@@ -21,8 +21,8 @@ interface GeneProteinNode extends PathwayGraphNode {
   geneNames: string[];
   label: string;
   groupId?: string;
-  regulation?: string; // TODO: One of 'up', 'down', '-'
-  details?: { [key: string]: string | number }; // TODO: Put things like logEC50 in here
+  regulation?: 'up' | 'down' | '-';
+  details?: { [key: string]: string | number }; // TODO: Put things like modifiedSequence &  logEC50 in here
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -30,10 +30,11 @@ interface GroupNode extends PathwayGraphNode {
   components: string[];
 }
 
+// TODO: There could also be ProteinInputEntry for FullProt Data
 interface PTMInputEntry {
   geneName: string;
   uniprotId: string;
-  regulation: string; // TODO: One of 'up', 'down', '-'
+  regulation: 'up' | 'down' | '-';
   details?: { [key: string]: string | number };
 }
 
@@ -41,7 +42,7 @@ interface PTMInputEntry {
 interface PTMNode extends PathwayGraphNode {
   proteinNode: string; // TODO: Refactor from proteinId - directly map to protein node, no need to store the id ever
   details?: { [key: string]: string | number }; // TODO: Put things like modifiedSequence &  logEC50 in here
-  regulation: string; // TODO: One of 'up', 'down', '-'
+  regulation: 'up' | 'down' | '-';
   geneName: string;
   uniprotId: string;
 }
@@ -51,7 +52,7 @@ interface PTMSummaryNode extends PathwayGraphNode {
   proteinNodeId: string; // TODO: Refactor from proteinId
   label: string;
   ptmIds: string[];
-  regulation: string; // TODO: One of 'up', 'down', '-'
+  regulation: 'up' | 'down' | '-';
 }
 
 interface PathwayGraphLink {
@@ -75,12 +76,16 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: false })
   ptmInputList?: PTMInputEntry[];
 
-  render() {
-    // eslint-disable-next-line
-    console.log(this.pathwayMetaData.identifier);
-    // eslint-disable-next-line
-    console.log(`Question: ${JSON.stringify(this.ptmInputList?.[0])}`);
+  graphdataPTM?: {
+    nodes: (PTMNode | PTMSummaryNode)[];
+    links: PathwayGraphLink[];
+  };
 
+  // TODO: Make this a property of the pathway - then it is clear that it refers to "the current pathway"
+  // TODO: Is there a way to make this a computed property - recompute it whenever the pathway data updates
+  currentPathwayGeneNodeMap: undefined;
+
+  render() {
     return html`
       <div id="pathwayContainer" ref="pathwayContainer">
         <svg
@@ -177,8 +182,34 @@ export class BiowcPathwaygraph extends LitElement {
 
   protected firstUpdated(_changedProperties: PropertyValues) {
     // Create Skeleton Graph from User Input
-
+    // this.graphdataPTM = this._addPTMInformationToPathway();
     // Map PTM Input to Skeleton Nodes
     super.firstUpdated(_changedProperties);
   }
+
+  // private _addPTMInformationToPathway(): { nodes: (PTMNode | PTMSummaryNode)[], links: PathwayGraphLink[] } {
+  //   /**
+  //    * This function combines a Pathway Object with a list of PTM peptides.
+  //    * Each PTM peptide is added as a node to the pathway graph and is linked
+  //    * to the protein it sits on.
+  //    * Additionally, summary nodes are generated, showing the count of up/down/unregulated peptides
+  //    * that were measured for a protein
+  //    */
+  //   const protein2Upregulated = {};
+  //   const protein2Downregulated = {};
+  //   const protein2Unregulated = {};
+  //
+  //   // Iterate over this to create map of gene/uniprot to node
+  //   this.graphdataSkeleton;
+  //
+  //
+  //   // TODO: Only call the whole method if this is not undefined!
+  //   // If this does not suffice put the if around this for gods sake
+  //   this.ptmInputList.forEach(ptmPeptide => {
+  //
+  //   });
+  //   const result = { nodes: [], links: [] };
+  //   return result;
+  //
+  // }
 }
