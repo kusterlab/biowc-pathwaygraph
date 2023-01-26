@@ -14,7 +14,8 @@
   <script type="module">
     import { html, render } from 'lit';
     import '../dist/src/biowc-pathwaygraph.js';
-    import PathwayGraphFixture from '../test/fixtures/PathwayGraphFixture.ts';
+    import PathwayGraphFixture from '../dist/test/fixtures/PathwayGraphFixture.js';
+
 
     render(
       html`
@@ -22,6 +23,7 @@
           .pathwayMetaData = ${PathwayGraphFixture.examplePathway1.metaData}
           .graphdataSkeleton = ${ {nodes: PathwayGraphFixture.examplePathway1.nodes, links: PathwayGraphFixture.examplePathway1.links} }
           .ptmInputList = ${PathwayGraphFixture.examplePathway1.ptmInputList}
+          .fullProteomeInputList= ${PathwayGraphFixture.examplePathway1.fpInputList}
         >
         </biowc-pathwaygraph>
       `,

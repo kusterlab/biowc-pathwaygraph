@@ -7,7 +7,7 @@ export default {
     },
     nodes: [
       {
-        id: '1', // TODO: Make optional and generate them if not present
+        nodeId: '1', // TODO: Make optional and generate them if not present
         geneNames: ['Protein A'],
         label: 'A',
         type: 'gene_protein',
@@ -16,7 +16,7 @@ export default {
         groupId: '7',
       },
       {
-        id: '2',
+        nodeId: '2',
         geneNames: ['Protein B'],
         label: 'B',
         type: 'gene_protein',
@@ -25,23 +25,25 @@ export default {
         groupId: '7',
       },
       {
-        id: '3',
+        nodeId: '3',
         geneNames: ['Protein C'],
+        uniprotAccs: ['P12345'],
         label: 'C',
         type: 'gene_protein',
         x: -10,
         y: 150,
       },
       {
-        id: '4',
+        nodeId: '4',
         geneNames: ['Protein D'],
+        uniprotAccs: ['Q19838'],
         label: 'D',
         type: 'gene_protein',
         x: 80,
         y: 150,
       },
       {
-        id: '5',
+        nodeId: '5',
         geneNames: ['Protein E'],
         label: 'E',
         type: 'gene_protein',
@@ -49,7 +51,7 @@ export default {
         y: 100,
       },
       {
-        id: '6',
+        nodeId: '6',
         geneNames: [''],
         label: 'Compound X',
         type: 'compound',
@@ -57,38 +59,38 @@ export default {
         y: 75,
       },
       {
-        id: '7',
+        nodeId: '7',
         type: 'group',
         components: ['1', '2'],
       },
     ],
     links: [
       {
-        id: 'relation-1',
+        linkId: 'relation-1',
         sourceId: '1',
         targetId: '2',
         types: ['binding/association'],
       },
       {
-        id: 'relation-2',
+        linkId: 'relation-2',
         sourceId: '1',
         targetId: '3',
         types: ['activation', 'dephosphorylation'],
       },
       {
-        id: 'relation-3',
+        linkId: 'relation-3',
         sourceId: '1',
         targetId: '4',
         types: ['inhibition'],
       },
       {
-        id: 'relation-4',
+        linkId: 'relation-4',
         sourceId: '7',
         targetId: '5',
         types: ['phosphorylation'],
       },
       {
-        id: 'relation-5',
+        linkId: 'relation-5',
         sourceId: '6',
         targetId: '3',
         types: ['activation'],
@@ -97,8 +99,8 @@ export default {
 
     ptmInputList: [
       {
-        geneName: 'D',
-        uniprotId: 'Q19838',
+        geneNames: ['D'],
+        uniprotIds: ['Q19838'],
         regulation: 'up',
         details: {
           modifiedSequence: 'KIMAKEMI',
@@ -111,6 +113,19 @@ export default {
           experiment: 'My Experiment',
           curveIds: 1234,
         },
+      },
+    ],
+
+    fpInputList: [
+      {
+        geneNames: ['Protein A'],
+        regulation: 'down',
+        details: {},
+      },
+      {
+        uniprotIds: ['P12345'],
+        regulation: '-',
+        details: {},
       },
     ],
   },
