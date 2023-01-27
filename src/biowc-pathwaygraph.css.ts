@@ -1,7 +1,7 @@
 import { css } from 'lit';
 
 export default css`
-  :root {
+  :host {
     --upregulated-color: #ea0000;
     --downregulated-color: #2571ff;
     --unregulated-color: #a4a4a4;
@@ -26,6 +26,7 @@ export default css`
     visibility: hidden;
   }
 
+  //TODO: Maplinks are not yet rendered
   .link.maplink {
     stroke-dasharray: '5 2';
   }

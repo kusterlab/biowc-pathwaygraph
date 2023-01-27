@@ -61,7 +61,7 @@ export default {
       {
         nodeId: '7',
         type: 'group',
-        components: ['1', '2'],
+        componentNodeIds: ['1', '2'],
       },
     ],
     links: [
