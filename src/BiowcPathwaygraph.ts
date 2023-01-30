@@ -3,6 +3,7 @@ import { property } from 'lit/decorators.js';
 import * as d3v6 from 'd3';
 import {
   D3DragEvent,
+  Selection,
   Simulation,
   SimulationLinkDatum,
   SimulationNodeDatum,
@@ -626,7 +627,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   private _getMainDiv() {
     // @ts-ignore
-    return d3v6.select(this.shadowRoot).select('#pathwaygraph');
+    return d3v6.select(this.shadowRoot).select<SVGElement>('#pathwaygraph');
   }
 
   private _renderGraph() {
@@ -672,12 +673,12 @@ export class BiowcPathwaygraph extends LitElement {
     const nodesSvg = nodeG
       .selectAll('g')
       .data(
-        this.d3Nodes!// Sort so that the groups come first - that way they are always drawn under the individual nodes
-        .sort((nodeA, nodeB) => {
-          if (nodeA.type === 'group') return -1;
-          if (nodeB.type === 'group') return 1;
-          return 0;
-        })
+        this.d3Nodes! // Sort so that the groups come first - that way they are always drawn under the individual nodes
+          .sort((nodeA, nodeB) => {
+            if (nodeA.type === 'group') return -1;
+            if (nodeB.type === 'group') return 1;
+            return 0;
+          })
           .filter(node => node.visible),
         d => (<PathwayGraphNode>d).nodeId
       )
@@ -907,21 +908,27 @@ export class BiowcPathwaygraph extends LitElement {
     // But they messed things up quite a lot
 
     // Apply drag behavior to nodes and groups
-    d3v6
+    this._getMainDiv()
       .select('#nodeG')
       .selectAll<SVGElement, PathwayGraphNode>('g')
-      .call(BiowcPathwaygraph._dragNodes(simulation));
-    d3v6
+      .call(this._dragNodes(simulation));
+    this._getMainDiv()
       .selectAll<SVGElement, PathwayGraphNode>('.group-path')
-      .call(BiowcPathwaygraph._dragGroups(simulation));
+      .call(this._dragGroups(simulation));
 
     // Define animation
     simulation.nodes(this.d3Nodes!).on('tick', () => {
       if (this.d3Nodes) {
         for (const node of this.d3Nodes) {
           if (node.type === 'group') {
-            // @ts-ignore TODO: Understand why this works - typescript is actually correct, 'node' is not the right argument type for select()
-            const nodeD3 = d3v6.select(node)._groups[0][0];
+            // TODO: Understand why this works - typescript is actually correct, 'node' is not the right argument type for select()
+            // And we get a DOMException now too: Element.querySelector: '[object Object]' is not a valid selector selector.js:5
+            // Question is, why has this ever worked?
+
+            const nodeD3 = this._getMainDiv().select(`#${node.nodeId}`);
+            console.log(nodeD3);
+
+            // const nodeD3 = this._getMainDiv().select(node)._groups[0][0];
             node.leftX = nodeD3.minX;
             node.rightX = nodeD3.maxX;
           } else if (node.isCircle) {
@@ -935,10 +942,14 @@ export class BiowcPathwaygraph extends LitElement {
       }
 
       // Set new positions of the nodes
-      d3v6
+      this._getMainDiv()
         .select('#nodeG')
         .selectAll('g')
         .filter(d => (<PathwayGraphNode>d).type !== 'group')
+        // .attr('jaloley', () => {
+        //   console.log('Ja lol ey!')
+        //   return 'eboi'
+        // })
         .attr(
           'transform',
           node =>
@@ -993,7 +1004,7 @@ export class BiowcPathwaygraph extends LitElement {
         return <number>link[endpoint].y;
       }
 
-      d3v6
+      this._getMainDiv()
         .select('#linkG')
         .selectAll<SVGElement, PathwayGraphLink>('line')
         /* eslint-disable no-param-reassign */
@@ -1038,15 +1049,15 @@ export class BiowcPathwaygraph extends LitElement {
             !link.sourceIsAnchor &&
             (<PathwayGraphNode>link.source).type === 'group'
           ) {
-            // @ts-ignore
-            const sourceD3 = d3v6.select(link.source)._groups[0][0];
+            const sourceD3 = this._getMainDiv().select(link.source)
+              ._groups[0][0];
             if (
               !link.targetIsAnchor &&
               (<PathwayGraphNode>link.target).type === 'group'
             ) {
               // Both are groups, we need to do the whole business
-              // @ts-ignore
-              const targetD3 = d3v6.select(link.target)._groups[0][0];
+              const targetD3 = this._getMainDiv().select(link.target)
+                ._groups[0][0];
               if (sourceD3.maxY < targetD3.minY) {
                 sourceY = sourceD3.maxY;
                 targetY = targetD3.minY;
@@ -1088,8 +1099,8 @@ export class BiowcPathwaygraph extends LitElement {
               (<PathwayGraphNode>link.target).type === 'group'
             ) {
               // target is group, source is not
-              // @ts-ignore
-              const targetD3 = d3v6.select(link.target)._groups[0][0];
+              const targetD3 = this._getMainDiv().select(link.target)
+                ._groups[0][0];
               if (sourceY < targetD3.minY) {
                 targetY = targetD3.minY;
               } else if (targetD3.maxY < sourceY) {
@@ -1124,7 +1135,7 @@ export class BiowcPathwaygraph extends LitElement {
         .attr('y2', link => link.targetY!);
 
       // Set the new positions of the edge paths
-      d3v6
+      this._getMainDiv()
         .select('#linkG')
         .selectAll<SVGElement, PathwayGraphLink>('.edgepath')
         .attr(
@@ -1134,7 +1145,7 @@ export class BiowcPathwaygraph extends LitElement {
         );
 
       // Optionally rotate the edge labels, if they have been turned upside-down
-      d3v6
+      this._getMainDiv()
         .select('#linkG')
         .selectAll<SVGGraphicsElement, PathwayGraphLink>('.edgelabel')
         .attr('transform', (link, i, nodes) => {
@@ -1151,8 +1162,10 @@ export class BiowcPathwaygraph extends LitElement {
         });
       // Logic to update node groups
       // Helper function for the group polygons
-      function polygonGenerator(inputGroupId: string) {
-        const nodeCoords = d3v6
+      const polygonGenerator = (inputGroupId: string) => {
+        const nodeCoords = (<
+          Selection<SVGElement, GeneProteinNode, HTMLElement, null>
+        >this._getMainDiv())
           .select('#nodeG')
           .selectAll<SVGElement, GeneProteinNode>('g')
           .filter(d => d.groupId === inputGroupId)
@@ -1168,10 +1181,10 @@ export class BiowcPathwaygraph extends LitElement {
             []
           );
         return d3v6.polygonHull(nodeCoords);
-      }
+      };
 
       // Reshape and relocate the groups based on the updated positions of their members
-      d3v6
+      this._getMainDiv()
         .select('#nodeG')
         .selectAll<SVGElement, GroupNode>('g')
         .filter(d => d.type === 'group')
@@ -1203,7 +1216,7 @@ export class BiowcPathwaygraph extends LitElement {
         .y(d => d[1])
         .curve(d3v6.curveCatmullRomClosed);
 
-      d3v6
+      this._getMainDiv()
         .select('#nodeG')
         .selectAll<SVGElement, GroupNode>('.group-path')
         .attr('d', group =>
@@ -1256,43 +1269,40 @@ export class BiowcPathwaygraph extends LitElement {
 
   // Define drag behavior
   /* eslint-disable no-param-reassign */
-  private static _dragNodes(
+  private _dragNodes(
     simulation: Simulation<
       SimulationNodeDatum,
       SimulationLinkDatum<PathwayGraphNode>
     >
   ) {
-    function dragstarted(
-      this: SVGElement,
+    const dragstarted = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>
-    ) {
+    ) => {
       // Disable tooltip while dragging
-      d3v6
+      this._getMainDiv()
         .select('#nodetooltip')
         .style('opacity', '0')
         .attr('is-dragging', 'true');
       if (!event.active) simulation.alphaTarget(0.3).restart();
-    }
+    };
 
-    function dragged(
-      this: SVGElement,
+    const dragged = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
       node: PathwayGraphNode
-    ) {
+    ) => {
       node.fx = event.x;
       node.fy = event.y;
-    }
+    };
 
-    function dragended(
-      this: SVGElement,
+    const dragended = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
       node: PathwayGraphNode
-    ) {
+    ) => {
       if (!event.active) simulation.alphaTarget(0);
       node.fx = null;
       node.fy = null;
-      d3v6.select('#nodetooltip').attr('is-dragging', 'false');
-    }
+      this._getMainDiv().select('#nodetooltip').attr('is-dragging', 'false');
+    };
 
     return d3v6
       .drag<SVGElement, PathwayGraphNode>()
@@ -1301,30 +1311,28 @@ export class BiowcPathwaygraph extends LitElement {
       .on('end', dragended);
   }
 
-  private static _dragGroups(
+  private _dragGroups(
     simulation: Simulation<
       SimulationNodeDatum,
       SimulationLinkDatum<PathwayGraphNode>
     >
   ) {
-    function dragstarted(
-      this: SVGElement,
+    const dragstarted = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>
-    ) {
+    ) => {
       // Disable tooltip while dragging
-      d3v6
+      this._getMainDiv()
         .select('#nodetooltip')
         .style('opacity', '0')
         .attr('is-dragging', 'true');
       if (!event.active) simulation.alphaTarget(0.3).restart();
-    }
+    };
 
-    function dragged(
-      this: SVGElement,
+    const dragged = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
       group: any
-    ) {
-      const nodes = d3v6.select('#nodeG').selectAll('g');
+    ) => {
+      const nodes = this._getMainDiv().select('#nodeG').selectAll('g');
       nodes
         .filter(
           d =>
@@ -1338,18 +1346,17 @@ export class BiowcPathwaygraph extends LitElement {
 
       group.fx = event.x;
       group.fy = event.y;
-    }
+    };
 
-    function dragended(
-      this: SVGElement,
+    const dragended = (
       event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
       group: any
-    ) {
+    ) => {
       if (!event.active) simulation.alphaTarget(0);
-      d3v6.select('#nodetooltip').attr('is-dragging', 'false');
+      this._getMainDiv().select('#nodetooltip').attr('is-dragging', 'false');
       group.fx = null;
       group.fy = null;
-    }
+    };
 
     return d3v6
       .drag<SVGElement, PathwayGraphNode>()
