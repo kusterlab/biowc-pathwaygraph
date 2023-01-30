@@ -687,7 +687,7 @@ export class BiowcPathwaygraph extends LitElement {
         'class',
         d => `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} `
       )
-      .attr('id', d => d.nodeId);
+      .attr('id', d => `node-${d.nodeId}`);
 
     // Draw each node as a rectangle - except for groups
     nodesSvg.selectAll('.node-rect').remove(); // TODO: Check if we actually need to do this
@@ -817,7 +817,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'edgepath')
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
-      .attr('id', (d, i) => `edgepath${i}`);
+      .attr('id', (d, i) => `edgepath-${i}`);
 
     // Add the actual edgelabels
     const edgelabels = linkG
@@ -921,16 +921,8 @@ export class BiowcPathwaygraph extends LitElement {
       if (this.d3Nodes) {
         for (const node of this.d3Nodes) {
           if (node.type === 'group') {
-            // TODO: Understand why this works - typescript is actually correct, 'node' is not the right argument type for select()
-            // And we get a DOMException now too: Element.querySelector: '[object Object]' is not a valid selector selector.js:5
-            // Question is, why has this ever worked?
-
-            const nodeD3 = this._getMainDiv().select(`#${node.nodeId}`);
-            console.log(nodeD3);
-
-            // const nodeD3 = this._getMainDiv().select(node)._groups[0][0];
-            node.leftX = nodeD3.minX;
-            node.rightX = nodeD3.maxX;
+            node.leftX = (<GroupNode>node).minX || 0;
+            node.rightX = (<GroupNode>node).maxX || 0;
           } else if (node.isCircle) {
             node.leftX = node.x;
             node.rightX = node.x;
@@ -946,10 +938,6 @@ export class BiowcPathwaygraph extends LitElement {
         .select('#nodeG')
         .selectAll('g')
         .filter(d => (<PathwayGraphNode>d).type !== 'group')
-        // .attr('jaloley', () => {
-        //   console.log('Ja lol ey!')
-        //   return 'eboi'
-        // })
         .attr(
           'transform',
           node =>
@@ -1049,34 +1037,40 @@ export class BiowcPathwaygraph extends LitElement {
             !link.sourceIsAnchor &&
             (<PathwayGraphNode>link.source).type === 'group'
           ) {
-            const sourceD3 = this._getMainDiv().select(link.source)
-              ._groups[0][0];
+            const sourceGroupNode = <GroupNode>link.source;
+            sourceGroupNode.maxY ??= 0;
+            sourceGroupNode.minY ??= 0;
+            sourceGroupNode.maxX ??= 0;
+            sourceGroupNode.minX ??= 0;
             if (
               !link.targetIsAnchor &&
               (<PathwayGraphNode>link.target).type === 'group'
             ) {
               // Both are groups, we need to do the whole business
-              const targetD3 = this._getMainDiv().select(link.target)
-                ._groups[0][0];
-              if (sourceD3.maxY < targetD3.minY) {
-                sourceY = sourceD3.maxY;
-                targetY = targetD3.minY;
-              } else if (targetD3.maxY < sourceD3.minY) {
-                targetY = targetD3.maxY;
-                sourceY = sourceD3.minY;
+              const targetGroupNode = <GroupNode>link.target;
+              targetGroupNode.maxY ??= 0;
+              targetGroupNode.minY ??= 0;
+              targetGroupNode.maxX ??= 0;
+              targetGroupNode.minX ??= 0;
+              if (sourceGroupNode.maxY < targetGroupNode.minY) {
+                sourceY = sourceGroupNode.maxY;
+                targetY = targetGroupNode.minY;
+              } else if (targetGroupNode.maxY < sourceGroupNode.minY) {
+                targetY = targetGroupNode.maxY;
+                sourceY = sourceGroupNode.minY;
               } else {
                 midY =
-                  (Math.min(sourceD3.minY, targetD3.minY) +
-                    Math.max(sourceD3.maxY, targetD3.maxY)) /
+                  (Math.min(sourceGroupNode.minY, targetGroupNode.minY) +
+                    Math.max(sourceGroupNode.maxY, targetGroupNode.maxY)) /
                   2;
-                if (midY > targetD3.maxY) {
-                  midY = targetD3.maxY;
-                } else if (midY > sourceD3.maxY) {
-                  midY = sourceD3.maxY;
-                } else if (midY < targetD3.minY) {
-                  midY = targetD3.minY;
-                } else if (midY < sourceD3.minY) {
-                  midY = sourceD3.minY;
+                if (midY > targetGroupNode.maxY) {
+                  midY = targetGroupNode.maxY;
+                } else if (midY > sourceGroupNode.maxY) {
+                  midY = sourceGroupNode.maxY;
+                } else if (midY < targetGroupNode.minY) {
+                  midY = targetGroupNode.minY;
+                } else if (midY < sourceGroupNode.minY) {
+                  midY = sourceGroupNode.minY;
                 }
                 targetY = midY;
                 sourceY = midY;
@@ -1084,10 +1078,10 @@ export class BiowcPathwaygraph extends LitElement {
             } else {
               // source is group, target is not
               targetY = getYCoordinate(link, 'target');
-              if (sourceD3.maxY < targetY) {
-                sourceY = sourceD3.maxY;
-              } else if (targetY < sourceD3.minY) {
-                sourceY = sourceD3.minY;
+              if (sourceGroupNode.maxY < targetY) {
+                sourceY = sourceGroupNode.maxY;
+              } else if (targetY < sourceGroupNode.minY) {
+                sourceY = sourceGroupNode.minY;
               } else {
                 sourceY = targetY;
               }
@@ -1099,12 +1093,15 @@ export class BiowcPathwaygraph extends LitElement {
               (<PathwayGraphNode>link.target).type === 'group'
             ) {
               // target is group, source is not
-              const targetD3 = this._getMainDiv().select(link.target)
-                ._groups[0][0];
-              if (sourceY < targetD3.minY) {
-                targetY = targetD3.minY;
-              } else if (targetD3.maxY < sourceY) {
-                targetY = targetD3.maxY;
+              const targetGroupNode = <GroupNode>link.target;
+              targetGroupNode.maxY = targetGroupNode.maxY || 0;
+              targetGroupNode.minY = targetGroupNode.minY || 0;
+              targetGroupNode.maxX = targetGroupNode.maxX || 0;
+              targetGroupNode.minX = targetGroupNode.minX || 0;
+              if (sourceY < targetGroupNode.minY) {
+                targetY = targetGroupNode.minY;
+              } else if (targetGroupNode.maxY < sourceY) {
+                targetY = targetGroupNode.maxY;
               } else {
                 targetY = sourceY;
               }
