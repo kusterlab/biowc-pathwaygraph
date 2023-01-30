@@ -7,6 +7,7 @@ import {
   Simulation,
   SimulationLinkDatum,
   SimulationNodeDatum,
+  ZoomTransform,
 } from 'd3';
 import styles from './biowc-pathwaygraph.css';
 
@@ -263,6 +264,8 @@ export class BiowcPathwaygraph extends LitElement {
     }
     // console.log('After');
     // console.log(this.graphdataSkeleton.nodes);
+
+    this._enableZoomingAndPanning();
 
     this._createD3GraphObject();
     this._renderGraph();
@@ -618,7 +621,6 @@ export class BiowcPathwaygraph extends LitElement {
       }
 
       if (!link.target) {
-        // @ts-ignore
         link.target = linkIdToLinkMap[link.target];
         link.targetIsAnchor = true;
       }
@@ -1629,5 +1631,41 @@ export class BiowcPathwaygraph extends LitElement {
         'y',
         yOffset * scalingFactor - 8 + lineHeight * 5 + paragraphMargin * 2
       );
+  }
+
+  private _enableZoomingAndPanning() {
+    const zoomed = ({ transform }: { transform: ZoomTransform }) => {
+      // Geometric zooms
+      this._getMainDiv()
+        .select('#nodeG')
+        .attr('transform', transform.toString());
+      this._getMainDiv()
+        .select('#linkG')
+        .attr('transform', transform.toString());
+
+      // Semantic zooms, aka hide/show the summary nodes and the edgelabels
+      this._getMainDiv()
+        .select('#pathwaygraph')
+        .selectAll('.edgelabel:not(.legend)')
+        .attr('visibility', transform.k < 1 ? 'hidden' : 'visible');
+    };
+
+    const zoom = d3v6
+      .zoom<SVGElement, unknown>()
+      .scaleExtent([0.1, 25])
+      .on('zoom', zoomed);
+
+    this._getMainDiv().call(zoom);
+
+    // Trigger initial zoom event - not sure if this is still required
+    // this._getMainDiv().transition().call(zoom.scaleBy, 1)
+
+    // Translate the view so that its not stuck to the top left corner
+    this._getMainDiv().transition().duration(0).call(zoom.translateBy, 500, 0);
+
+    // Set initial zoom level
+    this._getMainDiv()
+      .transition()
+      .call(zoom.scaleTo, d3v6.zoomTransform(this._getMainDiv().node()!).k);
   }
 }
