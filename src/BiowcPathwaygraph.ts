@@ -179,7 +179,8 @@ export class BiowcPathwaygraph extends LitElement {
       <div id="pathwayContainer" ref="pathwayContainer">
         <svg
           id="pathwaygraph"
-          style="min-width: 1200px; min-height: 1200px; display: block; margin: auto; background-color: white; border-radius: 5px"
+          style="min-width: ${document.body
+            .clientWidth}px; min-height: 1500px; display: block; margin: auto; background-color: white; border-radius: 5px"
         >
           <defs>
             <marker
@@ -286,7 +287,7 @@ export class BiowcPathwaygraph extends LitElement {
     this._renderGraph();
 
     window.addEventListener('resize', () => {
-      // console.log('resized!');
+      this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
     });
 
     this._renderLegend();
