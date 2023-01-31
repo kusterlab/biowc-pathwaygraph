@@ -95,6 +95,8 @@ export default css`
     dominant-baseline: central;
     font-size: 11pt;
     stroke-width: 2.5;
+    font-family: 'Roboto Light', sans-serif;
+    user-select: none;
   }
 
   .legend.link {
@@ -133,8 +135,7 @@ export default css`
     position: absolute;
     text-align: center;
     background-color: white;
-    border: solid;
-    border-width: 1px;
+    border: 1px solid;
     border-radius: 5px;
     padding: 10px;
     pointer-events: none;
@@ -148,20 +149,15 @@ export default css`
 
   .contextMenu {
     position: absolute;
-    border: solid;
-    border-width: 1px;
+    border: 1px solid;
   }
 
   .contextMenuEntry {
     cursor: pointer;
     text-align: center;
     background-color: white;
-    border: solid;
-    border-width: 1px;
-    padding-left: 3px;
-    padding-right: 3px;
-    padding-top: 0px;
-    padding-bottom: 0px;
+    border: 1px solid;
+    padding: 0 3px;
   }
 
   .contextMenuEntry text {
