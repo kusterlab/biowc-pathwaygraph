@@ -28,15 +28,6 @@ interface PathwayGraphNode extends SimulationNodeDatum {
   type: string; // TODO: Enumerate all possible types
   x: number; // Maybe exclamation mark is better here, check what it is used for
   y: number;
-  // All just for d3 version
-  selected?: boolean;
-  visible?: boolean;
-  isCircle?: boolean;
-  rectX?: number;
-  rectWidth?: number;
-  textLength?: number;
-  leftX?: number;
-  rightX?: number;
 }
 
 interface GeneProteinNode extends PathwayGraphNode {
@@ -46,7 +37,6 @@ interface GeneProteinNode extends PathwayGraphNode {
   groupId?: string;
   // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
   // eslint-disable-next-line no-use-before-define
-  groupNode?: GroupNode; // TODO: Only in d3 version
   details?: { [key: string]: string | number }; // TODO: Put things like modifiedSequence &  logEC50 in here
   // The following are only defined if Full Proteome Data was supplied
   nUp?: number;
@@ -56,14 +46,6 @@ interface GeneProteinNode extends PathwayGraphNode {
 
 interface GroupNode extends PathwayGraphNode {
   componentNodeIds: string[];
-  componentNodes: GeneProteinNode[];
-  // D3 Only
-  polygon?: [number, number][];
-  centroid?: [number, number];
-  minX?: number;
-  maxX?: number;
-  minY?: number;
-  maxY?: number;
 }
 
 interface PTMInputEntry {
@@ -74,24 +56,18 @@ interface PTMInputEntry {
 }
 
 interface PTMNode extends PathwayGraphNode {
-  geneProteinNodeId: string; // TODO: Split this up into two types: The D3 type exchanges the Id for the actual node
-  geneProteinNode?: GeneProteinNode;
-  details?: { [key: string]: string | number }; // TODO: Put things like modifiedSequence &  logEC50 in here
+  geneProteinNodeId: string;
+  details?: { [key: string]: string | number };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
   uniprotIds?: string[];
-  // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
-  // eslint-disable-next-line no-use-before-define
-  summaryNode?: PTMSummaryNode; // TODO: Exists only in D3 version
   summaryNodeId?: string;
 }
 
 interface PTMSummaryNode extends PathwayGraphNode {
-  geneProteinNodeId?: string; // TODO: Split this up into two types: The D3 type exchanges the Id for the actual node
-  geneProteinNode?: GeneProteinNode;
+  geneProteinNodeId?: string;
   label: string;
   ptmNodeIds?: string[];
-  ptmNodes?: PTMNode[]; // TODO: Exists only in D3 version
   regulation: PossibleRegulationCategoriesType;
 }
 
@@ -102,7 +78,6 @@ interface FullProteomeInputEntry {
   details?: { [key: string]: string | number };
 }
 
-// Link as input by user
 interface PathwayGraphLinkInput {
   linkId?: string;
   sourceId: string;
@@ -110,16 +85,56 @@ interface PathwayGraphLinkInput {
   types: string[]; // TODO: Enumerate all link types
 }
 
-// Internal representation of a link
 interface PathwayGraphLink
   extends SimulationLinkDatum<PathwayGraphNode | PathwayGraphLink>,
     SimulationNodeDatum {
-  linkId: string; // TODO: Refactor from 'id'
+  linkId: string;
   types: string[]; // TODO: Enumerate all link types
-  source: PathwayGraphNode | PathwayGraphLink;
-  target: PathwayGraphNode | PathwayGraphLink;
   sourceId: string;
   targetId: string;
+}
+
+// The nodes and links in the D3 graph have additional properties
+interface PathwayGraphNodeD3 extends PathwayGraphNode {
+  selected?: boolean;
+  visible?: boolean;
+  isCircle?: boolean;
+  rectX?: number;
+  rectWidth?: number;
+  textLength?: number;
+  leftX?: number;
+  rightX?: number;
+}
+
+interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
+  groupNode?: GroupNode;
+}
+
+interface GroupNodeD3 extends GroupNode, PathwayGraphNodeD3 {
+  componentNodes: GeneProteinNodeD3[];
+  polygon?: [number, number][];
+  centroid?: [number, number];
+  minX?: number;
+  maxX?: number;
+  minY?: number;
+  maxY?: number;
+}
+
+interface PTMNodeD3 extends PTMNode, PathwayGraphNodeD3 {
+  geneProteinNode?: GeneProteinNodeD3;
+  // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
+  // eslint-disable-next-line no-use-before-define
+  summaryNode?: PTMSummaryNodeD3;
+}
+
+interface PTMSummaryNodeD3 extends PTMSummaryNode, PathwayGraphNodeD3 {
+  geneProteinNode?: GeneProteinNodeD3;
+  ptmNodes?: PTMNodeD3[];
+}
+
+interface PathwayGraphLinkD3 extends PathwayGraphLink {
+  source: PathwayGraphNode | PathwayGraphLink;
+  target: PathwayGraphNode | PathwayGraphLink;
   sourceIsAnchor?: boolean;
   targetIsAnchor?: boolean;
   sourceX?: number;
@@ -154,12 +169,12 @@ export class BiowcPathwaygraph extends LitElement {
     links: PathwayGraphLinkInput[];
   };
 
-  d3Nodes?: PathwayGraphNode[];
+  d3Nodes?: PathwayGraphNodeD3[];
 
-  d3Links?: PathwayGraphLink[];
+  d3Links?: PathwayGraphLinkD3[];
 
   render() {
-    // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time.
+    // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time. - should be possible to update the DOM on resize though - who needs Vue watchers?
     return html`
       <div id="pathwayContainer" ref="pathwayContainer">
         <svg
@@ -550,7 +565,7 @@ export class BiowcPathwaygraph extends LitElement {
       visible: true,
     }));
     this.d3Links = this.graphdataSkeleton.links.map(
-      link => ({ ...link } as PathwayGraphLink)
+      link => ({ ...link } as PathwayGraphLinkD3)
     );
     if (this.graphdataPTM) {
       this.d3Nodes = this.d3Nodes.concat(
@@ -561,18 +576,18 @@ export class BiowcPathwaygraph extends LitElement {
         }))
       );
       this.d3Links = this.d3Links.concat(
-        this.graphdataPTM.links.map(link => ({ ...link } as PathwayGraphLink))
+        this.graphdataPTM.links.map(link => ({ ...link } as PathwayGraphLinkD3))
       );
     }
 
     // Now we need to setup some references within the D3 Graph Data
     // First we create maps of id to nodes/links for quicker access
-    const nodeIdToNodeMap: { [key: string]: PathwayGraphNode } = {};
+    const nodeIdToNodeMap: { [key: string]: PathwayGraphNodeD3 } = {};
     for (const node of this.d3Nodes) {
       nodeIdToNodeMap[node.nodeId] = node;
     }
 
-    const linkIdToLinkMap: { [key: string]: PathwayGraphLink } = {};
+    const linkIdToLinkMap: { [key: string]: PathwayGraphLinkD3 } = {};
     for (const link of this.d3Links) {
       linkIdToLinkMap[link.linkId] = link;
     }
@@ -581,30 +596,34 @@ export class BiowcPathwaygraph extends LitElement {
       // a) For all PTM peptides: add reference to protein node
       // This goes for both individual PTMs nodes and summary nodes
       if (node.type.includes('ptm')) {
-        (<PTMNode | PTMSummaryNode>node).geneProteinNode = <GeneProteinNode>(
-          nodeIdToNodeMap[(<PTMNode | PTMSummaryNode>node).geneProteinNodeId!]
-        );
+        (<PTMNodeD3 | PTMSummaryNodeD3>node).geneProteinNode = <
+          GeneProteinNodeD3
+        >nodeIdToNodeMap[
+          (<PTMNodeD3 | PTMSummaryNodeD3>node).geneProteinNodeId!
+        ];
       }
       // b) For the PTM summary nodes: add two-way references to individual PTM nodes
       if (node.type.includes('summary')) {
-        (<PTMSummaryNode>node).ptmNodes = (<PTMSummaryNode>(
+        (<PTMSummaryNodeD3>node).ptmNodes = (<PTMSummaryNodeD3>(
           node
         )).ptmNodeIds?.map(nodeid => nodeIdToNodeMap[nodeid] as PTMNode);
-        for (const nodeid of (<PTMSummaryNode>node).ptmNodeIds!) {
-          (<PTMNode>nodeIdToNodeMap[nodeid]).summaryNode = <PTMSummaryNode>node;
+        for (const nodeid of (<PTMSummaryNodeD3>node).ptmNodeIds!) {
+          (<PTMNodeD3>nodeIdToNodeMap[nodeid]).summaryNode = <PTMSummaryNodeD3>(
+            node
+          );
         }
       }
       // c) For Group Nodes: Add two-way references to members
       if (node.type === 'group') {
-        (<GroupNode>node).componentNodes = (<GroupNode>(
+        (<GroupNodeD3>node).componentNodes = (<GroupNodeD3>(
           node
         )).componentNodeIds.map(
           nodeid => nodeIdToNodeMap[nodeid] as GeneProteinNode
         );
-        for (const nodeid of (<GroupNode>node).componentNodeIds) {
-          (<GeneProteinNode>nodeIdToNodeMap[nodeid]).groupNode = <GroupNode>(
-            node
-          );
+        for (const nodeid of (<GroupNodeD3>node).componentNodeIds) {
+          (<GeneProteinNodeD3>nodeIdToNodeMap[nodeid]).groupNode = <
+            GroupNodeD3
+          >node;
         }
       }
     }
@@ -682,7 +701,7 @@ export class BiowcPathwaygraph extends LitElement {
             return 0;
           })
           .filter(node => node.visible),
-        d => (<PathwayGraphNode>d).nodeId
+        d => (<PathwayGraphNodeD3>d).nodeId
       )
       .join('g')
       .attr(
@@ -718,8 +737,8 @@ export class BiowcPathwaygraph extends LitElement {
     nodesSvg
       .selectAll('.node-label')
       .text(d => {
-        if (!Object.hasOwn(<PathwayGraphNode>d, 'label')) return '';
-        const node = d as GeneProteinNode | PTMSummaryNode;
+        if (!Object.hasOwn(<PathwayGraphNodeD3>d, 'label')) return '';
+        const node = d as GeneProteinNodeD3 | PTMSummaryNodeD3;
         if (node.label.startsWith('TITLE:')) {
           return node.label.substring(6).toUpperCase();
         }
@@ -736,7 +755,7 @@ export class BiowcPathwaygraph extends LitElement {
           nodes[i]
         )).getComputedTextLength();
         const textWidth = textLength + NODE_HEIGHT;
-        const node = d as PathwayGraphNode;
+        const node = d as PathwayGraphNodeD3;
         if (circleWidth > textWidth) {
           node.isCircle = true;
           node.rectX = -NODE_HEIGHT;
@@ -753,22 +772,24 @@ export class BiowcPathwaygraph extends LitElement {
     nodesSvg
       .selectAll('.node-rect')
       .attr('x', d =>
-        (<PathwayGraphNode>d).type === 'ptm'
+        (<PathwayGraphNodeD3>d).type === 'ptm'
           ? -0.5 * PTM_NODE_WIDTH
-          : (<PathwayGraphNode>d).rectX!
+          : (<PathwayGraphNodeD3>d).rectX!
       )
       .attr('y', d =>
-        (<PathwayGraphNode>d).type === 'ptm'
+        (<PathwayGraphNodeD3>d).type === 'ptm'
           ? -0.5 * PTM_NODE_HEIGHT
           : -NODE_HEIGHT
       )
       .attr('width', d =>
-        (<PathwayGraphNode>d).type === 'ptm'
+        (<PathwayGraphNodeD3>d).type === 'ptm'
           ? PTM_NODE_WIDTH
-          : (<PathwayGraphNode>d).rectWidth!
+          : (<PathwayGraphNodeD3>d).rectWidth!
       )
       .attr('height', d =>
-        (<PathwayGraphNode>d).type === 'ptm' ? PTM_NODE_HEIGHT : NODE_HEIGHT * 2
+        (<PathwayGraphNodeD3>d).type === 'ptm'
+          ? PTM_NODE_HEIGHT
+          : NODE_HEIGHT * 2
       );
 
     // Initialize paths for the group nodes
@@ -785,8 +806,9 @@ export class BiowcPathwaygraph extends LitElement {
       .data(
         this.d3Links!.filter(
           link =>
-            (link.sourceIsAnchor || (<PathwayGraphNode>link.source)?.visible) &&
-            (link.targetIsAnchor || (<PathwayGraphNode>link.target)?.visible)
+            (link.sourceIsAnchor ||
+              (<PathwayGraphNodeD3>link.source)?.visible) &&
+            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
       .join('line')
@@ -811,8 +833,8 @@ export class BiowcPathwaygraph extends LitElement {
       .data(
         this.d3Links!.filter(
           link =>
-            (<PathwayGraphNode>link.source)?.visible &&
-            (<PathwayGraphNode>link.target)?.visible
+            (<PathwayGraphNodeD3>link.source)?.visible &&
+            (<PathwayGraphNodeD3>link.target)?.visible
         )
       )
       .join('path')
@@ -827,8 +849,8 @@ export class BiowcPathwaygraph extends LitElement {
       .data(
         this.d3Links!.filter(
           link =>
-            (<PathwayGraphNode>link.source)?.visible &&
-            (<PathwayGraphNode>link.target)?.visible
+            (<PathwayGraphNodeD3>link.source)?.visible &&
+            (<PathwayGraphNodeD3>link.target)?.visible
         )
       )
       .join('text')
@@ -870,8 +892,8 @@ export class BiowcPathwaygraph extends LitElement {
           .forceLink(
             this.d3Links?.filter(
               link =>
-                (<PathwayGraphNode>link.source)!.visible &&
-                (<PathwayGraphNode>link.target)!.visible
+                (<PathwayGraphNodeD3>link.source)!.visible &&
+                (<PathwayGraphNodeD3>link.target)!.visible
             )
           )
           .strength(link =>
@@ -881,14 +903,14 @@ export class BiowcPathwaygraph extends LitElement {
           )
           .distance(link => {
             if (link.types && link.types.includes('ptmlink')) {
-              if ((<PathwayGraphNode>link.target).isCircle) {
+              if ((<PathwayGraphNodeD3>link.target).isCircle) {
                 return (
                   CIRCLE_NODE_LINK_FORCE_DISTANCE *
                   PTM_LINK_FORCE_DISTANCE_MULTIPLIER
                 );
               }
               return (
-                ((<PathwayGraphNode>link.target).textLength || 1) *
+                ((<PathwayGraphNodeD3>link.target).textLength || 1) *
                 PTM_LINK_FORCE_DISTANCE_MULTIPLIER
               );
             }
@@ -901,7 +923,7 @@ export class BiowcPathwaygraph extends LitElement {
         d3v6
           .forceCollide() // TODO: The old version was .forceCollide(this.nodes.filter((node) => node.visible)) but forceCollide does not take nodes as argument, only the radius. So has this ever worked as intended?
           .radius(node =>
-            (<PathwayGraphNode>node).type.includes('ptm')
+            (<PathwayGraphNodeD3>node).type.includes('ptm')
               ? PTM_COLLISION_FORCE_RADIUS
               : 0
           )
@@ -912,10 +934,10 @@ export class BiowcPathwaygraph extends LitElement {
     // Apply drag behavior to nodes and groups
     this._getMainDiv()
       .select('#nodeG')
-      .selectAll<SVGElement, PathwayGraphNode>('g')
+      .selectAll<SVGElement, PathwayGraphNodeD3>('g')
       .call(this._dragNodes(simulation));
     this._getMainDiv()
-      .selectAll<SVGElement, PathwayGraphNode>('.group-path')
+      .selectAll<SVGElement, PathwayGraphNodeD3>('.group-path')
       .call(this._dragGroups(simulation));
 
     // Define animation
@@ -923,8 +945,8 @@ export class BiowcPathwaygraph extends LitElement {
       if (this.d3Nodes) {
         for (const node of this.d3Nodes) {
           if (node.type === 'group') {
-            node.leftX = (<GroupNode>node).minX || 0;
-            node.rightX = (<GroupNode>node).maxX || 0;
+            node.leftX = (<GroupNodeD3>node).minX || 0;
+            node.rightX = (<GroupNodeD3>node).maxX || 0;
           } else if (node.isCircle) {
             node.leftX = node.x;
             node.rightX = node.x;
@@ -939,12 +961,12 @@ export class BiowcPathwaygraph extends LitElement {
       this._getMainDiv()
         .select('#nodeG')
         .selectAll('g')
-        .filter(d => (<PathwayGraphNode>d).type !== 'group')
+        .filter(d => (<PathwayGraphNodeD3>d).type !== 'group')
         .attr(
           'transform',
           node =>
-            `translate(${(<PathwayGraphNode>node).x},${
-              (<PathwayGraphNode>node).y
+            `translate(${(<PathwayGraphNodeD3>node).x},${
+              (<PathwayGraphNodeD3>node).y
             })`
         );
 
@@ -952,42 +974,42 @@ export class BiowcPathwaygraph extends LitElement {
       // This mess makes the arrowheads end exactly at the rim of the target node.
       // TODO: With the whole group business, this mess should be factored out.
       function getXCoordinate(
-        link: PathwayGraphLink,
+        link: PathwayGraphLinkD3,
         endpoint: 'source' | 'target',
         position: 'x' | 'rightX' | 'leftX'
       ): number {
         if (endpoint === 'source' && link.sourceIsAnchor) {
           return (
-            (((<PathwayGraphLink>link.source).sourceX || 0) +
-              ((<PathwayGraphLink>link.source).targetX || 0)) /
+            (((<PathwayGraphLinkD3>link.source).sourceX || 0) +
+              ((<PathwayGraphLinkD3>link.source).targetX || 0)) /
             2
           );
         }
         if (endpoint === 'target' && link.targetIsAnchor) {
           return (
-            (((<PathwayGraphLink>link.target).sourceX || 0) +
-              ((<PathwayGraphLink>link.target).targetX || 0)) /
+            (((<PathwayGraphLinkD3>link.target).sourceX || 0) +
+              ((<PathwayGraphLinkD3>link.target).targetX || 0)) /
             2
           );
         }
-        return <number>(<PathwayGraphNode>link[endpoint])[position];
+        return <number>(<PathwayGraphNodeD3>link[endpoint])[position];
       }
 
       function getYCoordinate(
-        link: PathwayGraphLink,
+        link: PathwayGraphLinkD3,
         endpoint: 'source' | 'target'
       ): number {
         if (endpoint === 'source' && link.sourceIsAnchor) {
           return (
-            (((<PathwayGraphLink>link.source).sourceY || 0) +
-              ((<PathwayGraphLink>link.source).targetY || 0)) /
+            (((<PathwayGraphLinkD3>link.source).sourceY || 0) +
+              ((<PathwayGraphLinkD3>link.source).targetY || 0)) /
             2
           );
         }
         if (endpoint === 'target' && link.targetIsAnchor) {
           return (
-            (((<PathwayGraphLink>link.target).sourceY || 0) +
-              ((<PathwayGraphLink>link.target).targetY || 0)) /
+            (((<PathwayGraphLinkD3>link.target).sourceY || 0) +
+              ((<PathwayGraphLinkD3>link.target).targetY || 0)) /
             2
           );
         }
@@ -996,7 +1018,7 @@ export class BiowcPathwaygraph extends LitElement {
 
       this._getMainDiv()
         .select('#linkG')
-        .selectAll<SVGElement, PathwayGraphLink>('line')
+        .selectAll<SVGElement, PathwayGraphLinkD3>('line')
         /* eslint-disable no-param-reassign */
         .each(link => {
           let sourceX;
@@ -1037,19 +1059,19 @@ export class BiowcPathwaygraph extends LitElement {
           let midY;
           if (
             !link.sourceIsAnchor &&
-            (<PathwayGraphNode>link.source).type === 'group'
+            (<PathwayGraphNodeD3>link.source).type === 'group'
           ) {
-            const sourceGroupNode = <GroupNode>link.source;
+            const sourceGroupNode = <GroupNodeD3>link.source;
             sourceGroupNode.maxY ??= 0;
             sourceGroupNode.minY ??= 0;
             sourceGroupNode.maxX ??= 0;
             sourceGroupNode.minX ??= 0;
             if (
               !link.targetIsAnchor &&
-              (<PathwayGraphNode>link.target).type === 'group'
+              (<PathwayGraphNodeD3>link.target).type === 'group'
             ) {
               // Both are groups, we need to do the whole business
-              const targetGroupNode = <GroupNode>link.target;
+              const targetGroupNode = <GroupNodeD3>link.target;
               targetGroupNode.maxY ??= 0;
               targetGroupNode.minY ??= 0;
               targetGroupNode.maxX ??= 0;
@@ -1092,10 +1114,10 @@ export class BiowcPathwaygraph extends LitElement {
             sourceY = getYCoordinate(link, 'source');
             if (
               !link.targetIsAnchor &&
-              (<PathwayGraphNode>link.target).type === 'group'
+              (<PathwayGraphNodeD3>link.target).type === 'group'
             ) {
               // target is group, source is not
-              const targetGroupNode = <GroupNode>link.target;
+              const targetGroupNode = <GroupNodeD3>link.target;
               targetGroupNode.maxY = targetGroupNode.maxY || 0;
               targetGroupNode.minY = targetGroupNode.minY || 0;
               targetGroupNode.maxX = targetGroupNode.maxX || 0;
@@ -1136,7 +1158,7 @@ export class BiowcPathwaygraph extends LitElement {
       // Set the new positions of the edge paths
       this._getMainDiv()
         .select('#linkG')
-        .selectAll<SVGElement, PathwayGraphLink>('.edgepath')
+        .selectAll<SVGElement, PathwayGraphLinkD3>('.edgepath')
         .attr(
           'd',
           edgepath =>
@@ -1146,7 +1168,7 @@ export class BiowcPathwaygraph extends LitElement {
       // Optionally rotate the edge labels, if they have been turned upside-down
       this._getMainDiv()
         .select('#linkG')
-        .selectAll<SVGGraphicsElement, PathwayGraphLink>('.edgelabel')
+        .selectAll<SVGGraphicsElement, PathwayGraphLinkD3>('.edgelabel')
         .attr('transform', (link, i, nodes) => {
           if (
             getXCoordinate(link, 'target', 'x') <
@@ -1163,10 +1185,10 @@ export class BiowcPathwaygraph extends LitElement {
       // Helper function for the group polygons
       const polygonGenerator = (inputGroupId: string) => {
         const nodeCoords = (<
-          Selection<SVGElement, GeneProteinNode, HTMLElement, null>
+          Selection<SVGElement, GeneProteinNodeD3, HTMLElement, null>
         >this._getMainDiv())
           .select('#nodeG')
-          .selectAll<SVGElement, GeneProteinNode>('g')
+          .selectAll<SVGElement, GeneProteinNodeD3>('g')
           .filter(d => d.groupId === inputGroupId)
           .data()
           .reduce<[number, number][]>(
@@ -1185,7 +1207,7 @@ export class BiowcPathwaygraph extends LitElement {
       // Reshape and relocate the groups based on the updated positions of their members
       this._getMainDiv()
         .select('#nodeG')
-        .selectAll<SVGElement, GroupNode>('g')
+        .selectAll<SVGElement, GroupNodeD3>('g')
         .filter(d => d.type === 'group')
         /* eslint-disable no-param-reassign */
         .each(group => {
@@ -1217,7 +1239,7 @@ export class BiowcPathwaygraph extends LitElement {
 
       this._getMainDiv()
         .select('#nodeG')
-        .selectAll<SVGElement, GroupNode>('.group-path')
+        .selectAll<SVGElement, GroupNodeD3>('.group-path')
         .attr('d', group =>
           group.centroid
             ? valueline(
@@ -1271,11 +1293,15 @@ export class BiowcPathwaygraph extends LitElement {
   private _dragNodes(
     simulation: Simulation<
       SimulationNodeDatum,
-      SimulationLinkDatum<PathwayGraphNode>
+      SimulationLinkDatum<PathwayGraphNodeD3>
     >
   ) {
     const dragstarted = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >
     ) => {
       // Disable tooltip while dragging
       this._getMainDiv()
@@ -1286,16 +1312,24 @@ export class BiowcPathwaygraph extends LitElement {
     };
 
     const dragged = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
-      node: PathwayGraphNode
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >,
+      node: PathwayGraphNodeD3
     ) => {
       node.fx = event.x;
       node.fy = event.y;
     };
 
     const dragended = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
-      node: PathwayGraphNode
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >,
+      node: PathwayGraphNodeD3
     ) => {
       if (!event.active) simulation.alphaTarget(0);
       node.fx = null;
@@ -1304,7 +1338,7 @@ export class BiowcPathwaygraph extends LitElement {
     };
 
     return d3v6
-      .drag<SVGElement, PathwayGraphNode>()
+      .drag<SVGElement, PathwayGraphNodeD3>()
       .on('start', dragstarted)
       .on('drag', dragged)
       .on('end', dragended);
@@ -1313,11 +1347,15 @@ export class BiowcPathwaygraph extends LitElement {
   private _dragGroups(
     simulation: Simulation<
       SimulationNodeDatum,
-      SimulationLinkDatum<PathwayGraphNode>
+      SimulationLinkDatum<PathwayGraphNodeD3>
     >
   ) {
     const dragstarted = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >
     ) => {
       // Disable tooltip while dragging
       this._getMainDiv()
@@ -1328,19 +1366,23 @@ export class BiowcPathwaygraph extends LitElement {
     };
 
     const dragged = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >,
       group: any
     ) => {
       const nodes = this._getMainDiv().select('#nodeG').selectAll('g');
       nodes
         .filter(
           d =>
-            Object.hasOwn(<PathwayGraphNode>d, 'groupId') &&
-            (<GeneProteinNode>d).groupId === group.id
+            Object.hasOwn(<PathwayGraphNodeD3>d, 'groupId') &&
+            (<GeneProteinNodeD3>d).groupId === group.id
         )
         .each(d => {
-          (<PathwayGraphNode>d).x += event.dx;
-          (<PathwayGraphNode>d).y += event.dy;
+          (<PathwayGraphNodeD3>d).x += event.dx;
+          (<PathwayGraphNodeD3>d).y += event.dy;
         });
 
       group.fx = event.x;
@@ -1348,7 +1390,11 @@ export class BiowcPathwaygraph extends LitElement {
     };
 
     const dragended = (
-      event: D3DragEvent<SVGElement, PathwayGraphNode | PathwayGraphLink, any>,
+      event: D3DragEvent<
+        SVGElement,
+        PathwayGraphNodeD3 | PathwayGraphLinkD3,
+        any
+      >,
       group: any
     ) => {
       if (!event.active) simulation.alphaTarget(0);
@@ -1358,7 +1404,7 @@ export class BiowcPathwaygraph extends LitElement {
     };
 
     return d3v6
-      .drag<SVGElement, PathwayGraphNode>()
+      .drag<SVGElement, PathwayGraphNodeD3>()
       .on('start', dragstarted)
       .on('drag', dragged)
       .on('end', dragended);
