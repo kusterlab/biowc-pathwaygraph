@@ -19,7 +19,6 @@ export default css`
     stroke: var(--link-color);
     stroke-opacity: 0.6;
     stroke-width: 3;
-    pointer-events: none;
   }
 
   .link.ptmlink {

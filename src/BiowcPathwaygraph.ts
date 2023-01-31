@@ -669,6 +669,9 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._addAnimation();
 
+    //TODO: Maybe move this after the timeout?
+    this._addTooltips();
+
     setTimeout(() => {
       if (this.d3Nodes) {
         for (const node of this.d3Nodes) {
@@ -795,7 +798,6 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Initialize paths for the group nodes
     // The actual polygons are drawn in the 'tick' callback of addAnimation
-    // TODO: For some reason there are always two group-path objects, and a node-label group object which we don't need I think (groups have no labels)
     nodesSvg
       .filter(d => d.type === 'group')
       .append('path')
@@ -1255,6 +1257,107 @@ export class BiowcPathwaygraph extends LitElement {
     return simulation;
   }
 
+
+  private _addTooltips() {
+    //Remove tooltip if present TODO: Still necessary?
+    // this._getMainDiv().select('#nodetooltip').remove()
+
+    // @ts-ignore
+    const tooltip = d3v6.select(this.shadowRoot)
+      .select('#pathwayContainer')
+      .append('div')
+      .attr('class', 'tooltip')
+      .attr('id', 'nodetooltip')
+      .attr('is-dragging', 'false')
+      // Hide the tooltip initially
+      .style('opacity', '0')
+
+
+    const mouseenter = (e : MouseEvent, nodeOrLink : PathwayGraphNodeD3 | PathwayGraphLinkD3) => {
+      const classesOfTarget = (<HTMLElement>e.target)?.classList
+      if (tooltip.attr('is-dragging') === 'false') {
+        if(classesOfTarget.contains('link')){
+          const link = nodeOrLink as PathwayGraphLinkD3
+          tooltip.html(
+            //TODO: Display all types of the link
+            `${link.types[0][0].toUpperCase() + link.types[0].slice(1)} (${
+              link.types[0]
+            })`
+          )
+        }
+        else {
+          const node = nodeOrLink as PathwayGraphNodeD3
+          if(node.type === 'ptm'){
+            tooltip.html(this._getPTMTooltipText(node as PTMNodeD3))
+          } else if (node.type === 'gene_protein') {
+            tooltip.html(this._getGeneProteinTooltipText(node as GeneProteinNodeD3))
+          } else if (classesOfTarget.contains('summary')){
+                let regulationLabel
+                switch ((<PTMSummaryNodeD3>node).regulation) {
+                  case 'up': {
+                    regulationLabel = 'Upregulated'
+                    break
+                  }
+                  case 'down': {
+                    regulationLabel = 'Downregulated'
+                    break
+                  }
+                  case '-': {
+                    regulationLabel = 'Unregulated'
+                    break
+                  }
+                  default: {
+                    regulationLabel = ''
+                    break
+                  }
+                }
+                tooltip.html(
+                  `${(<PTMSummaryNodeD3>node).label} ${regulationLabel} ${
+                    +(<PTMSummaryNodeD3>node).label > 1 ? 'Peptides' : 'Peptide'
+                  }`
+                )
+             } else {
+              tooltip.html((<GeneProteinNodeD3>node).label || '')
+            }
+            // PTMs are the only nodes that have no label and still get a tooltip
+            if (Object.hasOwn(node, 'label') || node.type === 'ptm') {
+              tooltip.transition().duration(0).style('opacity', '1')
+            }
+        }
+      }
+    }
+
+    const mousemove = (e : MouseEvent) => {
+      tooltip
+        // The offset is trial and error, I could not figure this out programmatically
+        .style('top', e.clientY+  'px')
+        .style('left', e.clientX+ 15 + 'px')
+    }
+
+    const mouseleave = () => {
+      tooltip.transition().duration(0).style('opacity', '0')
+    }
+
+
+    // // Apply this functionality to the nodes and links of the graph
+    this._getMainDiv().select('#nodeG')
+      .selectAll<SVGElement, PathwayGraphNodeD3>('g')
+      .on('mouseenter', mouseenter)
+      .on('mousemove', mousemove)
+      .on('mouseleave', mouseleave)
+
+    this._getMainDiv().select('#linkG')
+      .selectAll<SVGElement, PathwayGraphLinkD3>('line')
+      .on('mouseenter', mouseenter)
+
+    this._getMainDiv().select('#linkG')
+      .selectAll<SVGElement, PathwayGraphLinkD3>('line')
+      .on('mouseenter', mouseenter)
+      .on('mousemove', mousemove)
+      .on('mouseleave', mouseleave)
+
+  }
+
   private static _calculateContextMenuOptions(
     type: string,
     geneNames: string[],
@@ -1692,7 +1795,6 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Semantic zooms, aka hide/show the summary nodes and the edgelabels
       this._getMainDiv()
-        .select('#pathwaygraph')
         .selectAll('.edgelabel:not(.legend)')
         .attr('visibility', transform.k < 1 ? 'hidden' : 'visible');
     };
@@ -1714,5 +1816,13 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv()
       .transition()
       .call(zoom.scaleTo, d3v6.zoomTransform(this._getMainDiv().node()!).k);
+  }
+
+  private _getPTMTooltipText(node: PTMNodeD3) {
+    return 'I am a PTM whoop whoop';
+  }
+
+  private _getGeneProteinTooltipText(node: GeneProteinNodeD3){
+    return 'I am Protein/Gene whoop'
   }
 }
