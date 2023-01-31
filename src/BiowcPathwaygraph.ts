@@ -1378,7 +1378,7 @@ export class BiowcPathwaygraph extends LitElement {
         .filter(
           d =>
             Object.hasOwn(<PathwayGraphNodeD3>d, 'groupId') &&
-            (<GeneProteinNodeD3>d).groupId === group.id
+            (<GeneProteinNodeD3>d).groupId === (<GroupNodeD3>group).nodeId
         )
         .each(d => {
           (<PathwayGraphNodeD3>d).x += event.dx;
