@@ -6,8 +6,8 @@ import {
   Selection,
   Simulation,
   SimulationLinkDatum,
-  SimulationNodeDatum,
-  ZoomTransform,
+  SimulationNodeDatum, ValueFn,
+  ZoomTransform
 } from 'd3';
 import styles from './biowc-pathwaygraph.css';
 
@@ -671,6 +671,8 @@ export class BiowcPathwaygraph extends LitElement {
 
     //TODO: Maybe move this after the timeout?
     this._addTooltips();
+    this._addContextMenu();
+
 
     setTimeout(() => {
       if (this.d3Nodes) {
@@ -1356,6 +1358,73 @@ export class BiowcPathwaygraph extends LitElement {
       .on('mousemove', mousemove)
       .on('mouseleave', mouseleave)
 
+  }
+
+  private _addContextMenu() {
+    // The context menu should be created when a node is right-clicked
+    const onrightclick = (rightClickEvent : MouseEvent, node : GeneProteinNodeD3 | PTMSummaryNodeD3) => {
+      // Remove a possible previously existing context menu
+
+      // @ts-ignore
+      d3v6.select(this.shadowRoot).selectAll('.contextMenu').remove()
+      // Do not show the regular context menu of the browser
+      rightClickEvent.preventDefault()
+
+      // Hide the tooltip when the context menu is shown
+      this._getMainDiv().select('#nodetooltip').style('opacity', '0')
+      // @ts-ignore
+      const contextMenu = d3v6.select(this.shadowRoot)
+        .select('#pathwayContainer')
+        .append('div')
+        .attr('class', 'contextMenu')
+        .attr('id', 'nodeContextMenu')
+
+      contextMenu
+        .selectAll('.contextMenuEntry')
+        .data(
+          BiowcPathwaygraph._calculateContextMenuOptions(
+            node.type,
+            'geneNames' in node ? node.geneNames : [],
+            node.label
+          )
+        )
+        .join('div')
+        .attr('class', 'contextMenuEntry')
+        .style('cursor','pointer')
+
+      contextMenu
+        .style('top', `${rightClickEvent.clientY}px`)
+        .style('left', `${rightClickEvent.clientX + 15}px`)
+
+      const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry')
+
+      contextMenuEntry.append('rect')
+
+
+      contextMenuEntry.append('text').text(((entry) => entry) as ValueFn<SVGTextElement, unknown, string>)
+
+      contextMenuEntry.on('click', (contextMenuEntryClickEvent, d) => {
+        // Set the text to the user's choice
+        //const parentNodeId = (<PathwayGraphNodeD3>rightClickEvent.target?.parentNode)
+
+
+        this._getMainDiv().select(`#node-${node.nodeId}`)
+          .select('.node-label')
+          .text(<string>d);
+        //Yeah this was an interesting experiment but nah
+        // this._getMainDiv().select(`#node-${node.nodeId}`)
+        //   .attr('width', (this._getMainDiv().select(`#node-${node.nodeId}`)).getComputedTextLength() + NODE_HEIGHT)
+        // @ts-ignore
+        d3v6.select(this.shadowRoot).select('#nodeContextMenu').remove()
+      })
+    }
+
+    // Equip all nodes with the feature we just defined
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGElement, GeneProteinNodeD3 | PTMSummaryNodeD3>('.gene_protein,.compound')
+      // .selectAll('g')
+      .on('contextmenu', onrightclick)
   }
 
   private static _calculateContextMenuOptions(
