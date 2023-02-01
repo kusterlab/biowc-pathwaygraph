@@ -100,7 +100,7 @@ export default {
     ptmInputList: [
       {
         geneNames: ['D'],
-        uniprotIds: ['Q19838'],
+        uniprotAccs: ['Q19838'],
         regulation: 'up',
         details: {
           modifiedSequence: 'KIMAKEMI',
@@ -123,7 +123,7 @@ export default {
         details: {},
       },
       {
-        uniprotIds: ['P12345'],
+        uniprotAccs: ['P12345'],
         regulation: '-',
         details: {},
       },

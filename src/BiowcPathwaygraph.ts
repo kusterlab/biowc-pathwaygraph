@@ -6,8 +6,9 @@ import {
   Selection,
   Simulation,
   SimulationLinkDatum,
-  SimulationNodeDatum, ValueFn,
-  ZoomTransform
+  SimulationNodeDatum,
+  ValueFn,
+  ZoomTransform,
 } from 'd3';
 import styles from './biowc-pathwaygraph.css';
 
@@ -51,7 +52,7 @@ interface GroupNode extends PathwayGraphNode {
 
 interface PTMInputEntry {
   geneNames?: string[];
-  uniprotIds?: string[];
+  uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
   details?: { [key: string]: string | number };
 }
@@ -61,7 +62,7 @@ interface PTMNode extends PathwayGraphNode {
   details?: { [key: string]: string | number };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
-  uniprotIds?: string[];
+  uniprotAccs?: string[];
   summaryNodeId?: string;
 }
 
@@ -74,7 +75,7 @@ interface PTMSummaryNode extends PathwayGraphNode {
 
 interface FullProteomeInputEntry {
   geneNames?: string[];
-  uniprotIds?: string[];
+  uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
   details?: { [key: string]: string | number };
 }
@@ -174,12 +175,12 @@ export class BiowcPathwaygraph extends LitElement {
 
   d3Links?: PathwayGraphLinkD3[];
 
-  //Can be 0, 1 or 2, to distinguish single- from double-click events
+  // Can be 0, 1 or 2, to distinguish single- from double-click events
   recentClicks = 0;
 
-  //TODO: Install a watcher that throws an event if this reaches zero
-  //TODO: ...first check if this actually is still needed anywhere, could be legacy
-  numberOfUnselectedNodes = 0
+  // TODO: Install a watcher that throws an event if this reaches zero
+  // TODO: ...first check if this actually is still needed anywhere, could be legacy
+  numberOfUnselectedNodes = 0;
 
   render() {
     // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time. - should be possible to update the DOM on resize though - who needs Vue watchers?
@@ -308,11 +309,11 @@ export class BiowcPathwaygraph extends LitElement {
 
     for (const node of this.graphdataSkeleton.nodes) {
       if (Object.hasOwn(node, 'uniprotAccs')) {
-        for (const uniprotId of (<GeneProteinNode>node).uniprotAccs) {
-          if (!Object.hasOwn(result, uniprotId)) {
-            result[uniprotId] = [];
+        for (const uniprotAcc of (<GeneProteinNode>node).uniprotAccs) {
+          if (!Object.hasOwn(result, uniprotAcc)) {
+            result[uniprotAcc] = [];
           }
-          result[uniprotId].push(<GeneProteinNode>node);
+          result[uniprotAcc].push(<GeneProteinNode>node);
         }
       }
 
@@ -366,14 +367,14 @@ export class BiowcPathwaygraph extends LitElement {
 
         // Eliminate possible duplicates from the peptides' gene names and uniprot accessions
         const geneNamesUnique = [...new Set(ptmPeptide.geneNames)].sort();
-        const uniprotIdsUnique = [...new Set(ptmPeptide.uniprotIds)].sort();
+        const uniprotAccsUnique = [...new Set(ptmPeptide.uniprotAccs)].sort();
         // The map of Uniprot ID to Node ID only works with canonical isoforms, so create another version with hyphens removed
-        const uniprotIdsUniqueOnlyCanonical = [
-          ...new Set(uniprotIdsUnique.map(entry => entry.split('-')[0])),
+        const uniprotAccsUniqueOnlyCanonical = [
+          ...new Set(uniprotAccsUnique.map(entry => entry.split('-')[0])),
         ];
 
         // Now we map the peptide to a node in the current pathway, using gene names and canonical Uniprot IDs
-        for (const gene of uniprotIdsUniqueOnlyCanonical.concat(
+        for (const gene of uniprotAccsUniqueOnlyCanonical.concat(
           geneNamesUnique
         )) {
           if (
@@ -400,7 +401,7 @@ export class BiowcPathwaygraph extends LitElement {
                   type: 'ptm',
                   details: ptmPeptide.details,
                   geneNames: geneNamesUnique,
-                  uniprotIds: uniprotIdsUnique,
+                  uniprotAccs: uniprotAccsUnique,
                   regulation: ptmPeptide.regulation,
                   geneProteinNodeId: geneProteinNode.nodeId,
                   x: geneProteinNode.x,
@@ -522,13 +523,15 @@ export class BiowcPathwaygraph extends LitElement {
         // In case node is represented by both Uniprot and Genename we could otherwise match it twice here
         const geneProteinNodeIdsOfEntry = new Set();
         const geneNamesUnique = [...new Set(fullProteomeInputEntry.geneNames)];
-        const uniprotIdsUniqueOnlyCanonical = [
+        const uniprotAccsUniqueOnlyCanonical = [
           ...new Set(
-            fullProteomeInputEntry.uniprotIds?.map(entry => entry.split('-')[0])
+            fullProteomeInputEntry.uniprotAccs?.map(
+              entry => entry.split('-')[0]
+            )
           ),
         ];
 
-        for (const gene of uniprotIdsUniqueOnlyCanonical.concat(
+        for (const gene of uniprotAccsUniqueOnlyCanonical.concat(
           geneNamesUnique
         )) {
           if (
@@ -677,16 +680,14 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._addAnimation();
 
-    //TODO: Maybe move this after the timeout?
+    // TODO: Maybe move this after the timeout?
     this._addTooltips();
     this._addContextMenu();
 
     // Todo: Implement these - first figure out how to connect the "visible" property to the actual visibility
-    //Hmm maybe there is some initial event you are forgetting, and the rest actually happens in the dblclick handler
+    // Hmm maybe there is some initial event you are forgetting, and the rest actually happens in the dblclick handler
     // this._enableNodeSelection();
     this._enableNodeExpandAndCollapse();
-
-
 
     setTimeout(() => {
       if (this.d3Nodes) {
@@ -698,7 +699,7 @@ export class BiowcPathwaygraph extends LitElement {
           }
         }
       }
-      this._refreshGraph()
+      this._refreshGraph();
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
       // because 'visible' is set to false so they are not part of the graph)
       mainDiv
@@ -1273,126 +1274,138 @@ export class BiowcPathwaygraph extends LitElement {
     return simulation;
   }
 
-
   private _addTooltips() {
-    //Remove tooltip if present
+    // Remove tooltip if present
     // @ts-ignore
-    d3v6.select(this.shadowRoot).select('#nodetooltip').remove()
+    d3v6.select(this.shadowRoot).select('#nodetooltip').remove();
 
-    // @ts-ignore
-    const tooltip = d3v6.select(this.shadowRoot)
+    const tooltip = d3v6
+      // @ts-ignore
+      .select(this.shadowRoot)
       .select('#pathwayContainer')
       .append('div')
       .attr('class', 'tooltip')
       .attr('id', 'nodetooltip')
       .attr('is-dragging', 'false')
       // Hide the tooltip initially
-      .style('opacity', '0')
+      .style('opacity', '0');
 
-
-    const mouseenter = (e : MouseEvent, nodeOrLink : PathwayGraphNodeD3 | PathwayGraphLinkD3) => {
-      const classesOfTarget = (<HTMLElement>e.target)?.classList
+    const mouseenter = (
+      e: MouseEvent,
+      nodeOrLink: PathwayGraphNodeD3 | PathwayGraphLinkD3
+    ) => {
+      const classesOfTarget = (<HTMLElement>e.target)?.classList;
       if (tooltip.attr('is-dragging') === 'false') {
-        if(classesOfTarget.contains('link')){
-          const link = nodeOrLink as PathwayGraphLinkD3
+        if (classesOfTarget.contains('link')) {
+          const link = nodeOrLink as PathwayGraphLinkD3;
           tooltip.html(
-            //TODO: Display all types of the link
+            // TODO: Display all types of the link
             `${link.types[0][0].toUpperCase() + link.types[0].slice(1)} (${
               link.types[0]
             })`
-          )
-        }
-        else {
-          const node = nodeOrLink as PathwayGraphNodeD3
-          if(node.type === 'ptm'){
-            tooltip.html(this._getPTMTooltipText(node as PTMNodeD3))
+          );
+        } else {
+          const node = nodeOrLink as PathwayGraphNodeD3;
+          if (node.type === 'ptm') {
+            tooltip.html(
+              BiowcPathwaygraph._getPTMTooltipText(node as PTMNodeD3)
+            );
           } else if (node.type === 'gene_protein') {
-            tooltip.html(this._getGeneProteinTooltipText(node as GeneProteinNodeD3))
-          } else if (classesOfTarget.contains('summary')){
-                let regulationLabel
-                switch ((<PTMSummaryNodeD3>node).regulation) {
-                  case 'up': {
-                    regulationLabel = 'Upregulated'
-                    break
-                  }
-                  case 'down': {
-                    regulationLabel = 'Downregulated'
-                    break
-                  }
-                  case '-': {
-                    regulationLabel = 'Unregulated'
-                    break
-                  }
-                  default: {
-                    regulationLabel = ''
-                    break
-                  }
-                }
-                tooltip.html(
-                  `${(<PTMSummaryNodeD3>node).label} ${regulationLabel} ${
-                    +(<PTMSummaryNodeD3>node).label > 1 ? 'Peptides' : 'Peptide'
-                  }`
-                )
-             } else {
-              tooltip.html((<GeneProteinNodeD3>node).label || '')
+            tooltip.html(
+              BiowcPathwaygraph._getGeneProteinTooltipText(
+                node as GeneProteinNodeD3
+              )
+            );
+          } else if (classesOfTarget.contains('summary')) {
+            let regulationLabel;
+            switch ((<PTMSummaryNodeD3>node).regulation) {
+              case 'up': {
+                regulationLabel = 'Upregulated';
+                break;
+              }
+              case 'down': {
+                regulationLabel = 'Downregulated';
+                break;
+              }
+              case '-': {
+                regulationLabel = 'Unregulated';
+                break;
+              }
+              default: {
+                regulationLabel = '';
+                break;
+              }
             }
-            // PTMs are the only nodes that have no label and still get a tooltip
-            if (Object.hasOwn(node, 'label') || node.type === 'ptm') {
-              tooltip.transition().duration(0).style('opacity', '1')
-            }
+            tooltip.html(
+              `${(<PTMSummaryNodeD3>node).label} ${regulationLabel} ${
+                +(<PTMSummaryNodeD3>node).label > 1 ? 'Peptides' : 'Peptide'
+              }`
+            );
+          } else {
+            tooltip.html((<GeneProteinNodeD3>node).label || '');
+          }
+          // PTMs are the only nodes that have no label and still get a tooltip
+          if (Object.hasOwn(node, 'label') || node.type === 'ptm') {
+            tooltip.transition().duration(0).style('opacity', '1');
+          }
         }
       }
-    }
+    };
 
-    const mousemove = (e : MouseEvent) => {
+    const mousemove = (e: MouseEvent) => {
       tooltip
         // The offset is trial and error, I could not figure this out programmatically
-        .style('top', e.clientY+  'px')
-        .style('left', e.clientX+ 15 + 'px')
-    }
+        .style('top', `${e.clientY}px`)
+        .style('left', `${e.clientX + 15}px`);
+    };
 
     const mouseleave = () => {
-      tooltip.transition().duration(0).style('opacity', '0')
-    }
-
+      tooltip.transition().duration(0).style('opacity', '0');
+    };
 
     // // Apply this functionality to the nodes and links of the graph
-    this._getMainDiv().select('#nodeG')
+    this._getMainDiv()
+      .select('#nodeG')
       .selectAll<SVGElement, PathwayGraphNodeD3>('g')
       .on('mouseenter', mouseenter)
       .on('mousemove', mousemove)
-      .on('mouseleave', mouseleave)
+      .on('mouseleave', mouseleave);
 
-    this._getMainDiv().select('#linkG')
+    this._getMainDiv()
+      .select('#linkG')
       .selectAll<SVGElement, PathwayGraphLinkD3>('line')
-      .on('mouseenter', mouseenter)
+      .on('mouseenter', mouseenter);
 
-    this._getMainDiv().select('#linkG')
+    this._getMainDiv()
+      .select('#linkG')
       .selectAll<SVGElement, PathwayGraphLinkD3>('line')
       .on('mouseenter', mouseenter)
       .on('mousemove', mousemove)
-      .on('mouseleave', mouseleave)
-
+      .on('mouseleave', mouseleave);
   }
 
   private _addContextMenu() {
     // The context menu should be created when a node is right-clicked
-    const onrightclick = (rightClickEvent : MouseEvent, node : GeneProteinNodeD3 | PTMSummaryNodeD3) => {
+    const onrightclick = (
+      rightClickEvent: MouseEvent,
+      node: GeneProteinNodeD3 | PTMSummaryNodeD3
+    ) => {
       // Remove a possible previously existing context menu
 
       // @ts-ignore
-      d3v6.select(this.shadowRoot).selectAll('.contextMenu').remove()
+      d3v6.select(this.shadowRoot).selectAll('.contextMenu').remove();
       // Do not show the regular context menu of the browser
-      rightClickEvent.preventDefault()
+      rightClickEvent.preventDefault();
 
       // Hide the tooltip when the context menu is shown
-      this._getMainDiv().select('#nodetooltip').style('opacity', '0')
-      // @ts-ignore
-      const contextMenu = d3v6.select(this.shadowRoot)
+      this._getMainDiv().select('#nodetooltip').style('opacity', '0');
+      const contextMenu = d3v6
+        // @ts-ignore
+        .select(this.shadowRoot)
         .select('#pathwayContainer')
         .append('div')
         .attr('class', 'contextMenu')
-        .attr('id', 'nodeContextMenu')
+        .attr('id', 'nodeContextMenu');
 
       contextMenu
         .selectAll('.contextMenuEntry')
@@ -1405,41 +1418,44 @@ export class BiowcPathwaygraph extends LitElement {
         )
         .join('div')
         .attr('class', 'contextMenuEntry')
-        .style('cursor','pointer')
+        .style('cursor', 'pointer');
 
       contextMenu
         .style('top', `${rightClickEvent.clientY}px`)
-        .style('left', `${rightClickEvent.clientX + 15}px`)
+        .style('left', `${rightClickEvent.clientX + 15}px`);
 
-      const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry')
+      const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry');
 
-      contextMenuEntry.append('rect')
+      contextMenuEntry.append('rect');
 
-
-      contextMenuEntry.append('text').text(((entry) => entry) as ValueFn<SVGTextElement, unknown, string>)
+      contextMenuEntry
+        .append('text')
+        .text((entry => entry) as ValueFn<SVGTextElement, unknown, string>);
 
       contextMenuEntry.on('click', (contextMenuEntryClickEvent, d) => {
         // Set the text to the user's choice
-        //const parentNodeId = (<PathwayGraphNodeD3>rightClickEvent.target?.parentNode)
+        // const parentNodeId = (<PathwayGraphNodeD3>rightClickEvent.target?.parentNode)
 
-
-        this._getMainDiv().select(`#node-${node.nodeId}`)
+        this._getMainDiv()
+          .select(`#node-${node.nodeId}`)
           .select('.node-label')
           .text(<string>d);
-        //Yeah this was an interesting experiment but nah
+        // Yeah this was an interesting experiment but nah
         // this._getMainDiv().select(`#node-${node.nodeId}`)
         //   .attr('width', (this._getMainDiv().select(`#node-${node.nodeId}`)).getComputedTextLength() + NODE_HEIGHT)
         // @ts-ignore
-        d3v6.select(this.shadowRoot).select('#nodeContextMenu').remove()
-      })
-    }
+        d3v6.select(this.shadowRoot).select('#nodeContextMenu').remove();
+      });
+    };
 
     // Equip all nodes with the feature we just defined
     this._getMainDiv()
       .select('#nodeG')
-      .selectAll<SVGElement, GeneProteinNodeD3 | PTMSummaryNodeD3>('.gene_protein,.compound')
+      .selectAll<SVGElement, GeneProteinNodeD3 | PTMSummaryNodeD3>(
+        '.gene_protein,.compound'
+      )
       // .selectAll('g')
-      .on('contextmenu', onrightclick)
+      .on('contextmenu', onrightclick);
   }
 
   private static _calculateContextMenuOptions(
@@ -1902,12 +1918,126 @@ export class BiowcPathwaygraph extends LitElement {
       .call(zoom.scaleTo, d3v6.zoomTransform(this._getMainDiv().node()!).k);
   }
 
-  private _getPTMTooltipText(node: PTMNodeD3) {
-    return 'I am a PTM whoop whoop';
+  // Helper function for the two tooltip text functions
+  private static _createUniProtLink(accId: string) {
+    return accId.includes('-')
+      ? `https://www.uniprot.org/uniprot/${accId.split('-')[0]}#${accId}`
+      : `https://www.uniprot.org/uniprot/${accId}`;
   }
 
-  private _getGeneProteinTooltipText(node: GeneProteinNodeD3){
-    return 'I am Protein/Gene whoop'
+  // Another helper function for the two tooltip text functions
+  private static _formatTextIfValuePresent(
+    text: string,
+    value: any,
+    paddingLength: number
+  ) {
+    return value ? `${`${text}:`.padEnd(paddingLength) + value}<br>` : '';
+  }
+
+  // And a third one
+  // TODO: This needs specific keys in the details
+  // (e.g. summarize both modResidue and accessionId under a PhosphoSitePlus Key?)
+  private static _generatePSPLinks(modResidue: string, accessionId: string) {
+    if (!modResidue) return null;
+    const modResidueList = modResidue.split('|');
+    const accIdList = accessionId.split('|');
+    const resList: string[] = [];
+    for (let i = 0; i < modResidueList.length; i += 1) {
+      const linkString = `<a href='http://www.phosphosite.org/uniprotAccAction?id=${accIdList[i]}' target='_blank'>${modResidueList[i]}</a>`;
+      if (!resList.includes(linkString)) resList.push(linkString);
+    }
+    return resList.join(',');
+  }
+
+  private static _getPTMTooltipText(node: PTMNodeD3) {
+    let uniprotLinks: string = '';
+    if (node.uniprotAccs) {
+      uniprotLinks = node.uniprotAccs
+        .map(
+          id =>
+            `<a href=${BiowcPathwaygraph._createUniProtLink(
+              id
+            )} target="_blank">${id}</a>`
+        )
+        .join(',');
+    }
+    return `<pre style='text-align: left'>${
+      uniprotLinks.length > 0
+        ? `${BiowcPathwaygraph._formatTextIfValuePresent(
+            'Uniprot Acc(s)',
+            uniprotLinks,
+            19
+          )}<br>`
+        : ''
+    }${Object.entries(node.details!)
+      .map(([key, value]) =>
+        BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19)
+      )
+      .join('<br>')}</pre>`;
+  }
+
+  private static _getGeneProteinTooltipText(node: GeneProteinNodeD3) {
+    let uniprotLinks: string = '';
+    if (node.uniprotAccs) {
+      uniprotLinks = node.uniprotAccs
+        .map(
+          id =>
+            `<a href=${BiowcPathwaygraph._createUniProtLink(
+              id
+            )} target="_blank">${id}</a>`
+        )
+        .join(',');
+    }
+
+    const paddingLength =
+      (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? 25 : 15;
+    return `<pre style='text-align: left'>${BiowcPathwaygraph._formatTextIfValuePresent(
+      'Gene Name(s)',
+      node.geneNames ? node.geneNames.join(',') : node.label,
+      paddingLength
+    )}${
+      uniprotLinks
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Uniprot ID(s)',
+            uniprotLinks,
+            paddingLength
+          )
+        : ''
+    }${
+      (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
+    }${
+      node.nUp && node.nUp > 0
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Upregulated Curves',
+            node.nUp,
+            paddingLength
+          )
+        : ''
+    }${
+      node.nDown && node.nDown > 0
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Downregulated Curves',
+            node.nDown,
+            paddingLength
+          )
+        : ''
+    }${
+      node.nNot && node.nNot > 0
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Unregulated Curves',
+            node.nNot,
+            paddingLength
+          )
+        : ''
+    }${
+      node.details
+        ? Object.entries(node.details)
+            .map(([key, value]) =>
+              BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19)
+            )
+            .join('<br>')
+        : ''
+    }</pre>`;
   }
 
   private _enableNodeSelection() {
@@ -1920,7 +2050,7 @@ export class BiowcPathwaygraph extends LitElement {
         // Do not propagate event to canvas, because that would remove the highlighting
         e.stopPropagation();
         // Check if it is a doubleclick
-        this.recentClicks+=1;
+        this.recentClicks += 1;
         if (this.recentClicks === 1) {
           // Wait for a possible doubleclick using a timeout
           // If a doubleclick happens within DBL_CLICK_TIMEOUT milliseconds,
@@ -1929,11 +2059,12 @@ export class BiowcPathwaygraph extends LitElement {
             this.recentClicks = 0;
             // Unless the CTRL key is pressed, unselect everything first
             if (!e.ctrlKey) {
-              this._getMainDiv().select('#nodeG')
+              this._getMainDiv()
+                .select('#nodeG')
                 .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-                .each((d) => {
+                .each(d => {
                   /* eslint-disable no-param-reassign */
-                  (d.selected = false);
+                  d.selected = false;
                   /* eslint-enable no-param-reassign */
                 });
             }
@@ -1944,11 +2075,14 @@ export class BiowcPathwaygraph extends LitElement {
             node.selected = isSelected;
             /* eslint-enable no-param-reassign */
             this._getMainDiv()
-              .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink:not(.legend)')
-              .each((l) => {
+              .selectAll<SVGLineElement, PathwayGraphLinkD3>(
+                '.ptmlink:not(.legend)'
+              )
+              .each(l => {
                 /* eslint-disable no-param-reassign */
                 // If clicked node is a protein, select all its PTM nodes
-                if (l.target === node) (<PTMNodeD3>l.source).selected = isSelected;
+                if (l.target === node)
+                  (<PTMNodeD3>l.source).selected = isSelected;
                 // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
                 // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
                 if (l.source === node && isSelected) {
@@ -1958,9 +2092,9 @@ export class BiowcPathwaygraph extends LitElement {
               });
             // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
             if (node.type.includes('summary')) {
-              (<PTMSummaryNodeD3>node).ptmNodes!.forEach((d) => {
+              (<PTMSummaryNodeD3>node).ptmNodes!.forEach(d => {
                 /* eslint-disable no-param-reassign */
-                (d.selected = isSelected);
+                d.selected = isSelected;
                 /* eslint-enable no-param-reassign */
               });
             }
@@ -1974,296 +2108,315 @@ export class BiowcPathwaygraph extends LitElement {
               !node.type.includes('summary') &&
               !e.ctrlKey
             ) {
-              this.dispatchEvent(new CustomEvent('nodeDetails', {
-               bubbles: true,
-               cancelable: true,
-               detail: this._getPTMTooltipText(node as PTMNodeD3)
-              }))
-            }else if (node.type.includes('gene_protein') && !e.ctrlKey){
-              this.dispatchEvent(new CustomEvent('nodeDetails', {
-                bubbles: true,
-                cancelable: true,
-                detail: this._getGeneProteinTooltipText(node as GeneProteinNodeD3)
-              }))
-            }else{
-              this.dispatchEvent(new CustomEvent('nodeDetails', {
-                bubbles: true,
-                cancelable: true,
-                detail: undefined //TODO: Maybe empty string or empty html instead
-              }))
+              this.dispatchEvent(
+                new CustomEvent('nodeDetails', {
+                  bubbles: true,
+                  cancelable: true,
+                  detail: BiowcPathwaygraph._getPTMTooltipText(
+                    node as PTMNodeD3
+                  ),
+                })
+              );
+            } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
+              this.dispatchEvent(
+                new CustomEvent('nodeDetails', {
+                  bubbles: true,
+                  cancelable: true,
+                  detail: BiowcPathwaygraph._getGeneProteinTooltipText(
+                    node as GeneProteinNodeD3
+                  ),
+                })
+              );
+            } else {
+              this.dispatchEvent(
+                new CustomEvent('nodeDetails', {
+                  bubbles: true,
+                  cancelable: true,
+                  detail: undefined, // TODO: Maybe empty string or empty html instead
+                })
+              );
             }
 
             // If the node is a group, select all its members
             if (node.type === 'group') {
-              (<GroupNodeD3>node).componentNodes.forEach((comp) => {
+              (<GroupNodeD3>node).componentNodes.forEach(comp => {
                 /* eslint-disable no-param-reassign */
-                comp.selected = isSelected
+                comp.selected = isSelected;
                 /* eslint-enable no-param-reassign */
-
-              })
+              });
             }
 
-            this._onSelectedNodesChanged()
+            this._onSelectedNodesChanged();
           }, DBL_CLICK_TIMEOUT);
         } else {
           // If it is a doubleclick, the above code wrapped in the timeout should not be executed
           clearTimeout(dblClickTimer);
           this.recentClicks = 0;
         }
-
       });
 
     // Handle click on canvas
     this._getMainDiv().on('click', () => {
-      // Remove a possible context menu
-      // @ts-ignore
-      const maybeContextMenu = d3v6.select(this.shadowRoot).selectAll('.contextMenu')
+      const maybeContextMenu = d3v6
+        // Remove a possible context menu
+        // @ts-ignore
+        .select(this.shadowRoot)
+        .selectAll('.contextMenu');
 
       if (maybeContextMenu.size() > 0) {
         // Don't do anything else in that case
-        maybeContextMenu.remove()
+        maybeContextMenu.remove();
       } else {
         // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
         this._getMainDiv()
           .select('#nodeG')
           .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-          .each((d) => {
+          .each(d => {
             /* eslint-disable no-param-reassign */
-            (d.selected = true);
+            d.selected = true;
             /* eslint-enable no-param-reassign */
+          });
 
+        // If there's a parent listening for details, tell it to clear that
+        this.dispatchEvent(
+          new CustomEvent('nodeDetails', {
+            bubbles: true,
+            cancelable: true,
+            detail: undefined, // TODO: Maybe empty string or empty html instead
           })
+        );
 
-        //If there's a parent listening for details, tell it to clear that
-        this.dispatchEvent(new CustomEvent('nodeDetails', {
-          bubbles: true,
-          cancelable: true,
-          detail: undefined //TODO: Maybe empty string or empty html instead
-        }))
-
-        this._onSelectedNodesChanged()
+        this._onSelectedNodesChanged();
       }
-    })
+    });
   }
 
   private _onSelectedNodesChanged() {
-    this._highlightSelectedNodes()
-    this._sendSelectionDetailsToParent()
-    this._updateNUnselected()
+    this._highlightSelectedNodes();
+    this._sendSelectionDetailsToParent();
+    this._updateNUnselected();
   }
 
   private _enableNodeExpandAndCollapse() {
-
-    //Dblclick on summary nodes should expand them into their individual ptm nodes
+    // Dblclick on summary nodes should expand them into their individual ptm nodes
     this._getMainDiv()
       .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
       .on('dblclick', (e, d) => {
         // If recentClicks has not been reset, a single click event has already been fired. Abort in that case.
         if (this.recentClicks === 0) {
           /* eslint-disable no-param-reassign */
-            e.stopPropagation() // Prevent zooming on doubleclick
-            // Show all individual PTM Nodes of this summary node
-            d.ptmNodes!.forEach((ptmnode) => {
-
-              ptmnode.visible = true
-
-            })
-            // Hide the summary node
-            d.visible = false
-            this._refreshGraph()
+          e.stopPropagation(); // Prevent zooming on doubleclick
+          // Show all individual PTM Nodes of this summary node
+          d.ptmNodes!.forEach(ptmnode => {
+            ptmnode.visible = true;
+          });
+          // Hide the summary node
+          d.visible = false;
+          this._refreshGraph();
           /* eslint-enable no-param-reassign */
-          }
+        }
       });
 
-    //Dblclick on ptm nodes should collapse them into their summary node
+    // Dblclick on ptm nodes should collapse them into their summary node
     this._getMainDiv()
       .selectAll<SVGGElement, PTMNodeD3>('g.ptm:not(.summary):not(.legend)')
-      .on('dblclick', (e, d : PTMNodeD3) => {
+      .on('dblclick', (e, d: PTMNodeD3) => {
         /* eslint-disable no-param-reassign */
         if (this.recentClicks === 0) {
-          e.stopPropagation() // Prevent zooming on doubleclick
+          e.stopPropagation(); // Prevent zooming on doubleclick
           // Show the summary node of this PTM node
-          d.summaryNode!.visible = true
+          d.summaryNode!.visible = true;
           // Hide all sibling PTM nodes (all PTM nodes of the summary node)
-          d.summaryNode!.ptmNodes!.forEach((ptmnode) => {
-            ptmnode.visible = false
-          })
-          this._refreshGraph()
+          d.summaryNode!.ptmNodes!.forEach(ptmnode => {
+            ptmnode.visible = false;
+          });
+          this._refreshGraph();
         }
         /* eslint-enable no-param-reassign */
       });
-
   }
 
   private _refreshGraph() {
-    //TODO: This is where the group nodes are duplicated. The idea here is that the graph is only updated
-    //So nodes that already exist are just left be. This works already for all but the group nodes.
-    this._drawGraph()
-    this._addAnimation()
-    this._addTooltips()
-    this._addContextMenu()
-    this._enableNodeSelection()
-    this._enableNodeExpandAndCollapse()
+    // TODO: This is where the group nodes are duplicated. The idea here is that the graph is only updated
+    // So nodes that already exist are just left be. This works already for all but the group nodes.
+    this._drawGraph();
+    this._addAnimation();
+    this._addTooltips();
+    this._addContextMenu();
+    this._enableNodeSelection();
+    this._enableNodeExpandAndCollapse();
   }
 
   private _highlightSelectedNodes() {
     // What we actually do is 'un-highlight' the NOT selected nodes by reducing their opacity
-    const opacityOfUnselected = 0.125
-    const opacityOfUnselectedPTM = 0.25
+    const opacityOfUnselected = 0.125;
+    const opacityOfUnselectedPTM = 0.25;
     // Set opacity of all nodes which are selected to 1
     this._getMainDiv()
       .select('#nodeG')
       .selectAll<SVGGElement, PathwayGraphNodeD3>('g:not(.ptm)')
-      .filter((node) => node.selected!)
-      .style('opacity', 1)
+      .filter(node => node.selected!)
+      .style('opacity', 1);
 
     // Reduce opacity of all nodes which are not selected (or hide them completely if they are PTM nodes)
     this._getMainDiv()
       .select('#nodeG')
       .selectAll<SVGGElement, PathwayGraphNodeD3>('g:not(.ptm)')
-      .filter((node) => !node.selected)
-      .style('opacity', opacityOfUnselected)
+      .filter(node => !node.selected)
+      .style('opacity', opacityOfUnselected);
 
     // For the links, set the opacity to 1 only if both source and target are selected
     // ...accounting for the possibility that source and target might be links
-    //Define a helper function to figure out if a link is selected
-    function isLinkSelected(link : PathwayGraphLinkD3) {
+    // Define a helper function to figure out if a link is selected
+    function isLinkSelected(link: PathwayGraphLinkD3) {
       return <boolean>(
-        ((Object.hasOwn(link.source, 'selected') && (<PathwayGraphNodeD3>link.source).selected) ||
+        (((Object.hasOwn(link.source, 'selected') &&
+          (<PathwayGraphNodeD3>link.source).selected) ||
           (link.sourceIsAnchor &&
-            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).source).selected &&
-            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).target).selected)) &&
-        ((Object.hasOwn(link.target, 'selected') && (<PathwayGraphNodeD3>link.target).selected) ||
-          (link.targetIsAnchor &&
-            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).source).selected &&
-            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).target).selected))
-      )
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).source)
+              .selected &&
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).target)
+              .selected)) &&
+          ((Object.hasOwn(link.target, 'selected') &&
+            (<PathwayGraphNodeD3>link.target).selected) ||
+            (link.targetIsAnchor &&
+              (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).source)
+                .selected &&
+              (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).target)
+                .selected)))
+      );
     }
 
-    //Use the above function to filter links and link labels
+    // Use the above function to filter links and link labels
     this._getMainDiv()
       .select('#linkG')
       .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
-      .filter((link) => isLinkSelected(link))
-      .style('opacity', 1)
+      .filter(link => isLinkSelected(link))
+      .style('opacity', 1);
 
     this._getMainDiv()
       .select('#linkG')
       .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
-      .filter((link) => !isLinkSelected(link))
-      .style('opacity', opacityOfUnselected)
+      .filter(link => !isLinkSelected(link))
+      .style('opacity', opacityOfUnselected);
 
     this._getMainDiv()
       .selectAll<SVGTextElement, PathwayGraphLinkD3>('.edgelabel:not(.legend)')
-      .filter((link) => isLinkSelected(link))
-      .style('opacity', 1)
+      .filter(link => isLinkSelected(link))
+      .style('opacity', 1);
 
     this._getMainDiv()
       .selectAll<SVGTextElement, PathwayGraphLinkD3>('.edgelabel:not(.legend)')
-      .filter((link) => !isLinkSelected(link))
+      .filter(link => !isLinkSelected(link))
       .style('opacity', opacityOfUnselected);
 
     // PTM nodes might not yet have a 'selected' property - in that case, initialize them with that of their parent
-    //Then apply opacity
+    // Then apply opacity
     /* eslint-disable no-param-reassign */
     this._getMainDiv()
-      .selectAll<SVGGElement, PTMNodeD3|PTMSummaryNodeD3>('.ptm:not(.legend)')
-      .filter((ptmNode) => {
+      .selectAll<SVGGElement, PTMNodeD3 | PTMSummaryNodeD3>('.ptm:not(.legend)')
+      .filter(ptmNode => {
         if (typeof ptmNode.selected === 'undefined') {
-          ptmNode.selected = ptmNode.geneProteinNode!.selected!
+          ptmNode.selected = ptmNode.geneProteinNode!.selected!;
         }
-        return ptmNode.selected
+        return ptmNode.selected;
       })
       .style('opacity', 1);
 
     this._getMainDiv()
-      .selectAll<SVGGElement, PTMNodeD3|PTMSummaryNodeD3>('.ptm:not(.legend)')
-      .filter((ptmNode) => {
+      .selectAll<SVGGElement, PTMNodeD3 | PTMSummaryNodeD3>('.ptm:not(.legend)')
+      .filter(ptmNode => {
         if (typeof ptmNode.selected === 'undefined') {
-          ptmNode.selected = ptmNode.geneProteinNode!.selected!
+          ptmNode.selected = ptmNode.geneProteinNode!.selected!;
         }
-        return !ptmNode.selected
+        return !ptmNode.selected;
       })
-      .style('opacity', opacityOfUnselectedPTM)
+      .style('opacity', opacityOfUnselectedPTM);
     /* eslint-enable no-param-reassign */
-
   }
 
   private _sendSelectionDetailsToParent() {
     const selectedNodes = this.d3Nodes!.filter(
       // A PTM node counts as selected if either itself is visible and selected, or its summary node is.
-      (node) => {
-        if (node.type === 'ptm'){
-          const ptmNode = node as PTMNodeD3
-          return(
+      node => {
+        if (node.type === 'ptm') {
+          const ptmNode = node as PTMNodeD3;
+          return (
             (ptmNode.visible && ptmNode.selected) ||
-            (ptmNode.summaryNode && ptmNode.summaryNode.visible && ptmNode.summaryNode.selected)
-          )
-        } else if (node.type === 'gene_protein'){
-          return node.selected
-        } else {
-          return false
+            (ptmNode.summaryNode &&
+              ptmNode.summaryNode.visible &&
+              ptmNode.summaryNode.selected)
+          );
         }
+        if (node.type === 'gene_protein') {
+          return node.selected;
+        }
+        return false;
       }
-    )
-    this.dispatchEvent(new CustomEvent('selectionDetails', {
-      bubbles: true,
-      cancelable: true,
-      detail: selectedNodes
-        .filter(node => Object.hasOwn(node, 'details'))
-        .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!)
-    }))
+    );
+    this.dispatchEvent(
+      new CustomEvent('selectionDetails', {
+        bubbles: true,
+        cancelable: true,
+        detail: selectedNodes
+          .filter(node => Object.hasOwn(node, 'details'))
+          .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!),
+      })
+    );
   }
 
   private _updateNUnselected() {
     this.numberOfUnselectedNodes = this._getMainDiv()
       .select('#nodeG')
       .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-      .filter((d) => !d.selected)
-      .size()
+      .filter(d => !d.selected)
+      .size();
   }
 
-  //Todo: Document to user that this exists, as well as the events a parent could listen to
-  public selectDownstreamNodes(nodeId: string){
-    const nodesWithThatId = this.d3Nodes!.filter(d => d.nodeId === nodeId)
-    if (nodesWithThatId.length !== 1){
-      //If it is 0, there is nothing to do.
+  // Todo: Document to user that this exists, as well as the events a parent could listen to
+  public selectDownstreamNodes(nodeId: string) {
+    const nodesWithThatId = this.d3Nodes!.filter(d => d.nodeId === nodeId);
+    if (nodesWithThatId.length !== 1) {
+      // If it is 0, there is nothing to do.
       // If it is >=2, we have duplicates in our nodeIds, which should never happen
-      return
+      return;
     }
-    const node = nodesWithThatId[0]
-    this._selectDownstreamNodesWorker(node)
+    const node = nodesWithThatId[0];
+    this._selectDownstreamNodesWorker(node);
   }
 
-
-  //Helper that recursively select all nodes downstream of a node
-  private _selectDownstreamNodesWorker(node: PathwayGraphNodeD3){
+  // Helper that recursively select all nodes downstream of a node
+  private _selectDownstreamNodesWorker(node: PathwayGraphNodeD3) {
     /* eslint-disable no-param-reassign */
     // Select the node itself
-    node.selected = true
+    node.selected = true;
     // Select all PTM nodes attached to this node
     // (the node would be the target of the respective PTM link)
-   this._getMainDiv()
+    this._getMainDiv()
       .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink:not(.legend)')
-      .each((l : PathwayGraphLinkD3) => {
-        if (l.target === node) (<PathwayGraphNodeD3>l.source).selected = true
-      })
+      .each((l: PathwayGraphLinkD3) => {
+        if (l.target === node) (<PathwayGraphNodeD3>l.source).selected = true;
+      });
 
     // If the node is a group, select all its members
     if (node.type === 'group') {
-      (<GroupNodeD3>node).componentNodes.forEach((d) => {
-        d.selected = true
-      })
+      (<GroupNodeD3>node).componentNodes.forEach(d => {
+        d.selected = true;
+      });
     }
 
     // Iterate over links and recurse on all target nodes of this node that have not yet been selected
     // The second criterion prevents endless recursion on circular paths
-    this._getMainDiv().select('#linkG')
+    this._getMainDiv()
+      .select('#linkG')
       .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
-      .each((l) => {
+      .each(l => {
         if (l.source === node && !(<PathwayGraphNodeD3>l.target).selected) {
-          if (l.targetIsAnchor) this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.target).source)
-          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.target)
+          if (l.targetIsAnchor)
+            this._selectDownstreamNodesWorker(
+              <PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.target).source
+            );
+          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.target);
         } else if (
           // In the case of binding/association relations, we treat the edge as undirected,
           // i.e. the node could also be the target
@@ -2271,17 +2424,22 @@ export class BiowcPathwaygraph extends LitElement {
           l.target === node &&
           !(<PathwayGraphNodeD3>l.source).selected
         ) {
-          if (l.sourceIsAnchor) this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.source).source)
-          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.source)
+          if (l.sourceIsAnchor)
+            this._selectDownstreamNodesWorker(
+              <PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.source).source
+            );
+          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.source);
         }
-      })
+      });
 
     // After selecting downstream nodes, multiple PTMs are selected so the infobox needs to be disabled
-    this.dispatchEvent(new CustomEvent('nodeDetails', {
-      bubbles: true,
-      cancelable: true,
-      detail: undefined //TODO: Maybe empty string or empty html instead
-    }))
+    this.dispatchEvent(
+      new CustomEvent('nodeDetails', {
+        bubbles: true,
+        cancelable: true,
+        detail: undefined, // TODO: Maybe empty string or empty html instead
+      })
+    );
     /* eslint-enable no-param-reassign */
   }
 }
