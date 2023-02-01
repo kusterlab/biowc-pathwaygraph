@@ -16,7 +16,7 @@ type PossibleRegulationCategoriesType = 'up' | 'down' | '-';
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
-const RECENT_CLICK = false;
+const DBL_CLICK_TIMEOUT = 200;
 
 interface PathwayMetadata {
   identifier: string; // TODO: Refactor from 'id' - set if it is not set by user
@@ -173,6 +173,13 @@ export class BiowcPathwaygraph extends LitElement {
   d3Nodes?: PathwayGraphNodeD3[];
 
   d3Links?: PathwayGraphLinkD3[];
+
+  //Can be 0, 1 or 2, to distinguish single- from double-click events
+  recentClicks = 0;
+
+  //TODO: Install a watcher that throws an event if this reaches zero
+  //TODO: ...first check if this actually is still needed anywhere, could be legacy
+  numberOfUnselectedNodes = 0
 
   render() {
     // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time. - should be possible to update the DOM on resize though - who needs Vue watchers?
@@ -1904,7 +1911,145 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _enableNodeSelection() {
+    let dblClickTimer: NodeJS.Timeout;
 
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+      .on('click', (e, node) => {
+        // Do not propagate event to canvas, because that would remove the highlighting
+        e.stopPropagation();
+        // Check if it is a doubleclick
+        this.recentClicks+=1;
+        if (this.recentClicks === 1) {
+          // Wait for a possible doubleclick using a timeout
+          // If a doubleclick happens within DBL_CLICK_TIMEOUT milliseconds,
+          // the event is canceled using clearTimeout below
+          dblClickTimer = setTimeout(() => {
+            this.recentClicks = 0;
+            // Unless the CTRL key is pressed, unselect everything first
+            if (!e.ctrlKey) {
+              this._getMainDiv().select('#nodeG')
+                .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+                .each((d) => {
+                  /* eslint-disable no-param-reassign */
+                  (d.selected = false);
+                  /* eslint-enable no-param-reassign */
+                });
+            }
+            // CTRL + Click on a selected node deselects the node, otherwise the node becomes selected
+            const isSelected = !(e.ctrlKey && node.selected);
+            // Apply this new value to the node itself and all attached ptm nodes
+            /* eslint-disable no-param-reassign */
+            node.selected = isSelected;
+            /* eslint-enable no-param-reassign */
+            this._getMainDiv()
+              .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink:not(.legend)')
+              .each((l) => {
+                /* eslint-disable no-param-reassign */
+                // If clicked node is a protein, select all its PTM nodes
+                if (l.target === node) (<PTMNodeD3>l.source).selected = isSelected;
+                // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
+                // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
+                if (l.source === node && isSelected) {
+                  (<GeneProteinNodeD3>l.target).selected = true;
+                }
+                /* eslint-enable no-param-reassign */
+              });
+            // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
+            if (node.type.includes('summary')) {
+              (<PTMSummaryNodeD3>node).ptmNodes!.forEach((d) => {
+                /* eslint-disable no-param-reassign */
+                (d.selected = isSelected);
+                /* eslint-enable no-param-reassign */
+              });
+            }
+
+            // If the node is either a Gene/Protein node or a  (non-summary) PTM node
+            // and it's a non-CTRL selection event,
+            // throw an event to display the tooltip information permanently in the parent
+            // TODO: Can we declare this event somewhere before so people know they can use it?
+            if (
+              node.type.includes('ptm') &&
+              !node.type.includes('summary') &&
+              !e.ctrlKey
+            ) {
+              this.dispatchEvent(new CustomEvent('nodeDetails', {
+               bubbles: true,
+               cancelable: true,
+               detail: this._getPTMTooltipText(node as PTMNodeD3)
+              }))
+            }else if (node.type.includes('gene_protein') && !e.ctrlKey){
+              this.dispatchEvent(new CustomEvent('nodeDetails', {
+                bubbles: true,
+                cancelable: true,
+                detail: this._getGeneProteinTooltipText(node as GeneProteinNodeD3)
+              }))
+            }else{
+              this.dispatchEvent(new CustomEvent('nodeDetails', {
+                bubbles: true,
+                cancelable: true,
+                detail: undefined //TODO: Maybe empty string or empty html instead
+              }))
+            }
+
+            // If the node is a group, select all its members
+            if (node.type === 'group') {
+              (<GroupNodeD3>node).componentNodes.forEach((comp) => {
+                /* eslint-disable no-param-reassign */
+                comp.selected = isSelected
+                /* eslint-enable no-param-reassign */
+
+              })
+            }
+
+            this._onSelectedNodesChanged()
+          }, DBL_CLICK_TIMEOUT);
+        } else {
+          // If it is a doubleclick, the above code wrapped in the timeout should not be executed
+          clearTimeout(dblClickTimer);
+          this.recentClicks = 0;
+        }
+
+      });
+
+    // Handle click on canvas
+    this._getMainDiv().on('click', () => {
+      // Remove a possible context menu
+      // @ts-ignore
+      const maybeContextMenu = d3v6.select(this.shadowRoot).selectAll('.contextMenu')
+
+      if (maybeContextMenu.size() > 0) {
+        // Don't do anything else in that case
+        maybeContextMenu.remove()
+      } else {
+        // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
+        this._getMainDiv()
+          .select('#nodeG')
+          .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+          .each((d) => {
+            /* eslint-disable no-param-reassign */
+            (d.selected = true);
+            /* eslint-enable no-param-reassign */
+
+          })
+
+        //If there's a parent listening for details, tell it to clear that
+        this.dispatchEvent(new CustomEvent('nodeDetails', {
+          bubbles: true,
+          cancelable: true,
+          detail: undefined //TODO: Maybe empty string or empty html instead
+        }))
+
+        this._onSelectedNodesChanged()
+      }
+    })
+  }
+
+  private _onSelectedNodesChanged() {
+    this._highlightSelectedNodes()
+    this._sendSelectionDetailsToParent()
+    this._updateNUnselected()
   }
 
   private _enableNodeExpandAndCollapse() {
@@ -1913,19 +2058,21 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv()
       .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
       .on('dblclick', (e, d) => {
-        /* eslint-disable no-param-reassign */
         // If recentClicks has not been reset, a single click event has already been fired. Abort in that case.
-        if (!RECENT_CLICK) {
+        if (this.recentClicks === 0) {
+          /* eslint-disable no-param-reassign */
             e.stopPropagation() // Prevent zooming on doubleclick
             // Show all individual PTM Nodes of this summary node
             d.ptmNodes!.forEach((ptmnode) => {
+
               ptmnode.visible = true
+
             })
             // Hide the summary node
             d.visible = false
             this._refreshGraph()
+          /* eslint-enable no-param-reassign */
           }
-        /* eslint-enable no-param-reassign */
       });
 
     //Dblclick on ptm nodes should collapse them into their summary node
@@ -1933,7 +2080,7 @@ export class BiowcPathwaygraph extends LitElement {
       .selectAll<SVGGElement, PTMNodeD3>('g.ptm:not(.summary):not(.legend)')
       .on('dblclick', (e, d : PTMNodeD3) => {
         /* eslint-disable no-param-reassign */
-        if (!RECENT_CLICK) {
+        if (this.recentClicks === 0) {
           e.stopPropagation() // Prevent zooming on doubleclick
           // Show the summary node of this PTM node
           d.summaryNode!.visible = true
@@ -1957,5 +2104,122 @@ export class BiowcPathwaygraph extends LitElement {
     this._addContextMenu()
     this._enableNodeSelection()
     this._enableNodeExpandAndCollapse()
+  }
+
+  private _highlightSelectedNodes() {
+    // What we actually do is 'un-highlight' the NOT selected nodes by reducing their opacity
+    const opacityOfUnselected = 0.125
+    const opacityOfUnselectedPTM = 0.25
+    // Set opacity of all nodes which are selected to 1
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g:not(.ptm)')
+      .filter((node) => node.selected!)
+      .style('opacity', 1)
+
+    // Reduce opacity of all nodes which are not selected (or hide them completely if they are PTM nodes)
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g:not(.ptm)')
+      .filter((node) => !node.selected)
+      .style('opacity', opacityOfUnselected)
+
+    // For the links, set the opacity to 1 only if both source and target are selected
+    // ...accounting for the possibility that source and target might be links
+    //Define a helper function to figure out if a link is selected
+    function isLinkSelected(link : PathwayGraphLinkD3) {
+      return <boolean>(
+        ((Object.hasOwn(link.source, 'selected') && (<PathwayGraphNodeD3>link.source).selected) ||
+          (link.sourceIsAnchor &&
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).source).selected &&
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.source).target).selected)) &&
+        ((Object.hasOwn(link.target, 'selected') && (<PathwayGraphNodeD3>link.target).selected) ||
+          (link.targetIsAnchor &&
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).source).selected &&
+            (<PathwayGraphNodeD3>(<PathwayGraphLinkD3>link.target).target).selected))
+      )
+    }
+
+    //Use the above function to filter links and link labels
+    this._getMainDiv()
+      .select('#linkG')
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
+      .filter((link) => isLinkSelected(link))
+      .style('opacity', 1)
+
+    this._getMainDiv()
+      .select('#linkG')
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
+      .filter((link) => !isLinkSelected(link))
+      .style('opacity', opacityOfUnselected)
+
+    this._getMainDiv()
+      .selectAll<SVGTextElement, PathwayGraphLinkD3>('.edgelabel:not(.legend)')
+      .filter((link) => isLinkSelected(link))
+      .style('opacity', 1)
+
+    this._getMainDiv()
+      .selectAll<SVGTextElement, PathwayGraphLinkD3>('.edgelabel:not(.legend)')
+      .filter((link) => !isLinkSelected(link))
+      .style('opacity', opacityOfUnselected);
+
+    // PTM nodes might not yet have a 'selected' property - in that case, initialize them with that of their parent
+    //Then apply opacity
+    /* eslint-disable no-param-reassign */
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMNodeD3|PTMSummaryNodeD3>('.ptm:not(.legend)')
+      .filter((ptmNode) => {
+        if (typeof ptmNode.selected === 'undefined') {
+          ptmNode.selected = ptmNode.geneProteinNode!.selected!
+        }
+        return ptmNode.selected
+      })
+      .style('opacity', 1);
+
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMNodeD3|PTMSummaryNodeD3>('.ptm:not(.legend)')
+      .filter((ptmNode) => {
+        if (typeof ptmNode.selected === 'undefined') {
+          ptmNode.selected = ptmNode.geneProteinNode!.selected!
+        }
+        return !ptmNode.selected
+      })
+      .style('opacity', opacityOfUnselectedPTM)
+    /* eslint-enable no-param-reassign */
+
+  }
+
+  private _sendSelectionDetailsToParent() {
+    const selectedNodes = this.d3Nodes!.filter(
+      // A PTM node counts as selected if either itself is visible and selected, or its summary node is.
+      (node) => {
+        if (node.type === 'ptm'){
+          const ptmNode = node as PTMNodeD3
+          return(
+            (ptmNode.visible && ptmNode.selected) ||
+            (ptmNode.summaryNode && ptmNode.summaryNode.visible && ptmNode.summaryNode.selected)
+          )
+        } else if (node.type === 'gene_protein'){
+          return node.selected
+        } else {
+          return false
+        }
+      }
+    )
+    this.dispatchEvent(new CustomEvent('selectionDetails', {
+      bubbles: true,
+      cancelable: true,
+      detail: selectedNodes
+        .filter(node => Object.hasOwn(node, 'details'))
+        .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!)
+    }))
+  }
+
+  private _updateNUnselected() {
+    this.numberOfUnselectedNodes = this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+      .filter((d) => !d.selected)
+      .size()
   }
 }
