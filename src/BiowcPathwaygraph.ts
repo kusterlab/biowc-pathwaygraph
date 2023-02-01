@@ -16,6 +16,7 @@ type PossibleRegulationCategoriesType = 'up' | 'down' | '-';
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
+const RECENT_CLICK = false;
 
 interface PathwayMetadata {
   identifier: string; // TODO: Refactor from 'id' - set if it is not set by user
@@ -673,6 +674,12 @@ export class BiowcPathwaygraph extends LitElement {
     this._addTooltips();
     this._addContextMenu();
 
+    // Todo: Implement these - first figure out how to connect the "visible" property to the actual visibility
+    //Hmm maybe there is some initial event you are forgetting, and the rest actually happens in the dblclick handler
+    // this._enableNodeSelection();
+    this._enableNodeExpandAndCollapse();
+
+
 
     setTimeout(() => {
       if (this.d3Nodes) {
@@ -684,7 +691,7 @@ export class BiowcPathwaygraph extends LitElement {
           }
         }
       }
-      // this.refreshGraph() //TODO: Implement
+      this._refreshGraph()
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
       // because 'visible' is set to false so they are not part of the graph)
       mainDiv
@@ -1261,8 +1268,9 @@ export class BiowcPathwaygraph extends LitElement {
 
 
   private _addTooltips() {
-    //Remove tooltip if present TODO: Still necessary?
-    // this._getMainDiv().select('#nodetooltip').remove()
+    //Remove tooltip if present
+    // @ts-ignore
+    d3v6.select(this.shadowRoot).select('#nodetooltip').remove()
 
     // @ts-ignore
     const tooltip = d3v6.select(this.shadowRoot)
@@ -1893,5 +1901,61 @@ export class BiowcPathwaygraph extends LitElement {
 
   private _getGeneProteinTooltipText(node: GeneProteinNodeD3){
     return 'I am Protein/Gene whoop'
+  }
+
+  private _enableNodeSelection() {
+
+  }
+
+  private _enableNodeExpandAndCollapse() {
+
+    //Dblclick on summary nodes should expand them into their individual ptm nodes
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
+      .on('dblclick', (e, d) => {
+        /* eslint-disable no-param-reassign */
+        // If recentClicks has not been reset, a single click event has already been fired. Abort in that case.
+        if (!RECENT_CLICK) {
+            e.stopPropagation() // Prevent zooming on doubleclick
+            // Show all individual PTM Nodes of this summary node
+            d.ptmNodes!.forEach((ptmnode) => {
+              ptmnode.visible = true
+            })
+            // Hide the summary node
+            d.visible = false
+            this._refreshGraph()
+          }
+        /* eslint-enable no-param-reassign */
+      });
+
+    //Dblclick on ptm nodes should collapse them into their summary node
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMNodeD3>('g.ptm:not(.summary):not(.legend)')
+      .on('dblclick', (e, d : PTMNodeD3) => {
+        /* eslint-disable no-param-reassign */
+        if (!RECENT_CLICK) {
+          e.stopPropagation() // Prevent zooming on doubleclick
+          // Show the summary node of this PTM node
+          d.summaryNode!.visible = true
+          // Hide all sibling PTM nodes (all PTM nodes of the summary node)
+          d.summaryNode!.ptmNodes!.forEach((ptmnode) => {
+            ptmnode.visible = false
+          })
+          this._refreshGraph()
+        }
+        /* eslint-enable no-param-reassign */
+      });
+
+  }
+
+  private _refreshGraph() {
+    //TODO: This is where the group nodes are duplicated. The idea here is that the graph is only updated
+    //So nodes that already exist are just left be. This works already for all but the group nodes.
+    this._drawGraph()
+    this._addAnimation()
+    this._addTooltips()
+    this._addContextMenu()
+    this._enableNodeSelection()
+    this._enableNodeExpandAndCollapse()
   }
 }
