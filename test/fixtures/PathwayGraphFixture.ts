@@ -28,7 +28,7 @@ export default {
         nodeId: '3',
         geneNames: ['Protein C'],
         uniprotAccs: ['P12345'],
-        label: 'C',
+        label: 'C;ProtC',
         type: 'gene_protein',
         x: -10,
         y: 150,
@@ -124,7 +124,17 @@ export default {
       },
       {
         uniprotAccs: ['P12345'],
-        regulation: '-',
+        regulation: 'not',
+        details: {},
+      },
+      {
+        geneNames: ['Protein E'],
+        regulation: 'down',
+        details: {},
+      },
+      {
+        geneNames: ['Protein E'],
+        regulation: 'up',
         details: {},
       },
     ],

@@ -65,7 +65,7 @@ export default css`
     fill: var(--upregulated-color);
   }
 
-  .node-rect.ptm.unregulated {
+  .node-rect.ptm.not {
     fill: var(--unregulated-color);
   }
 
@@ -77,7 +77,7 @@ export default css`
     fill: var(--upregulated-color);
   }
 
-  .node-rect.gene_protein.unregulated {
+  .node-rect.gene_protein.not {
     fill: var(--unregulated-color);
   }
 

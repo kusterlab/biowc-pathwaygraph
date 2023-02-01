@@ -12,7 +12,7 @@ import {
 } from 'd3';
 import styles from './biowc-pathwaygraph.css';
 
-type PossibleRegulationCategoriesType = 'up' | 'down' | '-';
+type PossibleRegulationCategoriesType = 'up' | 'down' | 'not';
 
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
@@ -279,16 +279,11 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Map PTM Input to Skeleton Nodes
     this.graphdataPTM = this._addPTMInformationToPathway();
-    // console.log(this.graphdataPTM);
     // Add Full Proteome Input to Skeleton Nodes
-    // console.log(`Before:`);
-    // console.log(this.graphdataSkeleton.nodes);
     if (this.fullProteomeInputList) {
       this.graphdataSkeleton.nodes =
         this._addFullProteomeInformationToPathway();
     }
-    // console.log('After');
-    // console.log(this.graphdataSkeleton.nodes);
 
     this._enableZoomingAndPanning();
 
@@ -351,7 +346,7 @@ export class BiowcPathwaygraph extends LitElement {
     } = {
       up: {},
       down: {},
-      '-': {},
+      not: {},
     };
 
     const graphdataPTM: {
@@ -392,7 +387,7 @@ export class BiowcPathwaygraph extends LitElement {
                     ?.length || 0) +
                   (geneProtein2RegulationCategory.down[geneProteinNode.nodeId]
                     ?.length || 0) +
-                  (geneProtein2RegulationCategory['-'][geneProteinNode.nodeId]
+                  (geneProtein2RegulationCategory.not[geneProteinNode.nodeId]
                     ?.length || 0) +
                   1
                 }`;
@@ -446,18 +441,18 @@ export class BiowcPathwaygraph extends LitElement {
                       geneProteinNode.nodeId
                     ].push(ptmNode);
                     break;
-                  case '-':
+                  case 'not':
                     if (
                       !Object.hasOwn(
-                        geneProtein2RegulationCategory['-'],
+                        geneProtein2RegulationCategory.not,
                         geneProteinNode.nodeId
                       )
                     ) {
-                      geneProtein2RegulationCategory['-'][
+                      geneProtein2RegulationCategory.not[
                         geneProteinNode.nodeId
                       ] = [];
                     }
-                    geneProtein2RegulationCategory['-'][
+                    geneProtein2RegulationCategory.not[
                       geneProteinNode.nodeId
                     ].push(ptmNode);
                     break;
@@ -554,7 +549,7 @@ export class BiowcPathwaygraph extends LitElement {
                   case 'up':
                     nodesDictEntry.nUp = (nodesDictEntry.nUp || 0) + 1;
                     break;
-                  case '-':
+                  case 'not':
                     nodesDictEntry.nNot = (nodesDictEntry.nNot || 0) + 1;
                     break;
                   default:
@@ -713,7 +708,7 @@ export class BiowcPathwaygraph extends LitElement {
     const linkG = this._getMainDiv().select('#linkG');
 
     const nodesSvg = nodeG
-      .selectAll('g')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
       .data(
         this.d3Nodes! // Sort so that the groups come first - that way they are always drawn under the individual nodes
           .sort((nodeA, nodeB) => {
@@ -1327,7 +1322,7 @@ export class BiowcPathwaygraph extends LitElement {
                 regulationLabel = 'Downregulated';
                 break;
               }
-              case '-': {
+              case 'not': {
                 regulationLabel = 'Unregulated';
                 break;
               }
@@ -1481,13 +1476,11 @@ export class BiowcPathwaygraph extends LitElement {
       return (<PTMNode | PTMSummaryNode>node).regulation;
     }
 
-    if (Object.hasOwn(node, 'nUp')) {
-      const geneProteinNode = node as GeneProteinNode;
-      if (geneProteinNode.nUp! > 0 && geneProteinNode.nDown! > 0) return 'both';
-      if (geneProteinNode.nUp! > 0) return 'up';
-      if (geneProteinNode.nDown! > 0) return 'down';
-      if (geneProteinNode.nNot! > 0) return '-';
-    }
+    const geneProteinNode = node as GeneProteinNode;
+    if (geneProteinNode.nUp! > 0 && geneProteinNode.nDown! > 0) return 'both';
+    if (geneProteinNode.nUp! > 0) return 'up';
+    if (geneProteinNode.nDown! > 0) return 'down';
+    if (geneProteinNode.nNot! > 0) return 'not';
 
     return '';
   }
@@ -1864,7 +1857,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     legendSvg
       .append('rect')
-      .attr('class', 'node-rect ptm unregulated legend')
+      .attr('class', 'node-rect ptm not legend')
       .attr('x', xOffset + 130)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
       .attr('rx', 30 * scalingFactor)
@@ -1995,7 +1988,7 @@ export class BiowcPathwaygraph extends LitElement {
       'Gene Name(s)',
       node.geneNames ? node.geneNames.join(',') : node.label,
       paddingLength
-    )}${
+    )}<br>${
       uniprotLinks
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Uniprot ID(s)',
@@ -2008,28 +2001,28 @@ export class BiowcPathwaygraph extends LitElement {
     }${
       node.nUp && node.nUp > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Upregulated Curves',
+            'Upregulated',
             node.nUp,
             paddingLength
           )
         : ''
-    }${
+    }<br>${
       node.nDown && node.nDown > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Downregulated Curves',
+            'Downregulated',
             node.nDown,
             paddingLength
           )
         : ''
-    }${
+    }<br>${
       node.nNot && node.nNot > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Unregulated Curves',
+            'Unregulated',
             node.nNot,
             paddingLength
           )
         : ''
-    }${
+    }<br>${
       node.details
         ? Object.entries(node.details)
             .map(([key, value]) =>
