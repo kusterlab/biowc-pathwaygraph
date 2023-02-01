@@ -16,5 +16,8 @@
         "ignorePackages": true
       }
     ]
+  },
+  "globals": {
+    "NodeJS": true
   }
 }

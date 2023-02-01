@@ -2222,4 +2222,66 @@ export class BiowcPathwaygraph extends LitElement {
       .filter((d) => !d.selected)
       .size()
   }
+
+  //Todo: Document to user that this exists, as well as the events a parent could listen to
+  public selectDownstreamNodes(nodeId: string){
+    const nodesWithThatId = this.d3Nodes!.filter(d => d.nodeId === nodeId)
+    if (nodesWithThatId.length !== 1){
+      //If it is 0, there is nothing to do.
+      // If it is >=2, we have duplicates in our nodeIds, which should never happen
+      return
+    }
+    const node = nodesWithThatId[0]
+    this._selectDownstreamNodesWorker(node)
+  }
+
+
+  //Helper that recursively select all nodes downstream of a node
+  private _selectDownstreamNodesWorker(node: PathwayGraphNodeD3){
+    /* eslint-disable no-param-reassign */
+    // Select the node itself
+    node.selected = true
+    // Select all PTM nodes attached to this node
+    // (the node would be the target of the respective PTM link)
+   this._getMainDiv()
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink:not(.legend)')
+      .each((l : PathwayGraphLinkD3) => {
+        if (l.target === node) (<PathwayGraphNodeD3>l.source).selected = true
+      })
+
+    // If the node is a group, select all its members
+    if (node.type === 'group') {
+      (<GroupNodeD3>node).componentNodes.forEach((d) => {
+        d.selected = true
+      })
+    }
+
+    // Iterate over links and recurse on all target nodes of this node that have not yet been selected
+    // The second criterion prevents endless recursion on circular paths
+    this._getMainDiv().select('#linkG')
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('line')
+      .each((l) => {
+        if (l.source === node && !(<PathwayGraphNodeD3>l.target).selected) {
+          if (l.targetIsAnchor) this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.target).source)
+          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.target)
+        } else if (
+          // In the case of binding/association relations, we treat the edge as undirected,
+          // i.e. the node could also be the target
+          l.types.includes('binding/association') &&
+          l.target === node &&
+          !(<PathwayGraphNodeD3>l.source).selected
+        ) {
+          if (l.sourceIsAnchor) this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>(<PathwayGraphLinkD3>l.source).source)
+          else this._selectDownstreamNodesWorker(<PathwayGraphNodeD3>l.source)
+        }
+      })
+
+    // After selecting downstream nodes, multiple PTMs are selected so the infobox needs to be disabled
+    this.dispatchEvent(new CustomEvent('nodeDetails', {
+      bubbles: true,
+      cancelable: true,
+      detail: undefined //TODO: Maybe empty string or empty html instead
+    }))
+    /* eslint-enable no-param-reassign */
+  }
 }
