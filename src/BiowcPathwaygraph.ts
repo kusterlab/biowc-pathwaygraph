@@ -811,7 +811,15 @@ export class BiowcPathwaygraph extends LitElement {
     // Initialize paths for the group nodes
     // The actual polygons are drawn in the 'tick' callback of addAnimation
     nodesSvg
-      .filter(d => d.type === 'group')
+      .filter(
+        d =>
+          d.type === 'group' &&
+          // Check that the group has not been drawn yet
+          this._getMainDiv()
+            .select<SVGGElement>(`#node-${d.nodeId}`)
+            .select('.group-path')
+            .empty()
+      )
       .append('path')
       .attr('class', 'group-path');
 
