@@ -46,10 +46,6 @@ interface GeneProteinNode extends PathwayGraphNode {
   nNot?: number;
 }
 
-interface GroupNode extends PathwayGraphNode {
-  componentNodeIds: string[];
-}
-
 interface PTMInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
@@ -109,10 +105,12 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
-  groupNode?: GroupNode;
+  // Interfaces are hoisted so we can reference GroupNodeD3 before defining it
+  // eslint-disable-next-line no-use-before-define
+  groupNode?: GroupNodeD3;
 }
 
-interface GroupNodeD3 extends GroupNode, PathwayGraphNodeD3 {
+interface GroupNodeD3 extends PathwayGraphNodeD3 {
   componentNodes: GeneProteinNodeD3[];
   polygon?: [number, number][];
   centroid?: [number, number];
@@ -626,17 +624,18 @@ export class BiowcPathwaygraph extends LitElement {
           );
         }
       }
-      // c) For Group Nodes: Add two-way references to members
+      // c) For Group Nodes: Fetch members and add references in both directions
       if (node.type === 'group') {
-        (<GroupNodeD3>node).componentNodes = (<GroupNodeD3>(
-          node
-        )).componentNodeIds.map(
-          nodeid => nodeIdToNodeMap[nodeid] as GeneProteinNode
-        );
-        for (const nodeid of (<GroupNodeD3>node).componentNodeIds) {
-          (<GeneProteinNodeD3>nodeIdToNodeMap[nodeid]).groupNode = <
-            GroupNodeD3
-          >node;
+        const groupNode = <GroupNodeD3>node;
+        groupNode.componentNodes = [];
+        for (const otherNode of this.d3Nodes) {
+          if (
+            Object.hasOwn(otherNode, 'groupId') &&
+            (<GeneProteinNodeD3>otherNode).groupId === groupNode.nodeId
+          ) {
+            groupNode.componentNodes.push(<GeneProteinNodeD3>otherNode);
+            (<GeneProteinNodeD3>otherNode).groupNode = groupNode;
+          }
         }
       }
     }
