@@ -303,7 +303,10 @@ export class BiowcPathwaygraph extends LitElement {
     const result: { [key: string]: GeneProteinNode[] } = {};
 
     for (const node of this.graphdataSkeleton.nodes) {
-      if (Object.hasOwn(node, 'uniprotAccs')) {
+      if (
+        Object.hasOwn(node, 'uniprotAccs') &&
+        !!(<GeneProteinNode>node).uniprotAccs
+      ) {
         for (const uniprotAcc of (<GeneProteinNode>node).uniprotAccs) {
           if (!Object.hasOwn(result, uniprotAcc)) {
             result[uniprotAcc] = [];
@@ -312,7 +315,10 @@ export class BiowcPathwaygraph extends LitElement {
         }
       }
 
-      if (Object.hasOwn(node, 'geneNames')) {
+      if (
+        Object.hasOwn(node, 'geneNames') &&
+        !!(<GeneProteinNode>node).geneNames
+      ) {
         for (const geneName of (<GeneProteinNode>node).geneNames) {
           if (!Object.hasOwn(result, geneName)) {
             result[geneName] = [];
@@ -753,7 +759,11 @@ export class BiowcPathwaygraph extends LitElement {
     nodesSvg
       .selectAll('.node-label')
       .text(d => {
-        if (!Object.hasOwn(<PathwayGraphNodeD3>d, 'label')) return '';
+        if (
+          !Object.hasOwn(<PathwayGraphNodeD3>d, 'label') ||
+          !(<GeneProteinNode | PTMSummaryNodeD3>d).label
+        )
+          return '';
         const node = d as GeneProteinNodeD3 | PTMSummaryNodeD3;
         if (node.label.startsWith('TITLE:')) {
           return node.label.substring(6).toUpperCase();
@@ -1348,7 +1358,11 @@ export class BiowcPathwaygraph extends LitElement {
             tooltip.html((<GeneProteinNodeD3>node).label || '');
           }
           // PTMs are the only nodes that have no label and still get a tooltip
-          if (Object.hasOwn(node, 'label') || node.type === 'ptm') {
+          if (
+            (Object.hasOwn(node, 'label') &&
+              !!(<GeneProteinNode | PTMSummaryNodeD3>node).label) ||
+            node.type === 'ptm'
+          ) {
             tooltip.transition().duration(0).style('opacity', '1');
           }
         }
@@ -1480,7 +1494,10 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private static _computeRegulationClass(node: PathwayGraphNode) {
-    if (Object.hasOwn(node, 'regulation')) {
+    if (
+      Object.hasOwn(node, 'regulation') &&
+      !!(<PTMNode | PTMSummaryNode>node).regulation
+    ) {
       return (<PTMNode | PTMSummaryNode>node).regulation;
     }
 
@@ -1591,6 +1608,7 @@ export class BiowcPathwaygraph extends LitElement {
         .filter(
           d =>
             Object.hasOwn(<PathwayGraphNodeD3>d, 'groupId') &&
+            !!(<GeneProteinNodeD3>d).groupId &&
             (<GeneProteinNodeD3>d).groupId === (<GroupNodeD3>group).nodeId
         )
         .each(d => {
@@ -2372,7 +2390,11 @@ export class BiowcPathwaygraph extends LitElement {
         bubbles: true,
         cancelable: true,
         detail: selectedNodes
-          .filter(node => Object.hasOwn(node, 'details'))
+          .filter(
+            node =>
+              Object.hasOwn(node, 'details') &&
+              !!(<GeneProteinNodeD3 | PTMNodeD3>node).details
+          )
           .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!),
       })
     );
