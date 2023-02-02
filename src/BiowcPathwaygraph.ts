@@ -1508,8 +1508,10 @@ export class BiowcPathwaygraph extends LitElement {
         any
       >
     ) => {
-      // Disable tooltip while dragging
-      this._getMainDiv()
+      d3v6
+        // Disable tooltip while dragging
+        // @ts-ignore
+        .select(this.shadowRoot)
         .select('#nodetooltip')
         .style('opacity', '0')
         .attr('is-dragging', 'true');
@@ -1539,7 +1541,11 @@ export class BiowcPathwaygraph extends LitElement {
       if (!event.active) simulation.alphaTarget(0);
       node.fx = null;
       node.fy = null;
-      this._getMainDiv().select('#nodetooltip').attr('is-dragging', 'false');
+      d3v6
+        // @ts-ignore
+        .select(this.shadowRoot)
+        .select('#nodetooltip')
+        .attr('is-dragging', 'false');
     };
 
     return d3v6
@@ -1562,8 +1568,10 @@ export class BiowcPathwaygraph extends LitElement {
         any
       >
     ) => {
-      // Disable tooltip while dragging
-      this._getMainDiv()
+      d3v6
+        // Disable tooltip while dragging
+        // @ts-ignore
+        .select(this.shadowRoot)
         .select('#nodetooltip')
         .style('opacity', '0')
         .attr('is-dragging', 'true');
@@ -1603,7 +1611,11 @@ export class BiowcPathwaygraph extends LitElement {
       group: any
     ) => {
       if (!event.active) simulation.alphaTarget(0);
-      this._getMainDiv().select('#nodetooltip').attr('is-dragging', 'false');
+      d3v6
+        // @ts-ignore
+        .select(this.shadowRoot)
+        .select('#nodetooltip')
+        .attr('is-dragging', 'false');
       group.fx = null;
       group.fy = null;
     };
