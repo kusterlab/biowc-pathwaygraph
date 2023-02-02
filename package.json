@@ -1,5 +1,5 @@
 {
-  "name": "biowc-pathwaygraph",
+  "name": "@jmueller95/biowc-pathwaygraph",
   "description": "Webcomponent biowc-pathwaygraph following open-wc recommendations",
   "license": "MIT",
   "author": "biowc-pathwaygraph",
@@ -87,5 +87,13 @@
       "eslint --fix",
       "prettier --write"
     ]
+  },
+  "types": "./dist/src/index.d.ts",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@gitlab.lrz.de:jmueller/biowc-pathwaygraph.git"
   }
 }
