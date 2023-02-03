@@ -652,7 +652,7 @@ export class BiowcPathwaygraph extends LitElement {
       }
 
       if (!link.target) {
-        link.target = linkIdToLinkMap[link.target];
+        link.target = linkIdToLinkMap[link.targetId];
         link.targetIsAnchor = true;
       }
     }
@@ -924,7 +924,9 @@ export class BiowcPathwaygraph extends LitElement {
           .forceLink(
             this.d3Links?.filter(
               link =>
+                !link.sourceIsAnchor &&
                 (<PathwayGraphNodeD3>link.source)!.visible &&
+                !link.targetIsAnchor &&
                 (<PathwayGraphNodeD3>link.target)!.visible
             )
           )
@@ -935,16 +937,22 @@ export class BiowcPathwaygraph extends LitElement {
           )
           .distance(link => {
             if (link.types && link.types.includes('ptmlink')) {
-              if ((<PathwayGraphNodeD3>link.target).isCircle) {
+              if (
+                Object.hasOwn(link.target, 'isCircle') &&
+                (<PathwayGraphNodeD3>link.target).isCircle
+              ) {
                 return (
                   CIRCLE_NODE_LINK_FORCE_DISTANCE *
                   PTM_LINK_FORCE_DISTANCE_MULTIPLIER
                 );
               }
-              return (
-                ((<PathwayGraphNodeD3>link.target).textLength || 1) *
-                PTM_LINK_FORCE_DISTANCE_MULTIPLIER
-              );
+              if (Object.hasOwn(link.target, 'textLength')) {
+                return (
+                  ((<PathwayGraphNodeD3>link.target).textLength || 1) *
+                  PTM_LINK_FORCE_DISTANCE_MULTIPLIER
+                );
+              }
+              return 0;
             }
             return 0;
           })

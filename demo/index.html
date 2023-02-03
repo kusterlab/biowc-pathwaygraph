@@ -21,7 +21,11 @@
       html`
         <biowc-pathwaygraph
           .pathwayMetaData = ${PathwayGraphFixture.examplePathway1.metaData}
-          .graphdataSkeleton = ${ {nodes: PathwayGraphFixture.examplePathway1.nodes, links: PathwayGraphFixture.examplePathway1.links} }
+          .graphdataSkeleton = ${ {nodes: PathwayGraphFixture.examplePathway1.nodes,
+            links: [...PathwayGraphFixture.examplePathway1.links,
+              ...PathwayGraphFixture.examplePathway1.sourceAnchor,
+              ...PathwayGraphFixture.examplePathway1.targetAnchor,
+              ...PathwayGraphFixture.examplePathway1.doubleAnchor]} }
           .ptmInputList = ${PathwayGraphFixture.examplePathway1.ptmInputList}
           .fullProteomeInputList= ${PathwayGraphFixture.examplePathway1.fpInputList}
         >

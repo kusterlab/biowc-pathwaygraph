@@ -95,6 +95,30 @@ export default {
         types: ['activation'],
       },
     ],
+    sourceAnchor: [
+      {
+        linkId: 'relation-6',
+        sourceId: 'relation-4',
+        targetId: '3',
+        types: ['activation'],
+      },
+    ],
+    targetAnchor: [
+      {
+        linkId: 'relation-7',
+        sourceId: '5',
+        targetId: 'relation-5',
+        types: ['activation'],
+      },
+    ],
+    doubleAnchor: [
+      {
+        linkId: 'relation-8',
+        sourceId: 'relation-4',
+        targetId: 'relation-5',
+        types: ['activation'],
+      },
+    ],
 
     ptmInputList: [
       {
