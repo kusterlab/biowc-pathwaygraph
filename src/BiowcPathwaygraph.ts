@@ -185,6 +185,9 @@ export class BiowcPathwaygraph extends LitElement {
   numberOfUnselectedNodes = 0;
 
   render() {
+    console.log('Everyday Im rendering');
+    console.log(this.ptmInputList?.length);
+
     return html`
       <div id="pathwayContainer">
         <svg
