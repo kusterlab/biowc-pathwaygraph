@@ -19,10 +19,11 @@ const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
 const DBL_CLICK_TIMEOUT = 200;
 
+// TODO: This is not used anywhere yet, check if it actually is needed
 interface PathwayMetadata {
-  identifier: string; // TODO: Refactor from 'id' - set if it is not set by user
+  identifier: string;
   org: string;
-  pathwaytitle: string; // TODO: Refactor from 'title'
+  pathwaytitle: string;
 }
 
 interface PathwayGraphNode extends SimulationNodeDatum {
@@ -184,15 +185,16 @@ export class BiowcPathwaygraph extends LitElement {
   numberOfUnselectedNodes = 0;
 
   render() {
-    console.log('Rerendering!');
-
-    // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time. - should be possible to update the DOM on resize though - who needs Vue watchers?
     return html`
       <div id="pathwayContainer">
         <svg
           id="pathwaygraph"
-          style="min-width: ${this
-            .graphWidth}px; min-height: 1500px; display: block; margin: auto; background-color: white; border-radius: 5px"
+          style="min-width: ${this.graphWidth}px;
+          min-height: 1500px;
+           display: block;
+            margin: auto;
+             background-color: white;
+             border-radius: 5px"
         >
           <defs>
             <marker
@@ -684,15 +686,6 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('display', 'none');
 
     this._addAnimation();
-
-    // TODO: Maybe move this after the timeout?
-    this._addTooltips();
-    this._addContextMenu();
-
-    // Todo: Implement these - first figure out how to connect the "visible" property to the actual visibility
-    // Hmm maybe there is some initial event you are forgetting, and the rest actually happens in the dblclick handler
-    // this._enableNodeSelection();
-    this._enableNodeExpandAndCollapse();
 
     setTimeout(() => {
       if (this.d3Nodes) {
