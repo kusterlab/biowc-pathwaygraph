@@ -185,9 +185,6 @@ export class BiowcPathwaygraph extends LitElement {
   numberOfUnselectedNodes = 0;
 
   render() {
-    console.log('Everyday Im rendering');
-    console.log(this.ptmInputList?.length);
-
     return html`
       <div id="pathwayContainer">
         <svg
@@ -282,7 +279,7 @@ export class BiowcPathwaygraph extends LitElement {
     `;
   }
 
-  protected firstUpdated(_changedProperties: PropertyValues) {
+  protected updated(_changedProperties: PropertyValues) {
     this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
 
     // Map PTM Input to Skeleton Nodes
@@ -304,7 +301,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._renderLegend();
 
-    super.firstUpdated(_changedProperties);
+    super.updated(_changedProperties);
   }
 
   private _createPathwayGeneToNodeMap(): { [key: string]: GeneProteinNode[] } {
