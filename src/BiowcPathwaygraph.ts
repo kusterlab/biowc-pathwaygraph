@@ -146,6 +146,9 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
 export class BiowcPathwaygraph extends LitElement {
   static styles = styles;
 
+  @property({ attribute: 'graph-width' })
+  graphWidth: number = document.body.clientWidth;
+
   @property({ attribute: false })
   pathwayMetaData!: PathwayMetadata;
 
@@ -181,13 +184,15 @@ export class BiowcPathwaygraph extends LitElement {
   numberOfUnselectedNodes = 0;
 
   render() {
+    console.log('Rerendering!');
+
     // TODO: Make min-width depend on this.clientWidth - problem is that it is zero at this time. - should be possible to update the DOM on resize though - who needs Vue watchers?
     return html`
-      <div id="pathwayContainer" ref="pathwayContainer">
+      <div id="pathwayContainer">
         <svg
           id="pathwaygraph"
-          style="min-width: ${document.body
-            .clientWidth}px; min-height: 1500px; display: block; margin: auto; background-color: white; border-radius: 5px"
+          style="min-width: ${this
+            .graphWidth}px; min-height: 1500px; display: block; margin: auto; background-color: white; border-radius: 5px"
         >
           <defs>
             <marker
@@ -289,7 +294,7 @@ export class BiowcPathwaygraph extends LitElement {
     this._renderGraph();
 
     window.addEventListener('resize', () => {
-      this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
+      // this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
     });
 
     this._renderLegend();
