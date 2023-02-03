@@ -150,10 +150,10 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: 'graph-width' })
   graphWidth: number = document.body.clientWidth;
 
-  @property({ attribute: 'pathway-meta-data' })
+  @property({ attribute: false })
   pathwayMetaData!: PathwayMetadata;
 
-  @property({ attribute: 'graphdata-skeleton' })
+  @property({ attribute: false })
   graphdataSkeleton!: {
     nodes: PathwayGraphNode[];
     links: (PathwayGraphLinkInput | PathwayGraphLink)[];
@@ -162,10 +162,10 @@ export class BiowcPathwaygraph extends LitElement {
     geneToNodeMap?: { [key: string]: GeneProteinNode[] };
   };
 
-  @property({ attribute: 'ptm-input-list' })
+  @property({ attribute: false })
   ptmInputList?: PTMInputEntry[];
 
-  @property({ attribute: 'full-proteome-input-list' })
+  @property({ attribute: false })
   fullProteomeInputList?: FullProteomeInputEntry[];
 
   graphdataPTM?: {
