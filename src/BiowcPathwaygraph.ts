@@ -891,7 +891,7 @@ export class BiowcPathwaygraph extends LitElement {
     // Put the edgelabels onto the paths
     edgelabels
       .append('textPath')
-      .attr('xlink:href', (d, i) => `#edgepath${i}`)
+      .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
       .text(d => {
         // Right now, the labels are limited to (de)phosphorylation
