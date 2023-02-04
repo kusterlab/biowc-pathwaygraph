@@ -142,6 +142,7 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
   targetX?: number;
   sourceY?: number;
   targetY?: number;
+  label?: string;
 }
 
 export class BiowcPathwaygraph extends LitElement {
@@ -863,8 +864,9 @@ export class BiowcPathwaygraph extends LitElement {
       .data(
         this.d3Links!.filter(
           link =>
-            (<PathwayGraphNodeD3>link.source)?.visible &&
-            (<PathwayGraphNodeD3>link.target)?.visible
+            (link.sourceIsAnchor ||
+              (<PathwayGraphNodeD3>link.source)?.visible) &&
+            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
       .join('path')
@@ -879,8 +881,9 @@ export class BiowcPathwaygraph extends LitElement {
       .data(
         this.d3Links!.filter(
           link =>
-            (<PathwayGraphNodeD3>link.source)?.visible &&
-            (<PathwayGraphNodeD3>link.target)?.visible
+            (link.sourceIsAnchor ||
+              (<PathwayGraphNodeD3>link.source)?.visible) &&
+            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
       .join('text')
@@ -893,17 +896,13 @@ export class BiowcPathwaygraph extends LitElement {
       .append('textPath')
       .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
-      .text(d => {
-        // Right now, the labels are limited to (de)phosphorylation
-        // 2022-07-22: Erm, is this comment still valid?
-        // 2023-01-27 I still don't know...
-        if (d.types.includes('phosphorylation')) return '+p';
-        if (d.types.includes('dephosphorylation')) return '-p';
-        if (d.types.includes('ubiquitination')) return '+u';
-        if (d.types.includes('glycosylation')) return '+g';
-        if (d.types.includes('methylation')) return '+m';
-        return '';
-      });
+      .text(d => d.label || '');
+    // TODO: This should be handled in the parent - map during preprocessing and just add a 'label' property to the d
+    // if (d.types.includes('phosphorylation')) return '+p';
+    // if (d.types.includes('dephosphorylation')) return '-p';
+    // if (d.types.includes('ubiquitination')) return '+u';
+    // if (d.types.includes('glycosylation')) return '+g';
+    // if (d.types.includes('methylation')) return '+m';
   }
 
   private _addAnimation() {
@@ -1200,7 +1199,7 @@ export class BiowcPathwaygraph extends LitElement {
         .attr(
           'd',
           edgepath =>
-            `M ${edgepath.source.x} ${edgepath.source.y} L ${edgepath.target.x} ${edgepath.target.y}`
+            `M ${edgepath.sourceX} ${edgepath.sourceY} L ${edgepath.targetX} ${edgepath.targetY}`
         );
 
       // Optionally rotate the edge labels, if they have been turned upside-down

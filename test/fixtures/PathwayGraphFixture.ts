@@ -75,6 +75,7 @@ export default {
         sourceId: '1',
         targetId: '3',
         types: ['activation', 'dephosphorylation'],
+        label: '-p',
       },
       {
         linkId: 'relation-3',
@@ -87,6 +88,7 @@ export default {
         sourceId: '7',
         targetId: '5',
         types: ['phosphorylation'],
+        label: '+p',
       },
       {
         linkId: 'relation-5',
@@ -116,7 +118,8 @@ export default {
         linkId: 'relation-8',
         sourceId: 'relation-4',
         targetId: 'relation-5',
-        types: ['activation'],
+        types: ['activation', 'methylation'],
+        label: '+m',
       },
     ],
 
