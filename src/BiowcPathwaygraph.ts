@@ -915,7 +915,6 @@ export class BiowcPathwaygraph extends LitElement {
       )
       .join('text')
       .attr('class', 'edgelabel')
-      .attr('font-size', 10)
       .attr('fill', 'var(--edge-label-color)');
 
     // Put the edgelabels onto the paths
@@ -2054,19 +2053,16 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   // Helper function for the two tooltip text functions
-  private static _formatTextIfValuePresent(
-    text: string,
-    value: any,
-    paddingLength: number
-  ) {
-    return value ? `${`${text}:`.padEnd(paddingLength) + value}<br>` : '';
+  private static _formatTextIfValuePresent(text: string, value: any) {
+    return value
+      ? `<li class=tooltip-list-item><strong>${text}:</strong> ${value}</li>`
+      : '';
   }
 
   private static _getPTMTooltipText(node: PTMNodeD3) {
-    return `<pre style='text-align: left'>${this._formatTextIfValuePresent(
+    return `<ul class='tooltip-list'>${this._formatTextIfValuePresent(
       'Regulation',
-      node.regulation,
-      19
+      node.regulation
     )}${Object.entries(node.details!)
       .map(([key, value]) => {
         if (
@@ -2074,55 +2070,43 @@ export class BiowcPathwaygraph extends LitElement {
           typeof value === 'number' ||
           value?.display
         ) {
-          return BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19);
+          return BiowcPathwaygraph._formatTextIfValuePresent(key, value);
         }
         return null;
       })
-      .join('')}</pre>`;
+      .join('')}</ul>`;
   }
 
   private static _getGeneProteinTooltipText(node: GeneProteinNodeD3) {
-    const paddingLength =
-      (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? 25 : 15;
-    return `<pre style='text-align: left'>${BiowcPathwaygraph._formatTextIfValuePresent(
+    return `<ul class='tooltip-list'>${BiowcPathwaygraph._formatTextIfValuePresent(
       'Gene Name(s)',
-      node.geneNames ? node.geneNames.join(',') : node.label,
-      paddingLength
+      node.geneNames ? node.geneNames.join(',') : node.label
     )}${
       (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
     }${
       node.nUp && node.nUp > 0
-        ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Upregulated',
-            node.nUp,
-            paddingLength
-          )
+        ? BiowcPathwaygraph._formatTextIfValuePresent('Upregulated', node.nUp)
         : ''
     }${
       node.nDown && node.nDown > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Downregulated',
-            node.nDown,
-            paddingLength
+            node.nDown
           )
         : ''
     }${
       node.nNot && node.nNot > 0
-        ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Unregulated',
-            node.nNot,
-            paddingLength
-          )
+        ? BiowcPathwaygraph._formatTextIfValuePresent('Unregulated', node.nNot)
         : ''
     }${
       node.details
         ? Object.entries(node.details)
             .map(([key, value]) =>
-              BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19)
+              BiowcPathwaygraph._formatTextIfValuePresent(key, value)
             )
             .join('<br>')
         : ''
-    }</pre>`;
+    }</ul>`;
   }
 
   private _enableNodeSelection() {

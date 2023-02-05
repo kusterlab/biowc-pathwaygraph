@@ -129,7 +129,7 @@ export default {
         uniprotAccs: ['Q19838'],
         regulation: 'up',
         details: {
-          'Modified Sequence': 'KIMAKEMI',
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
           '-log(EC50)': 5,
           'Fold Change': 0.2,
           'R²': 0.89,

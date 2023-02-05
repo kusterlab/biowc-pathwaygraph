@@ -89,6 +89,24 @@ export default css`
     fill: var(--compound-color);
   }
 
+  .tooltip-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .tooltip-list-item {
+    margin: 5px 0;
+    font-size: 12pt;
+    font-family: 'Roboto Light', sans-serif;
+  }
+
+  strong {
+    display: inline-block;
+    width: 150px;
+    text-align: left;
+  }
+
   .legend {
     pointer-events: none;
     dominant-baseline: central;
@@ -112,17 +130,16 @@ export default css`
 
   .node-label {
     stroke-width: 0;
-    font-family: 'Arial', serif;
+    font-family: 'Roboto Light', sans-serif;
     font-size: 8px;
     font-weight: normal;
     text-anchor: middle;
     dominant-baseline: middle;
     pointer-events: none;
-    fill: black !important;
   }
 
   .node-label.ptm.summary {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: bold;
   }
 
@@ -130,14 +147,21 @@ export default css`
     font-size: 7px;
   }
 
+  .edgelabel {
+    font-size: 10px;
+    font-family: 'Roboto Light', sans-serif;
+    font-weight: bold;
+  }
+
   .tooltip {
     position: absolute;
-    text-align: center;
     background-color: white;
     border: 1px solid;
     border-radius: 5px;
-    padding: 10px;
+    padding: 5px 8px;
     pointer-events: none;
+    font-size: 12pt;
+    font-family: 'Roboto Light', sans-serif;
   }
 
   .group-path {
@@ -156,10 +180,11 @@ export default css`
     text-align: center;
     background-color: white;
     border: 1px solid;
-    padding: 0 3px;
+    padding: 2px 5px;
   }
 
   .contextMenuEntry text {
-    font-size: 12px;
+    font-family: 'Roboto Light', sans-serif;
+    font-size: 14px;
   }
 `;
