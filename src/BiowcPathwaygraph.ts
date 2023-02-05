@@ -977,6 +977,50 @@ export class BiowcPathwaygraph extends LitElement {
       .selectAll<SVGElement, PathwayGraphNodeD3>('.group-path')
       .call(this._dragGroups(simulation));
 
+    // TODO: Continue here!
+    // function pathLineIntersection(pathEl : SVGPathElement, xOffset: number, yOffset:number, scale:number, line : Selection<any, any, any, any>) {
+    //   const nSegments = 10;
+    //
+    // function btwn(a : number, b1 : number, b2: number)  {
+    //   if ((a >= b1) && (a <= b2)) { return true; }
+    //   if ((a >= b2) && (a <= b1)) { return true; }
+    //   return false;
+    // }
+    //
+    // function lineLineIntersect(line1 : { x1: number; x2: number; y1: number; y2: number; }, line2: { x1: number; x2: number; y1: number; y2: number; }) {
+    //   console.log(`Trying to intersect pathline: ${JSON.stringify(line1)} with lineline: ${JSON.stringify(line2)}`)
+    //   const {x1} = line1; const {x2} = line1; const x3 = line2.x1; const x4 = line2.x2;
+    //   const {y1} = line1; const {y2} = line1; const y3 = line2.y1; const y4 = line2.y2;
+    //   const ptDenom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    //   const ptXNum = (x1*y2 - y1*x2) * (x3 - x4) - (x1 - x2) * (x3*y4 - y3*x4);
+    //   const ptYNum = (x1*y2 - y1*x2) * (y3 - y4) - (y1 - y2) * (x3*y4 - y3*x4);
+    //   if (ptDenom === 0) { return "parallel"; }
+    //     const pt = {'x': ptXNum / ptDenom, 'y': ptYNum / ptDenom};
+    //     if (btwn(pt.x, x1, x2) && btwn(pt.y, y1, y2) && btwn(pt.x, x3, x4) && btwn(pt.y, y3, y4)) { return pt; }
+    //      return "not in range";
+    //
+    // }
+    //
+    //
+    //   const pathLength = pathEl.getTotalLength();
+    //   const pts = []
+    //   for (let i=0; i<nSegments; i+=1) {
+    //     const pos1 = pathEl.getPointAtLength(pathLength * i / nSegments);
+    //     const pos2 = pathEl.getPointAtLength(pathLength * (i+1) / nSegments);
+    //     const line1 = {x1: (pos1.x*scale+xOffset), x2: (pos2.x*scale+xOffset), y1: (pos1.y*scale+yOffset), y2: (pos2.y*scale+yOffset)};
+    //     const line2 = {x1: Number(line.attr('x1')), x2: Number(line.attr('x2')),
+    //       y1: Number(line.attr('y1')), y2: Number(line.attr('y2'))};
+    //     const pt = lineLineIntersect(line1, line2);
+    //     if (typeof(pt) !== "string") {
+    //       pts.push(pt);
+    //     }
+    //   }
+    //
+    //   return pts;
+    //
+    // }
+    //
+
     // Define animation
     simulation.nodes(this.d3Nodes!).on('tick', () => {
       if (this.d3Nodes) {
@@ -1146,6 +1190,11 @@ export class BiowcPathwaygraph extends LitElement {
               } else {
                 sourceY = targetY;
               }
+              // // TODO: Skip the stuff above, only this
+              // if(sourceGroupNode.centroid){
+              //   // eslint-disable-next-line prefer-destructuring
+              //   sourceY = sourceGroupNode.centroid[1]
+              // }
             }
           } else {
             sourceY = getYCoordinate(link, 'source');
@@ -1287,6 +1336,36 @@ export class BiowcPathwaygraph extends LitElement {
               )
             : null
         );
+
+      // const myGroup = this._getMainDiv().select('#nodeG').select('.group')
+      // if(myGroup.attr('transform')) {
+      //
+      //   const myGroupPath =
+      //     myGroup
+      //       .select<SVGPathElement>('.group-path');
+      //
+      //   const myLink = this._getMainDiv()
+      //     .select('#linkG')
+      //     .select<SVGLineElement>('.phosphorylation');
+      //
+      //   const translateValues = myGroup.attr('transform').split('(')[1].split(')')[0].split(',')
+      //   const translateX = Number(translateValues[0])
+      //   const translateY = Number(translateValues[1])
+      //   const scale = Number(myGroup.attr('transform').split('(')[2].split(')')[0])
+      //
+      //   // console.log(`Group transform: x=${translateX} y=${translateY}`)
+      //   const myIntersection = pathLineIntersection(myGroupPath.node()!, translateX, translateY, scale, myLink)
+      //
+      //   // console.log(`Intersections: ${JSON.stringify(myIntersection[0])}`)
+      //
+      //
+      //   myLink
+      //     .attr('x1',  myIntersection[0].x)
+      //     .attr('y1', myIntersection[0].y)
+      //
+      //   // console.log(`Link Dimensions: x1=${myLink.attr('x1')}`)
+      //   // console.dir(myLink.node())
+      // }
     });
     return simulation;
   }
