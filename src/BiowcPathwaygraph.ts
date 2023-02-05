@@ -915,10 +915,19 @@ export class BiowcPathwaygraph extends LitElement {
       )
       .join('text')
       .attr('class', 'edgelabel')
-      .attr('fill', 'var(--edge-label-color)');
+      .attr('fill', 'var(--edge-label-color)')
+      .attr('id', (d, i) => `edgelabel-${i}`);
 
     // Put the edgelabels onto the paths
     edgelabels
+      // Filter for paths that do not have a label yet
+      .filter((edgepath, i) =>
+        this._getMainDiv()
+          .select('#linkG')
+          .select(`#edgelabel-${i}`)
+          .select('textPath')
+          .empty()
+      )
       .append('textPath')
       .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
