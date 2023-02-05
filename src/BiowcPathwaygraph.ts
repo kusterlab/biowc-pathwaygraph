@@ -40,7 +40,12 @@ interface GeneProteinNode extends PathwayGraphNode {
   groupId?: string;
   // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
   // eslint-disable-next-line no-use-before-define
-  details?: { [key: string]: string | number }; // TODO: Put things like modifiedSequence &  logEC50 in here
+  details?: {
+    [key: string]:
+      | string
+      | number
+      | { display: boolean; value: string | number };
+  };
   // The following are only defined if Full Proteome Data was supplied
   nUp?: number;
   nDown?: number;
@@ -51,12 +56,22 @@ interface PTMInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
-  details?: { [key: string]: string | number };
+  details?: {
+    [key: string]:
+      | string
+      | number
+      | { display: boolean; value: string | number };
+  };
 }
 
 interface PTMNode extends PathwayGraphNode {
   geneProteinNodeId: string;
-  details?: { [key: string]: string | number };
+  details?: {
+    [key: string]:
+      | string
+      | number
+      | { display: boolean; value: string | number };
+  };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
   uniprotAccs?: string[];
@@ -74,7 +89,12 @@ interface FullProteomeInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
-  details?: { [key: string]: string | number };
+  details?: {
+    [key: string]:
+      | string
+      | number
+      | { display: boolean; value: string | number };
+  };
 }
 
 interface PathwayGraphLinkInput {
@@ -2044,10 +2064,17 @@ export class BiowcPathwaygraph extends LitElement {
 
   private static _getPTMTooltipText(node: PTMNodeD3) {
     return `<pre style='text-align: left'>${Object.entries(node.details!)
-      .map(([key, value]) =>
-        BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19)
-      )
-      .join('<br>')}</pre>`;
+      .map(([key, value]) => {
+        if (
+          typeof value === 'string' ||
+          typeof value === 'number' ||
+          value?.display
+        ) {
+          return BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19);
+        }
+        return null;
+      })
+      .join('')}</pre>`;
   }
 
   private static _getGeneProteinTooltipText(node: GeneProteinNodeD3) {
