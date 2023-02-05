@@ -904,12 +904,6 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
       .text(link => link.label!);
-    // TODO: This should be handled in the parent - map during preprocessing and just add a 'label' property to the d
-    // if (d.types.includes('phosphorylation')) return '+p';
-    // if (d.types.includes('dephosphorylation')) return '-p';
-    // if (d.types.includes('ubiquitination')) return '+u';
-    // if (d.types.includes('glycosylation')) return '+g';
-    // if (d.types.includes('methylation')) return '+m';
   }
 
   private _addAnimation() {
