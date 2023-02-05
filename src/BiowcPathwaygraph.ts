@@ -2063,7 +2063,11 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private static _getPTMTooltipText(node: PTMNodeD3) {
-    return `<pre style='text-align: left'>${Object.entries(node.details!)
+    return `<pre style='text-align: left'>${this._formatTextIfValuePresent(
+      'Regulation',
+      node.regulation,
+      19
+    )}${Object.entries(node.details!)
       .map(([key, value]) => {
         if (
           typeof value === 'string' ||
@@ -2084,7 +2088,7 @@ export class BiowcPathwaygraph extends LitElement {
       'Gene Name(s)',
       node.geneNames ? node.geneNames.join(',') : node.label,
       paddingLength
-    )}<br>${
+    )}${
       (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
     }${
       node.nUp && node.nUp > 0
@@ -2094,7 +2098,7 @@ export class BiowcPathwaygraph extends LitElement {
             paddingLength
           )
         : ''
-    }<br>${
+    }${
       node.nDown && node.nDown > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Downregulated',
@@ -2102,7 +2106,7 @@ export class BiowcPathwaygraph extends LitElement {
             paddingLength
           )
         : ''
-    }<br>${
+    }${
       node.nNot && node.nNot > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Unregulated',
@@ -2110,7 +2114,7 @@ export class BiowcPathwaygraph extends LitElement {
             paddingLength
           )
         : ''
-    }<br>${
+    }${
       node.details
         ? Object.entries(node.details)
             .map(([key, value]) =>
