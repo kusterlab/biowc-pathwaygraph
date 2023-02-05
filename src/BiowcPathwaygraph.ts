@@ -82,6 +82,7 @@ interface PathwayGraphLinkInput {
   sourceId: string;
   targetId: string;
   types: string[]; // TODO: Enumerate all link types
+  label?: string;
 }
 
 interface PathwayGraphLink
@@ -91,6 +92,7 @@ interface PathwayGraphLink
   types: string[]; // TODO: Enumerate all link types
   sourceId: string;
   targetId: string;
+  label?: string;
 }
 
 // The nodes and links in the D3 graph have additional properties
@@ -142,7 +144,6 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
   targetX?: number;
   sourceY?: number;
   targetY?: number;
-  label?: string;
 }
 
 export class BiowcPathwaygraph extends LitElement {
@@ -866,7 +867,10 @@ export class BiowcPathwaygraph extends LitElement {
           link =>
             (link.sourceIsAnchor ||
               (<PathwayGraphNodeD3>link.source)?.visible) &&
-            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
+            (link.targetIsAnchor ||
+              (<PathwayGraphNodeD3>link.target)?.visible) &&
+            link.label &&
+            link.label !== ''
         )
       )
       .join('path')
@@ -883,7 +887,10 @@ export class BiowcPathwaygraph extends LitElement {
           link =>
             (link.sourceIsAnchor ||
               (<PathwayGraphNodeD3>link.source)?.visible) &&
-            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
+            (link.targetIsAnchor ||
+              (<PathwayGraphNodeD3>link.target)?.visible) &&
+            link.label &&
+            link.label !== ''
         )
       )
       .join('text')
@@ -896,7 +903,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('textPath')
       .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
-      .text(d => d.label || '');
+      .text(link => link.label!);
     // TODO: This should be handled in the parent - map during preprocessing and just add a 'label' property to the d
     // if (d.types.includes('phosphorylation')) return '+p';
     // if (d.types.includes('dephosphorylation')) return '-p';
@@ -2033,13 +2040,6 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   // Helper function for the two tooltip text functions
-  private static _createUniProtLink(accId: string) {
-    return accId.includes('-')
-      ? `https://www.uniprot.org/uniprot/${accId.split('-')[0]}#${accId}`
-      : `https://www.uniprot.org/uniprot/${accId}`;
-  }
-
-  // Another helper function for the two tooltip text functions
   private static _formatTextIfValuePresent(
     text: string,
     value: any,
@@ -2048,42 +2048,8 @@ export class BiowcPathwaygraph extends LitElement {
     return value ? `${`${text}:`.padEnd(paddingLength) + value}<br>` : '';
   }
 
-  // And a third one
-  // TODO: This needs specific keys in the details
-  // (e.g. summarize both modResidue and accessionId under a PhosphoSitePlus Key?)
-  private static _generatePSPLinks(modResidue: string, accessionId: string) {
-    if (!modResidue) return null;
-    const modResidueList = modResidue.split('|');
-    const accIdList = accessionId.split('|');
-    const resList: string[] = [];
-    for (let i = 0; i < modResidueList.length; i += 1) {
-      const linkString = `<a href='http://www.phosphosite.org/uniprotAccAction?id=${accIdList[i]}' target='_blank'>${modResidueList[i]}</a>`;
-      if (!resList.includes(linkString)) resList.push(linkString);
-    }
-    return resList.join(',');
-  }
-
   private static _getPTMTooltipText(node: PTMNodeD3) {
-    let uniprotLinks: string = '';
-    if (node.uniprotAccs) {
-      uniprotLinks = node.uniprotAccs
-        .map(
-          id =>
-            `<a href=${BiowcPathwaygraph._createUniProtLink(
-              id
-            )} target="_blank">${id}</a>`
-        )
-        .join(',');
-    }
-    return `<pre style='text-align: left'>${
-      uniprotLinks.length > 0
-        ? `${BiowcPathwaygraph._formatTextIfValuePresent(
-            'Uniprot Acc(s)',
-            uniprotLinks,
-            19
-          )}<br>`
-        : ''
-    }${Object.entries(node.details!)
+    return `<pre style='text-align: left'>${Object.entries(node.details!)
       .map(([key, value]) =>
         BiowcPathwaygraph._formatTextIfValuePresent(key, value, 19)
       )
@@ -2091,18 +2057,6 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private static _getGeneProteinTooltipText(node: GeneProteinNodeD3) {
-    let uniprotLinks: string = '';
-    if (node.uniprotAccs) {
-      uniprotLinks = node.uniprotAccs
-        .map(
-          id =>
-            `<a href=${BiowcPathwaygraph._createUniProtLink(
-              id
-            )} target="_blank">${id}</a>`
-        )
-        .join(',');
-    }
-
     const paddingLength =
       (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? 25 : 15;
     return `<pre style='text-align: left'>${BiowcPathwaygraph._formatTextIfValuePresent(
@@ -2110,14 +2064,6 @@ export class BiowcPathwaygraph extends LitElement {
       node.geneNames ? node.geneNames.join(',') : node.label,
       paddingLength
     )}<br>${
-      uniprotLinks
-        ? BiowcPathwaygraph._formatTextIfValuePresent(
-            'Uniprot ID(s)',
-            uniprotLinks,
-            paddingLength
-          )
-        : ''
-    }${
       (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
     }${
       node.nUp && node.nUp > 0
@@ -2246,7 +2192,7 @@ export class BiowcPathwaygraph extends LitElement {
                 new CustomEvent('nodeDetails', {
                   bubbles: true,
                   cancelable: true,
-                  detail: undefined, // TODO: Maybe empty string or empty html instead
+                  detail: undefined,
                 })
               );
             }
