@@ -877,7 +877,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'edgepath')
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
-      .attr('id', (d, i) => `edgepathdash${i}`);
+      .attr('id', (d, i) => `edgepath-${i}`);
 
     // Add the actual edgelabels
     const edgelabels = linkG
@@ -901,7 +901,7 @@ export class BiowcPathwaygraph extends LitElement {
     // Put the edgelabels onto the paths
     edgelabels
       .append('textPath')
-      .attr('xlink:href', (d, i) => `#edgepathdash${i}`)
+      .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
       .text(link => link.label!);
   }
