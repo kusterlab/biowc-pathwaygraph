@@ -1475,8 +1475,8 @@ export class BiowcPathwaygraph extends LitElement {
     const mousemove = (e: MouseEvent) => {
       tooltip
         // The offset is trial and error, I could not figure this out programmatically
-        .style('top', `${e.clientY}px`)
-        .style('left', `${e.clientX + 15}px`);
+        .style('top', `${e.pageY}px`)
+        .style('left', `${e.pageX + 15}px`);
     };
 
     const mouseleave = () => {
