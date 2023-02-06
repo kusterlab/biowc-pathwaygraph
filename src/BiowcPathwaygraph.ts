@@ -2062,16 +2062,33 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   // Helper function for the two tooltip text functions
-  private static _formatTextIfValuePresent(text: string, value: any) {
+  private static _formatTextIfValuePresent(
+    text: string,
+    value: any,
+    strongWidth: number
+  ) {
     return value
-      ? `<li class=tooltip-list-item><strong>${text}:</strong> ${value}</li>`
+      ? `<li class=tooltip-list-item><strong style='width: ${strongWidth}px'>${text}:</strong> ${value}</li>`
       : '';
   }
 
   private static _getPTMTooltipText(node: PTMNodeD3) {
+    // Estimate required width of the tooltip
+    const minTooltipStrongWidth = 150;
+    let tooltipStrongWidth = minTooltipStrongWidth;
+    if (node.details) {
+      const maxKeyLength = Object.keys(node.details!).reduce(
+        (currentMax, currentKey) =>
+          currentKey.length > currentMax ? currentKey.length : currentMax,
+        minTooltipStrongWidth / 12
+      );
+      tooltipStrongWidth = maxKeyLength * 12;
+    }
+
     return `<ul class='tooltip-list'>${this._formatTextIfValuePresent(
       'Regulation',
-      node.regulation
+      node.regulation,
+      tooltipStrongWidth
     )}${Object.entries(node.details!)
       .map(([key, value]) => {
         if (
@@ -2079,7 +2096,11 @@ export class BiowcPathwaygraph extends LitElement {
           typeof value === 'number' ||
           value?.display
         ) {
-          return BiowcPathwaygraph._formatTextIfValuePresent(key, value);
+          return BiowcPathwaygraph._formatTextIfValuePresent(
+            key,
+            value,
+            tooltipStrongWidth
+          );
         }
         return null;
       })
@@ -2087,31 +2108,57 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private static _getGeneProteinTooltipText(node: GeneProteinNodeD3) {
+    // Estimate required width of the tooltip
+    const minGeneProteinTooltipStrongWidth = 150;
+    let tooltipStrongWidth = minGeneProteinTooltipStrongWidth;
+    if (node.details) {
+      const maxKeyLength = Object.keys(node.details!).reduce(
+        (currentMax, currentKey) =>
+          currentKey.length > currentMax ? currentKey.length : currentMax,
+        minGeneProteinTooltipStrongWidth / 12
+      );
+      tooltipStrongWidth = maxKeyLength * 12;
+    }
+
     return `<ul class='tooltip-list'>${BiowcPathwaygraph._formatTextIfValuePresent(
       'Gene Name(s)',
-      node.geneNames ? node.geneNames.join(',') : node.label
+      node.geneNames ? node.geneNames.join(',') : node.label,
+      tooltipStrongWidth
     )}${
       (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
     }${
       node.nUp && node.nUp > 0
-        ? BiowcPathwaygraph._formatTextIfValuePresent('Upregulated', node.nUp)
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Upregulated',
+            node.nUp,
+            tooltipStrongWidth
+          )
         : ''
     }${
       node.nDown && node.nDown > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Downregulated',
-            node.nDown
+            node.nDown,
+            tooltipStrongWidth
           )
         : ''
     }${
       node.nNot && node.nNot > 0
-        ? BiowcPathwaygraph._formatTextIfValuePresent('Unregulated', node.nNot)
+        ? BiowcPathwaygraph._formatTextIfValuePresent(
+            'Unregulated',
+            node.nNot,
+            tooltipStrongWidth
+          )
         : ''
     }${
       node.details
         ? Object.entries(node.details)
             .map(([key, value]) =>
-              BiowcPathwaygraph._formatTextIfValuePresent(key, value)
+              BiowcPathwaygraph._formatTextIfValuePresent(
+                key,
+                value,
+                tooltipStrongWidth
+              )
             )
             .join('<br>')
         : ''

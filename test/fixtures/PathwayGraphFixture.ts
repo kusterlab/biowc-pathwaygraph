@@ -133,6 +133,8 @@ export default {
           '-log(EC50)': 5,
           'Fold Change': 0.2,
           'R²': 0.89,
+          'PhosphoSitePlus®':
+            '<a href="http://www.phosphosite.org/uniprotAccAction?id=Q19838" target="_blank">T633-p</a>',
           'Experiment Name': 'My Experiment',
           curveIds: { display: false, value: 1234 },
         },
@@ -159,51 +161,6 @@ export default {
         geneNames: ['Protein E'],
         regulation: 'up',
         details: {},
-      },
-    ],
-  },
-  // DEPRECATED
-  graphdataPTM: {
-    nodes: [
-      {
-        id: 'ptm-0',
-        type: 'ptm',
-        label: 'Do I need to have a label?', // Should probably be forced to be 0 or just omitted
-        modifiedSequence: 'KIMAKEMI',
-        logEC50: 5,
-        mod_rsd: 'ABCDEF_p350',
-        acc_id: 'Q19838',
-        foldChange: 0.2,
-        r2: 0.89,
-        logPValue: 8,
-        experiment: 'My Experiment',
-        geneName: 'This genename is actually irrelevant',
-        proteinId: '4', // Do we need this?
-        uniprotId: 'Q19838', // ACC_ID AND Uniprot ID?
-        regulation: 'up',
-        curveIds: 1234,
-      },
-      {
-        id: `ptm-summary-up-0`,
-        type: 'ptm summary', // TODO: Why is this a whitespace-separated string and for the links it is an actual list?
-        label: `1`,
-        proteinId: '4',
-        ptmIds: ['ptm-0'],
-        regulation: 'up',
-      },
-    ],
-    links: [
-      {
-        id: 'ptmlink-ptm-0', // TODO: Do these IDs have any meaning, e.g. does the suffix of this HAVE to be the id of its ptm? If it does: It shouldn't!
-        sourceId: 'ptm-0',
-        targetId: '4', // This is duplication from the proteinId above
-        types: ['ptmlink'],
-      },
-      {
-        id: 'pptm-summary-up-4', // TODO: Do these IDs have any meaning, e.g. does the suffix of this HAVE to be the id of its ptm? If it does: It shouldn't!
-        sourceId: 'ptm-summary-up-0',
-        targetId: '4', // This is duplication from the proteinId above
-        types: ['ptmlink', 'summary'],
       },
     ],
   },

@@ -103,7 +103,6 @@ export default css`
 
   strong {
     display: inline-block;
-    width: 150px;
     text-align: left;
   }
 
