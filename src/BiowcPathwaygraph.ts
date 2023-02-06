@@ -312,10 +312,9 @@ export class BiowcPathwaygraph extends LitElement {
         this._addFullProteomeInformationToPathway();
     }
 
-    this._enableZoomingAndPanning();
-
     this._createD3GraphObject();
     this._renderGraph();
+    this._enableZoomingAndPanning();
 
     window.addEventListener('resize', () => {
       // this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
@@ -2049,16 +2048,11 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._getMainDiv().call(zoom);
 
-    // Trigger initial zoom event - not sure if this is still required
-    // this._getMainDiv().transition().call(zoom.scaleBy, 1)
-
     // Translate the view so that its not stuck to the top left corner
-    this._getMainDiv().transition().duration(0).call(zoom.translateBy, 500, 0);
-
-    // Set initial zoom level
-    this._getMainDiv()
-      .transition()
-      .call(zoom.scaleTo, d3v6.zoomTransform(this._getMainDiv().node()!).k);
+    // This is only done the first time we render, so we check if there already exists a transform
+    if (!this._getMainDiv().select('#nodeG').attr('transform')) {
+      this._getMainDiv().call(zoom.translateBy, 500, 0);
+    }
   }
 
   // Helper function for the two tooltip text functions
