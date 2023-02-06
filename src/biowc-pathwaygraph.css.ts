@@ -13,6 +13,7 @@ export default css`
     --link-color: #999999;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
+    --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
   }
 
   .link {
@@ -98,7 +99,7 @@ export default css`
   .tooltip-list-item {
     margin: 5px 0;
     font-size: 12pt;
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
   }
 
   strong {
@@ -111,7 +112,7 @@ export default css`
     dominant-baseline: central;
     font-size: 11pt;
     stroke-width: 2.5;
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
     user-select: none;
   }
 
@@ -129,7 +130,7 @@ export default css`
 
   .node-label {
     stroke-width: 0;
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
     font-size: 8px;
     font-weight: normal;
     text-anchor: middle;
@@ -148,7 +149,7 @@ export default css`
 
   .edgelabel {
     font-size: 10px;
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
     font-weight: bold;
   }
 
@@ -160,7 +161,7 @@ export default css`
     padding: 5px 8px;
     pointer-events: none;
     font-size: 12pt;
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
   }
 
   .group-path {
@@ -183,7 +184,7 @@ export default css`
   }
 
   .contextMenuEntry text {
-    font-family: 'Roboto Light', sans-serif;
+    font-family: var(--font-stack);
     font-size: 14px;
   }
 `;
