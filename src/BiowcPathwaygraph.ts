@@ -172,6 +172,12 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: 'graph-width' })
   graphWidth: number = document.body.clientWidth;
 
+  @property({ attribute: 'tooltip-vertical-offset' })
+  tooltipVerticalOffset: number = 0;
+
+  @property({ attribute: 'tooltip-horizontal-offset' })
+  tooltipHorizontalOffset: number = 0;
+
   @property({ attribute: false })
   pathwayMetaData!: PathwayMetadata;
 
@@ -1483,8 +1489,8 @@ export class BiowcPathwaygraph extends LitElement {
     const mousemove = (e: MouseEvent) => {
       tooltip
         // The offset is trial and error, I could not figure this out programmatically
-        .style('top', `${e.pageY}px`)
-        .style('left', `${e.pageX + 15}px`);
+        .style('top', `${e.pageY + this.tooltipVerticalOffset}px`)
+        .style('left', `${e.pageX + this.tooltipHorizontalOffset + 15}px`);
     };
 
     const mouseleave = () => {
@@ -1549,8 +1555,11 @@ export class BiowcPathwaygraph extends LitElement {
         .style('cursor', 'pointer');
 
       contextMenu
-        .style('top', `${rightClickEvent.clientY}px`)
-        .style('left', `${rightClickEvent.clientX + 15}px`);
+        .style('top', `${rightClickEvent.pageY + this.tooltipVerticalOffset}px`)
+        .style(
+          'left',
+          `${rightClickEvent.pageX + this.tooltipHorizontalOffset + 15}px`
+        );
 
       const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry');
 
