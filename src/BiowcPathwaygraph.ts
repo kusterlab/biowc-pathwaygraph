@@ -210,7 +210,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   // TODO: Install a watcher that throws an event if this reaches zero
   // TODO: ...first check if this actually is still needed anywhere, could be legacy
-  numberOfUnselectedNodes = 0;
+  // numberOfUnselectedNodes = 0;
 
   render() {
     return html`
@@ -2322,7 +2322,6 @@ export class BiowcPathwaygraph extends LitElement {
   private _onSelectedNodesChanged() {
     this._highlightSelectedNodes();
     this._sendSelectionDetailsToParent();
-    this._updateNUnselected();
   }
 
   private _enableNodeExpandAndCollapse() {
@@ -2495,14 +2494,6 @@ export class BiowcPathwaygraph extends LitElement {
           .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!),
       })
     );
-  }
-
-  private _updateNUnselected() {
-    this.numberOfUnselectedNodes = this._getMainDiv()
-      .select('#nodeG')
-      .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-      .filter(d => !d.selected)
-      .size();
   }
 
   // Todo: Document to user that this exists, as well as the events a parent could listen to
