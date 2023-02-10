@@ -139,6 +139,13 @@ export default {
           curveIds: { display: false, value: 1234 },
         },
       },
+      {
+        uniprotAccs: ['P12345'],
+        regulation: 'down',
+        details: {
+          'Modified Sequence': 'VNIPROT(ph)K',
+        },
+      },
     ],
 
     fpInputList: [
