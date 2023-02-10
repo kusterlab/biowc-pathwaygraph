@@ -2497,15 +2497,11 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   // Todo: Document to user that this exists, as well as the events a parent could listen to
-  public selectDownstreamNodes(nodeId: string) {
-    const nodesWithThatId = this.d3Nodes!.filter(d => d.nodeId === nodeId);
-    if (nodesWithThatId.length !== 1) {
-      // If it is 0, there is nothing to do.
-      // If it is >=2, we have duplicates in our nodeIds, which should never happen
-      return;
-    }
-    const node = nodesWithThatId[0];
-    this._selectDownstreamNodesWorker(node);
+  public selectNodesDownstreamOfSelection() {
+    this.d3Nodes!.filter(node => node.selected).forEach(node =>
+      this._selectDownstreamNodesWorker(node)
+    );
+    this._onSelectedNodesChanged();
   }
 
   // Helper that recursively select all nodes downstream of a node
