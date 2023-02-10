@@ -1436,12 +1436,10 @@ export class BiowcPathwaygraph extends LitElement {
       if (tooltip.attr('is-dragging') === 'false') {
         if (classesOfTarget.contains('link')) {
           const link = nodeOrLink as PathwayGraphLinkD3;
-          tooltip.html(
-            // TODO: Display all types of the link
-            `${link.types[0][0].toUpperCase() + link.types[0].slice(1)} (${
-              link.types[0]
-            })`
-          );
+          if (link.types && link.types.length > 0) {
+            tooltip.html(`<strong>Type(s):</strong> ${link.types.join(', ')}`);
+            tooltip.transition().duration(0).style('opacity', '1');
+          }
         } else {
           const node = nodeOrLink as PathwayGraphNodeD3;
           if (node.type === 'ptm') {
@@ -1482,10 +1480,10 @@ export class BiowcPathwaygraph extends LitElement {
           } else {
             tooltip.html((<GeneProteinNodeD3>node).label || '');
           }
-          // PTMs are the only nodes that have no label and still get a tooltip
           if (
             (Object.hasOwn(node, 'label') &&
               !!(<GeneProteinNode | PTMSummaryNodeD3>node).label) ||
+            // PTMs are the only nodes that have no label and still get a tooltip
             node.type === 'ptm'
           ) {
             tooltip.transition().duration(0).style('opacity', '1');
