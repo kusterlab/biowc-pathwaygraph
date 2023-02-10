@@ -2504,16 +2504,33 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     );
   }
 
+  public exportSvg() {
+    let svgHtml = this.shadowRoot?.querySelector('svg')?.outerHTML!;
+
+    // We need to inject the css custom properties into the svg
+    // I only have a clumsy solution for that: extract the css rule into a key-value pair and
+    // going over the whole svg and replacing every occurrence one by one
+    const hostRule = styles.styleSheet?.cssRules[0].cssText!;
+    hostRule
+      .slice(8, -2)
+      .split(';')
+      .forEach(prop => {
+        const propertySplit = prop.split(':');
+        if (propertySplit.length > 1) {
+          const key = `var(${propertySplit[0].trim()})`;
+          const value = propertySplit[1].trim();
+          svgHtml = svgHtml.replaceAll(key, value);
+        }
+      });
+    return svgHtml;
+  }
+
   // Todo: Document to user that this exists, as well as the events a parent could listen to
   public selectNodesDownstreamOfSelection() {
     this.d3Nodes!.filter(node => node.selected).forEach(node =>
       this._selectDownstreamNodesWorker(node)
     );
     this._onSelectedNodesChanged();
-  }
-
-  public exportSvg() {
-    return this.shadowRoot?.querySelector('svg')?.outerHTML;
   }
 
   // Helper that recursively select all nodes downstream of a node
