@@ -2512,6 +2512,10 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._onSelectedNodesChanged();
   }
 
+  public exportSvg() {
+    return this.shadowRoot?.querySelector('svg')?.outerHTML;
+  }
+
   // Helper that recursively select all nodes downstream of a node
   private _selectDownstreamNodesWorker(node: PathwayGraphNodeD3) {
     /* eslint-disable no-param-reassign */
