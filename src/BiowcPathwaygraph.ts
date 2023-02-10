@@ -1,4 +1,4 @@
-import { html, LitElement, PropertyValues } from 'lit';
+import { html, LitElement, PropertyDeclaration, PropertyValues } from 'lit';
 import { property } from 'lit/decorators.js';
 import * as d3v6 from 'd3';
 import {
@@ -169,13 +169,13 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
 export class BiowcPathwaygraph extends LitElement {
   static styles = styles;
 
-  @property({ attribute: 'graph-width' })
+  @property({ attribute: false })
   graphWidth: number = document.body.clientWidth;
 
-  @property({ attribute: 'tooltip-vertical-offset' })
+  @property({ attribute: false })
   tooltipVerticalOffset: number = 0;
 
-  @property({ attribute: 'tooltip-horizontal-offset' })
+  @property({ attribute: false })
   tooltipHorizontalOffset: number = 0;
 
   @property({ attribute: false })
@@ -305,6 +305,14 @@ export class BiowcPathwaygraph extends LitElement {
         </svg>
       </div>
     `;
+  }
+
+  requestUpdate(
+    name?: PropertyKey,
+    oldValue?: unknown,
+    options?: PropertyDeclaration
+  ) {
+    super.requestUpdate(name, oldValue, options);
   }
 
   protected updated(_changedProperties: PropertyValues) {
