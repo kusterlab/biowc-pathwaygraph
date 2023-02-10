@@ -90,18 +90,6 @@ export default css`
     fill: var(--compound-color);
   }
 
-  .tooltip-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .tooltip-list-item {
-    margin: 5px 0;
-    font-size: 12pt;
-    font-family: var(--font-stack);
-  }
-
   strong {
     display: inline-block;
     text-align: left;

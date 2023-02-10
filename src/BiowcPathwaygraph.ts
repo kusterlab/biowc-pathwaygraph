@@ -2077,7 +2077,9 @@ export class BiowcPathwaygraph extends LitElement {
     strongWidth: number
   ) {
     return value
-      ? `<li class=tooltip-list-item><strong style='width: ${strongWidth}px'>${text}:</strong> ${value}</li>`
+      ? `<li class='tooltip-list-item' style='margin: 5px 0;
+font-size: 12pt;
+font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${strongWidth}px'>${text}:</strong> ${value}</li>`
       : '';
   }
 
@@ -2094,7 +2096,7 @@ export class BiowcPathwaygraph extends LitElement {
       tooltipStrongWidth = maxKeyLength * 12;
     }
 
-    return `<ul class='tooltip-list'>${this._formatTextIfValuePresent(
+    return `<ul class='tooltip-list' style='list-style-type: none; padding: 0;margin: 0;'>${this._formatTextIfValuePresent(
       'Regulation',
       node.regulation,
       tooltipStrongWidth
@@ -2129,7 +2131,7 @@ export class BiowcPathwaygraph extends LitElement {
       tooltipStrongWidth = maxKeyLength * 12;
     }
 
-    return `<ul class='tooltip-list'>${BiowcPathwaygraph._formatTextIfValuePresent(
+    return `<ul class='tooltip-list' style='list-style-type: none; padding: 0;margin: 0;'>${BiowcPathwaygraph._formatTextIfValuePresent(
       'Gene Name(s)',
       node.geneNames ? node.geneNames.join(',') : node.label,
       tooltipStrongWidth
