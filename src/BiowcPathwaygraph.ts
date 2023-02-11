@@ -428,15 +428,9 @@ export class BiowcPathwaygraph extends LitElement {
               // Only proceed if the node has not yet been associated with this peptide
               if (!geneProteinNodeIdsOfPeptide.has(geneProteinNode.nodeId)) {
                 geneProteinNodeIdsOfPeptide.add(geneProteinNode.nodeId);
-                const ptmNodeId = `ptm-${geneProteinNode.nodeId}_${
-                  (geneProtein2RegulationCategory.up[geneProteinNode.nodeId]
-                    ?.length || 0) +
-                  (geneProtein2RegulationCategory.down[geneProteinNode.nodeId]
-                    ?.length || 0) +
-                  (geneProtein2RegulationCategory.not[geneProteinNode.nodeId]
-                    ?.length || 0) +
-                  1
-                }`;
+                const ptmNodeId = `ptm-${
+                  geneProteinNode.nodeId
+                }_${crypto.randomUUID()}`;
                 const ptmNode = {
                   nodeId: ptmNodeId,
                   type: 'ptm',
