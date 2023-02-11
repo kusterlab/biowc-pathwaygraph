@@ -208,7 +208,6 @@ export class BiowcPathwaygraph extends LitElement {
   // Can be 0, 1 or 2, to distinguish single- from double-click events
   recentClicks = 0;
 
-
   render() {
     return html`
       <div id="pathwayContainer">
@@ -312,6 +311,16 @@ export class BiowcPathwaygraph extends LitElement {
     super.requestUpdate(name, oldValue, options);
   }
 
+  protected firstUpdated(_changedProperties: PropertyValues) {
+    this.d3Nodes = [];
+    this.d3Links = [];
+    this._getMainDiv().append('g').attr('id', 'linkG');
+    this._getMainDiv().append('g').attr('id', 'nodeG');
+    this._renderLegend();
+    this._enableZoomingAndPanning();
+    super.firstUpdated(_changedProperties);
+  }
+
   protected updated(_changedProperties: PropertyValues) {
     // TODO: only if it has changed
     this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
@@ -326,14 +335,6 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._createD3GraphObject();
     this._renderGraph();
-    this._enableZoomingAndPanning();
-
-    window.addEventListener('resize', () => {
-      // this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
-    });
-
-    // TODO: Only if it doesn't exist
-    this._renderLegend();
 
     super.updated(_changedProperties);
   }
@@ -611,40 +612,73 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _createD3GraphObject() {
-    this.d3Nodes = this.graphdataSkeleton.nodes.map(node => ({
-      ...node,
-      selected: true,
-      visible: true,
-    }));
-    this.d3Links = this.graphdataSkeleton.links.map(
-      link => ({ ...link } as PathwayGraphLinkD3)
+    // Essentially, the d3Nodes and d3Links objects consist of all nodes and links
+    // from the skeleton and the ptm objects. So in principle we could recreate them
+    // from the concatenation of skeleton and ptm every time.
+    // Problem is: d3 would then redraw the whole graph, resetting everything to
+    // its original position and so on. The user might not want that. So, instead:
+    // 1. Remove all ptm summary nodes and links - their ptm lists might be outdated
+    // 2. Add all nodes and links from graphdata that are not yet part of the d3 objects
+    // 3. Then remove all from the d3 objects that are not anymore part of the graphdata
+    this.d3Nodes = this.d3Nodes!.filter(node => node.type !== 'ptm summary');
+    this.d3Links = this.d3Links!.filter(
+      link => !link.types.includes('summary')
     );
-    if (this.graphdataPTM) {
-      this.d3Nodes = this.d3Nodes.concat(
-        this.graphdataPTM.nodes.map(node => ({
-          ...node,
-          selected: true,
-          visible: true,
-        }))
-      );
-      this.d3Links = this.d3Links.concat(
-        this.graphdataPTM.links.map(link => ({ ...link } as PathwayGraphLinkD3))
-      );
-    }
+    const d3NodeIds = new Set(this.d3Nodes!.map(node => node.nodeId));
+    const d3LinkIds = new Set(this.d3Links!.map(link => link.linkId));
+    const graphdataNodeIds = new Set(
+      this.graphdataSkeleton.nodes
+        .map(node => node.nodeId)
+        .concat(this.graphdataPTM!.nodes.map(node => node.nodeId))
+    );
+    const graphdataLinkIds = new Set(
+      this.graphdataSkeleton.links
+        .map(link => link.linkId)
+        .concat(this.graphdataPTM!.links.map(link => link.linkId))
+    );
+
+    this.graphdataSkeleton.nodes
+      .concat(this.graphdataPTM!.nodes)
+      .forEach(node => {
+        if (!d3NodeIds.has(node.nodeId)) {
+          // console.log(`${node.nodeId} is not yet in the graph, adding it!`)
+          this.d3Nodes!.push({
+            ...node,
+            selected: true,
+            visible: true,
+          });
+        }
+      });
+
+    this.d3Nodes = this.d3Nodes!.filter(node =>
+      graphdataNodeIds.has(node.nodeId)
+    );
+
+    this.graphdataSkeleton.links
+      .concat(this.graphdataPTM!.links)
+      .forEach(link => {
+        if (!d3LinkIds.has(link.linkId!)) {
+          this.d3Links!.push({ ...link } as PathwayGraphLinkD3);
+        }
+      });
+
+    this.d3Links = this.d3Links!.filter(link =>
+      graphdataLinkIds.has(link.linkId)
+    );
 
     // Now we need to setup some references within the D3 Graph Data
     // First we create maps of id to nodes/links for quicker access
     const nodeIdToNodeMap: { [key: string]: PathwayGraphNodeD3 } = {};
-    for (const node of this.d3Nodes) {
+    for (const node of this.d3Nodes!) {
       nodeIdToNodeMap[node.nodeId] = node;
     }
 
     const linkIdToLinkMap: { [key: string]: PathwayGraphLinkD3 } = {};
-    for (const link of this.d3Links) {
+    for (const link of this.d3Links!) {
       linkIdToLinkMap[link.linkId] = link;
     }
 
-    for (const node of this.d3Nodes) {
+    for (const node of this.d3Nodes!) {
       // a) For all PTM peptides: add reference to protein node
       // This goes for both individual PTMs nodes and summary nodes
       if (node.type.includes('ptm')) {
@@ -669,7 +703,7 @@ export class BiowcPathwaygraph extends LitElement {
       if (node.type === 'group') {
         const groupNode = <GroupNodeD3>node;
         groupNode.componentNodes = [];
-        for (const otherNode of this.d3Nodes) {
+        for (const otherNode of this.d3Nodes!) {
           if (
             Object.hasOwn(otherNode, 'groupId') &&
             (<GeneProteinNodeD3>otherNode).groupId === groupNode.nodeId
@@ -682,7 +716,7 @@ export class BiowcPathwaygraph extends LitElement {
     }
 
     // Connect each link with its source and target
-    for (const link of this.d3Links) {
+    for (const link of this.d3Links!) {
       link.source = nodeIdToNodeMap[link.sourceId];
       link.target = nodeIdToNodeMap[link.targetId];
       // If no source/target was found, the link might start/end on another link
@@ -697,6 +731,12 @@ export class BiowcPathwaygraph extends LitElement {
         link.targetIsAnchor = true;
       }
     }
+
+    // Clear selection
+    this.d3Nodes!.forEach(node => {
+      /* eslint-disable-next-line no-param-reassign */
+      node.selected = true;
+    });
   }
 
   private _getMainDiv() {
@@ -707,19 +747,15 @@ export class BiowcPathwaygraph extends LitElement {
   private _renderGraph() {
     const mainDiv = this._getMainDiv();
 
-    mainDiv.append('g').attr('id', 'nodeG');
-    mainDiv.append('g').attr('id', 'linkG');
     // Initially draw the graph with all possible nodes present so the simulation reaches a steady state
     // After a few seconds redraw the graph filtered for summary PTM nodes
-    this._drawGraph();
+    this._refreshGraph();
 
     // Initially, make all individual PTM nodes invisible. They should be physically present for the simulation to stabilize,
     // but visible only after the stabilization process is complete.
     mainDiv
       .selectAll('g.ptm:not(.summary):not(.legend)')
       .attr('display', 'none');
-
-    this._addAnimation();
 
     setTimeout(() => {
       if (this.d3Nodes) {
@@ -1773,9 +1809,16 @@ export class BiowcPathwaygraph extends LitElement {
 
   private _renderLegend() {
     const legendSvg = this._getMainDiv().select<SVGElement>('#pathwayLegend');
+    // If the selector does not exist yet we are too early and need to come back later
     if (legendSvg.empty()) {
       return;
     }
+
+    // If the selector already has children, the legend has been drawn already
+    if (!legendSvg.select('*').empty()) {
+      return;
+    }
+
     // Bring legend to front of the canvas
     legendSvg.node()!.parentNode!.appendChild(legendSvg.node()!);
     // Draw the frame
@@ -2343,6 +2386,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           // Show all individual PTM Nodes of this summary node
           d.ptmNodes!.forEach(ptmnode => {
             ptmnode.visible = true;
+            ptmnode.selected = ptmnode.summaryNode?.selected;
           });
           // Hide the summary node
           d.visible = false;
@@ -2360,6 +2404,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           e.stopPropagation(); // Prevent zooming on doubleclick
           // Show the summary node of this PTM node
           d.summaryNode!.visible = true;
+          d.summaryNode!.selected = d.selected;
           // Hide all sibling PTM nodes (all PTM nodes of the summary node)
           d.summaryNode!.ptmNodes!.forEach(ptmnode => {
             ptmnode.visible = false;
@@ -2371,14 +2416,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   private _refreshGraph() {
-    // TODO: This is where the group nodes are duplicated. The idea here is that the graph is only updated
-    // So nodes that already exist are just left be. This works already for all but the group nodes.
     this._drawGraph();
     this._addAnimation();
     this._addTooltips();
     this._addContextMenu();
     this._enableNodeSelection();
     this._enableNodeExpandAndCollapse();
+    this._highlightSelectedNodes();
   }
 
   private _highlightSelectedNodes() {
