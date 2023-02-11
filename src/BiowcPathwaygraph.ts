@@ -208,9 +208,6 @@ export class BiowcPathwaygraph extends LitElement {
   // Can be 0, 1 or 2, to distinguish single- from double-click events
   recentClicks = 0;
 
-  // TODO: Install a watcher that throws an event if this reaches zero
-  // TODO: ...first check if this actually is still needed anywhere, could be legacy
-  // numberOfUnselectedNodes = 0;
 
   render() {
     return html`
