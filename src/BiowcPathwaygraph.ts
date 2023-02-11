@@ -2542,12 +2542,19 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   public exportSvg() {
-    let svgHtml = this.shadowRoot?.querySelector('svg')?.outerHTML!;
-
-    // We need to inject the css custom properties into the svg
+    // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
+    // into the svg and the rest of the stylesheet.
     // I only have a clumsy solution for that: extract the css rule into a key-value pair and
-    // going over the whole svg and replacing every occurrence one by one
+    // going over the whole svg+css and replacing every occurrence one by one
     const hostRule = styles.styleSheet?.cssRules[0].cssText!;
+
+    let svgHtml = this.shadowRoot?.querySelector('svg')?.outerHTML!;
+    let cssRules = styles.cssText;
+    // Trim away the hostRule from the remaining rules - if they are part of the style, some SVG viewers may have rendering issues
+    cssRules = cssRules
+      .slice(cssRules.indexOf('}') + 1)
+      .replace(/\r?\n|\r/g, '');
+
     hostRule
       .slice(8, -2)
       .split(';')
@@ -2557,8 +2564,29 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           const key = `var(${propertySplit[0].trim()})`;
           const value = propertySplit[1].trim();
           svgHtml = svgHtml.replaceAll(key, value);
+          cssRules = cssRules.replaceAll(key, value);
         }
       });
+
+    // Inject the styles into the svg
+    svgHtml = `${svgHtml.slice(0, -6)}<style>${cssRules}</style>${svgHtml.slice(
+      -6
+    )}`;
+
+    // Load xmlns
+    if (!svgHtml.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgHtml = svgHtml.replace(
+        /^<svg/,
+        '<svg xmlns="http://www.w3.org/2000/svg"'
+      );
+    }
+    if (!svgHtml.match(/^<svg[^>]+"http:\/\/www\.w3\.org\/1999\/xlink"/)) {
+      svgHtml = svgHtml.replace(
+        /^<svg/,
+        '<svg xmlns:xlink="http://www.w3.org/1999/xlink"'
+      );
+    }
+
     return svgHtml;
   }
 

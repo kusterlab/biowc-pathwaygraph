@@ -26,7 +26,6 @@ export default css`
     visibility: hidden;
   }
 
-  //TODO: Maplinks are not yet rendered
   .link.maplink {
     stroke-dasharray: '5 2';
   }
