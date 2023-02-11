@@ -316,6 +316,7 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   protected updated(_changedProperties: PropertyValues) {
+    // TODO: only if it has changed
     this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
 
     // Map PTM Input to Skeleton Nodes
@@ -334,6 +335,7 @@ export class BiowcPathwaygraph extends LitElement {
       // this._getMainDiv().style('min-width', `${document.body.clientWidth}px`);
     });
 
+    // TODO: Only if it doesn't exist
     this._renderLegend();
 
     super.updated(_changedProperties);
@@ -2589,5 +2591,17 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       })
     );
     /* eslint-enable no-param-reassign */
+  }
+
+  public collapseAllPTMNodes() {
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMNodeD3>('g.ptm:not(.summary):not(.legend)')
+      .each((ptmNode: PTMNodeD3) => {
+        /* eslint-disable no-param-reassign */
+        ptmNode.visible = false;
+        ptmNode.summaryNode!.visible = true;
+        /* eslint-enable no-param-reassign */
+      });
+    this._refreshGraph();
   }
 }
