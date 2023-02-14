@@ -300,6 +300,7 @@ export class BiowcPathwaygraph extends LitElement {
           <svg id="pathwayLegend" x="25" y="25" />
         </svg>
       </div>
+      <canvas id="canvasId" style="display: none"></canvas>
     `;
   }
 
@@ -2561,14 +2562,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     );
   }
 
-  public exportSvg() {
+  private _prepareForExport() {
     // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
     // into the svg and the rest of the stylesheet.
     // I only have a clumsy solution for that: extract the css rule into a key-value pair and
     // going over the whole svg+css and replacing every occurrence one by one
     const hostRule = styles.styleSheet?.cssRules[0].cssText!;
 
-    let svgHtml = this.shadowRoot?.querySelector('svg')?.outerHTML!;
+    const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
+
+    let serializedSVG = svg.outerHTML!;
     let cssRules = styles.cssText;
     // Trim away the hostRule from the remaining rules - if they are part of the style, some SVG viewers may have rendering issues
     cssRules = cssRules
@@ -2583,31 +2586,76 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         if (propertySplit.length > 1) {
           const key = `var(${propertySplit[0].trim()})`;
           const value = propertySplit[1].trim();
-          svgHtml = svgHtml.replaceAll(key, value);
+          serializedSVG = serializedSVG.replaceAll(key, value);
           cssRules = cssRules.replaceAll(key, value);
         }
       });
 
     // Inject the styles into the svg
-    svgHtml = `${svgHtml.slice(0, -6)}<style>${cssRules}</style>${svgHtml.slice(
+    serializedSVG = `${serializedSVG.slice(
+      0,
       -6
-    )}`;
+    )}<style>${cssRules}</style>${serializedSVG.slice(-6)}`;
 
     // Load xmlns
-    if (!svgHtml.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
-      svgHtml = svgHtml.replace(
+    if (
+      !serializedSVG.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)
+    ) {
+      serializedSVG = serializedSVG.replace(
         /^<svg/,
         '<svg xmlns="http://www.w3.org/2000/svg"'
       );
     }
-    if (!svgHtml.match(/^<svg[^>]+"http:\/\/www\.w3\.org\/1999\/xlink"/)) {
-      svgHtml = svgHtml.replace(
+    if (
+      !serializedSVG.match(/^<svg[^>]+"http:\/\/www\.w3\.org\/1999\/xlink"/)
+    ) {
+      serializedSVG = serializedSVG.replace(
         /^<svg/,
         '<svg xmlns:xlink="http://www.w3.org/1999/xlink"'
       );
     }
 
-    return svgHtml;
+    return serializedSVG;
+  }
+
+  public downloadSvg() {
+    const serializedSVG = this._prepareForExport();
+    const blob = new Blob([serializedSVG], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.download = 'pathwaygraph.svg';
+    a.href = url;
+    a.click();
+  }
+
+  public downloadPng() {
+    const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
+
+    const serializedSVG = this._prepareForExport();
+    const base64SVG = `data:image/svg+xml;base64,${btoa(
+      unescape(
+        encodeURIComponent(
+          `<?xml version="1.0" standalone="no"?>\r\n${serializedSVG}`
+        )
+      )
+    )}`;
+
+    const canvas = document.getElementById('canvasId') as HTMLCanvasElement;
+
+    canvas.height = svg.height.animVal.value;
+    canvas.width = svg.width.animVal.value;
+    const context = canvas.getContext('2d');
+    const image = new Image();
+    image.src = base64SVG;
+    image.onload = () => {
+      context!.drawImage(image, 0, 0);
+      // click button for download
+      const link = document.createElement('a');
+      link.download = 'pathwaygraph.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    };
   }
 
   // Todo: Document to user that this exists, as well as the events a parent could listen to
