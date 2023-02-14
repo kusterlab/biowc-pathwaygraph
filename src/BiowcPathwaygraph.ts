@@ -595,6 +595,25 @@ export class BiowcPathwaygraph extends LitElement {
                   default:
                     break;
                 }
+
+                // Concatenate the details
+                if (fullProteomeInputEntry.details) {
+                  nodesDictEntry.details = nodesDictEntry.details || {};
+                  Object.keys(fullProteomeInputEntry.details).forEach(
+                    detailKey => {
+                      if (Object.hasOwn(nodesDictEntry.details!, detailKey)) {
+                        nodesDictEntry.details![detailKey] = `${String(
+                          nodesDictEntry.details![detailKey]
+                        )},${String(
+                          fullProteomeInputEntry.details![detailKey]
+                        )}`;
+                      } else {
+                        nodesDictEntry.details![detailKey] =
+                          fullProteomeInputEntry.details![detailKey];
+                      }
+                    }
+                  );
+                }
               }
             }
           }
@@ -2197,7 +2216,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             tooltipStrongWidth
           )
         : ''
-    }${
+    }
+    ${
       node.details
         ? Object.entries(node.details)
             .map(([key, value]) =>
