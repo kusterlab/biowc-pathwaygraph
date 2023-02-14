@@ -2629,35 +2629,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
-  public downloadPng() {
-    const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
-
-    const serializedSVG = this._prepareForExport();
-    const base64SVG = `data:image/svg+xml;base64,${btoa(
-      unescape(
-        encodeURIComponent(
-          `<?xml version="1.0" standalone="no"?>\r\n${serializedSVG}`
-        )
-      )
-    )}`;
-
-    const canvas = document.getElementById('canvasId') as HTMLCanvasElement;
-
-    canvas.height = svg.height.animVal.value;
-    canvas.width = svg.width.animVal.value;
-    const context = canvas.getContext('2d');
-    const image = new Image();
-    image.src = base64SVG;
-    image.onload = () => {
-      context!.drawImage(image, 0, 0);
-      // click button for download
-      const link = document.createElement('a');
-      link.download = 'pathwaygraph.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    };
-  }
-
   // Todo: Document to user that this exists, as well as the events a parent could listen to
   public selectNodesDownstreamOfSelection() {
     this.d3Nodes!.filter(node => node.selected).forEach(node =>
