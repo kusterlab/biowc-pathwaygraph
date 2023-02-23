@@ -9,7 +9,7 @@ export default {
       {
         nodeId: '1', // TODO: Make optional and generate them if not present
         geneNames: ['Protein A'],
-        label: 'A',
+        label: 'Protein A;A',
         type: 'gene_protein',
         x: 50,
         y: 50,
@@ -18,7 +18,7 @@ export default {
       {
         nodeId: '2',
         geneNames: ['Protein B'],
-        label: 'B',
+        label: 'Protein B;B',
         type: 'gene_protein',
         x: 150,
         y: 50,
@@ -28,7 +28,7 @@ export default {
         nodeId: '3',
         geneNames: ['Protein C'],
         uniprotAccs: ['P12345'],
-        label: 'C;ProtC',
+        label: 'Protein C;C;ProtC',
         type: 'gene_protein',
         x: -10,
         y: 150,
@@ -37,7 +37,7 @@ export default {
         nodeId: '4',
         geneNames: ['Protein D'],
         uniprotAccs: ['Q19838'],
-        label: 'D',
+        label: 'Protein D;D',
         type: 'gene_protein',
         x: 80,
         y: 150,
@@ -45,7 +45,7 @@ export default {
       {
         nodeId: '5',
         geneNames: ['Protein E'],
-        label: 'E',
+        label: 'Protein E;E',
         type: 'gene_protein',
         x: 130,
         y: 100,
