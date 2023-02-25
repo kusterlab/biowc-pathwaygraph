@@ -1,13 +1,15 @@
 import { html, TemplateResult } from 'lit';
 import '../src/biowc-pathwaygraph.js';
+import Story1Fixture from '../test/fixtures/Story1Fixture.js';
 
 export default {
   title: 'BiowcPathwaygraph',
   component: 'biowc-pathwaygraph',
   argTypes: {
-    title: { control: 'text' },
-    counter: { control: 'number' },
-    textColor: { control: 'color' },
+    pathwayMetaData: { control: 'object' },
+    graphdataSkeleton: { control: 'object' },
+    ptmInputList: { control: 'object' },
+    fullProteomeInputList: { control: 'object' },
   },
 };
 
@@ -18,43 +20,31 @@ interface Story<T> {
 }
 
 interface ArgTypes {
-  title?: string;
-  counter?: number;
-  textColor?: string;
-  slot?: TemplateResult;
+  pathwayMetaData?: object;
+  graphdataSkeleton?: object;
+  ptmInputList?: object;
+  fullProteomeInputList?: object;
 }
 
-const Template: Story<ArgTypes> = ({
-  title = 'Hello world',
-  counter = 5,
-  textColor,
-  slot,
-}: ArgTypes) => html`
+const Template: Story<ArgTypes> = (args: ArgTypes) => html`
   <biowc-pathwaygraph
-    style="--biowc-pathwaygraph-text-color: ${textColor || 'black'}"
-    .title=${title}
-    .counter=${counter}
+    .pathwayMetaData=${args.pathwayMetaData}
+    .graphdataSkeleton=${args.graphdataSkeleton}
+    .ptmInputList=${args.ptmInputList}
+    .fullProteomeInputList=${args.fullProteomeInputList}
   >
-    ${slot}
   </biowc-pathwaygraph>
 `;
 
-export const Regular = Template.bind({});
-
-export const CustomTitle = Template.bind({});
-CustomTitle.args = {
-  title: 'My title',
+export const MinimalSkeletonGraph = Template.bind({});
+MinimalSkeletonGraph.args = {};
+MinimalSkeletonGraph.args.graphdataSkeleton = {
+  nodes: Story1Fixture.pathway1.nodes,
+  links: Story1Fixture.pathway1.links,
 };
 
-export const CustomCounter = Template.bind({});
-CustomCounter.args = {
-  counter: 123456,
-};
-
-export const SlottedContent = Template.bind({});
-SlottedContent.args = {
-  slot: html`<p>Slotted content</p>`,
-};
-SlottedContent.argTypes = {
-  slot: { table: { disable: true } },
+export const MinimalPTMGraph = Template.bind({});
+MinimalPTMGraph.args = {
+  ...MinimalSkeletonGraph.args,
+  ptmInputList: Story1Fixture.pathway1.ptmInputList,
 };
