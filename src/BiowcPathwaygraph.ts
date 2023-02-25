@@ -1589,6 +1589,13 @@ export class BiowcPathwaygraph extends LitElement {
         .attr('class', 'contextMenu')
         .attr('id', 'nodeContextMenu');
 
+      // Before we add the entries, add a title to the menu
+      contextMenu
+        .append('div')
+        .attr('class', 'contextMenuTitle')
+        .append('text')
+        .text('Alternative Names');
+
       contextMenu
         .selectAll('.contextMenuEntry')
         .data(
@@ -1610,8 +1617,6 @@ export class BiowcPathwaygraph extends LitElement {
         );
 
       const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry');
-
-      contextMenuEntry.append('rect');
 
       contextMenuEntry
         .append('text')
@@ -1658,7 +1663,7 @@ export class BiowcPathwaygraph extends LitElement {
     const allPossibleNames = (label ? label.split(splitRegex) : []).concat(
       geneNames
     );
-    return [...new Set(allPossibleNames)];
+    return [...new Set(allPossibleNames.filter(name => !!name && name !== ''))];
   }
 
   private static _computeRegulationClass(node: PathwayGraphNode) {

@@ -170,6 +170,19 @@ export default css`
     padding: 2px 5px;
   }
 
+  .contextMenuTitle {
+    text-align: center;
+    background-color: #bebebe;
+    border: 2px solid;
+    padding: 2px 5px;
+  }
+
+  .contextMenuTitle text {
+    font-family: var(--font-stack);
+    font-size: 14px;
+    font-weight: bold;
+  }
+
   .contextMenuEntry text {
     font-family: var(--font-stack);
     font-size: 14px;
