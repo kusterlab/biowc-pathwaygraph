@@ -1,3 +1,4 @@
+// TODO: Alternative names concept
 export default {
   pathway1: {
     nodes: [

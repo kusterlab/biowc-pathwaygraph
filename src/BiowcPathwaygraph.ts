@@ -997,11 +997,6 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _addAnimation() {
-    const PTM_LINK_FORCE_STRENGTH = 2;
-    const PTM_LINK_FORCE_DISTANCE_MULTIPLIER = 1.025;
-    const PTM_COLLISION_FORCE_RADIUS = 7;
-    const CIRCLE_NODE_LINK_FORCE_DISTANCE = 20;
-
     // Add forces to the PTM nodes and links
     const simulation = d3v6
       .forceSimulation()
@@ -1019,9 +1014,7 @@ export class BiowcPathwaygraph extends LitElement {
             )
           )
           .strength(link =>
-            link.types && link.types.includes('ptmlink')
-              ? PTM_LINK_FORCE_STRENGTH
-              : 0
+            link.types && link.types.includes('ptmlink') ? 2 : 0
           )
           .distance(link => {
             if (link.types && link.types.includes('ptmlink')) {
@@ -1029,16 +1022,18 @@ export class BiowcPathwaygraph extends LitElement {
                 Object.hasOwn(link.target, 'isCircle') &&
                 (<PathwayGraphNodeD3>link.target).isCircle
               ) {
-                return (
-                  CIRCLE_NODE_LINK_FORCE_DISTANCE *
-                  PTM_LINK_FORCE_DISTANCE_MULTIPLIER
-                );
+                return 20;
               }
               if (Object.hasOwn(link.target, 'textLength')) {
-                return (
-                  ((<PathwayGraphNodeD3>link.target).textLength || 1) *
-                  PTM_LINK_FORCE_DISTANCE_MULTIPLIER
-                );
+                const nodeTextLength =
+                  (<PathwayGraphNodeD3>link.target).textLength || 1;
+
+                // This is the result of some playing around with text lengths and forces
+                // (as are most of the hard-coded numbers in here)
+                if (nodeTextLength > 75) {
+                  return Math.sqrt(nodeTextLength) * 7;
+                }
+                return Math.sqrt(nodeTextLength) * 6;
               }
               return 0;
             }
@@ -1051,9 +1046,7 @@ export class BiowcPathwaygraph extends LitElement {
         d3v6
           .forceCollide() // TODO: The old version was .forceCollide(this.nodes.filter((node) => node.visible)) but forceCollide does not take nodes as argument, only the radius. So has this ever worked as intended?
           .radius(node =>
-            (<PathwayGraphNodeD3>node).type.includes('ptm')
-              ? PTM_COLLISION_FORCE_RADIUS
-              : 0
+            (<PathwayGraphNodeD3>node).type.includes('ptm') ? 7 : 0
           )
       );
     // I used to have center force, many-body force and x/y positional force in here as well
