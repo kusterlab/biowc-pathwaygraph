@@ -763,7 +763,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Initially draw the graph with all possible nodes present so the simulation reaches a steady state
     // After a few seconds redraw the graph filtered for summary PTM nodes
-    this._refreshGraph();
+    this._refreshGraph(false);
 
     // Initially, make all individual PTM nodes invisible. They should be physically present for the simulation to stabilize,
     // but visible only after the stabilization process is complete.
@@ -781,7 +781,7 @@ export class BiowcPathwaygraph extends LitElement {
           }
         }
       }
-      this._refreshGraph();
+      this._refreshGraph(true);
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
       // because 'visible' is set to false so they are not part of the graph)
       mainDiv
@@ -2405,7 +2405,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           });
           // Hide the summary node
           d.visible = false;
-          this._refreshGraph();
+          this._refreshGraph(true);
           /* eslint-enable no-param-reassign */
         }
       });
@@ -2424,19 +2424,21 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           d.summaryNode!.ptmNodes!.forEach(ptmnode => {
             ptmnode.visible = false;
           });
-          this._refreshGraph();
+          this._refreshGraph(true);
         }
         /* eslint-enable no-param-reassign */
       });
   }
 
-  private _refreshGraph() {
+  private _refreshGraph(doEnableNodeExpandAndCollapse: boolean) {
     this._drawGraph();
     this._addAnimation();
     this._addTooltips();
     this._addContextMenu();
     this._enableNodeSelection();
-    this._enableNodeExpandAndCollapse();
+    if (doEnableNodeExpandAndCollapse) {
+      this._enableNodeExpandAndCollapse();
+    }
     this._highlightSelectedNodes();
   }
 
@@ -2704,6 +2706,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         ptmNode.summaryNode!.visible = true;
         /* eslint-enable no-param-reassign */
       });
-    this._refreshGraph();
+    this._refreshGraph(true);
   }
 }
