@@ -429,9 +429,9 @@ export class BiowcPathwaygraph extends LitElement {
               // Only proceed if the node has not yet been associated with this peptide
               if (!geneProteinNodeIdsOfPeptide.has(geneProteinNode.nodeId)) {
                 geneProteinNodeIdsOfPeptide.add(geneProteinNode.nodeId);
-                const ptmNodeId = `ptm-${
-                  geneProteinNode.nodeId
-                }_${crypto.randomUUID()}`;
+                const ptmNodeId = `ptm-${geneProteinNode.nodeId}_${
+                  crypto.getRandomValues(new Uint32Array(1))[0]
+                }`;
                 const ptmNode = {
                   nodeId: ptmNodeId,
                   type: 'ptm',
