@@ -36,7 +36,7 @@ interface PathwayGraphNode extends SimulationNodeDatum {
 interface GeneProteinNode extends PathwayGraphNode {
   geneNames: string[];
   uniprotAccs: string[];
-  label: string;
+  label?: string;
   groupId?: string;
   // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
   // eslint-disable-next-line no-use-before-define
@@ -655,12 +655,30 @@ export class BiowcPathwaygraph extends LitElement {
       .concat(this.graphdataPTM!.nodes)
       .forEach(node => {
         if (!d3NodeIds.has(node.nodeId)) {
-          // console.log(`${node.nodeId} is not yet in the graph, adding it!`)
-          this.d3Nodes!.push({
+          const newNode = {
             ...node,
+            // label: node.label || node.geneNames,
             selected: true,
             visible: true,
-          });
+          } as PathwayGraphNodeD3;
+          if (
+            Object.hasOwn(node, 'label') ||
+            Object.hasOwn(node, 'geneNames')
+          ) {
+            if ((<GeneProteinNode>node).label) {
+              (<GeneProteinNodeD3>newNode).label = (<GeneProteinNode>(
+                node
+              )).label;
+            } else if (
+              !!(<GeneProteinNode>node).geneNames &&
+              (<GeneProteinNode>node).geneNames.length > 0
+            ) {
+              [(<GeneProteinNodeD3>newNode).label] = (<GeneProteinNode>(
+                node
+              )).geneNames;
+            }
+          }
+          this.d3Nodes!.push(newNode);
         }
       });
 
@@ -846,13 +864,13 @@ export class BiowcPathwaygraph extends LitElement {
         )
           return '';
         const node = d as GeneProteinNodeD3 | PTMSummaryNodeD3;
-        if (node.label.startsWith('TITLE:')) {
-          return node.label.substring(6).toUpperCase();
+        if (node.label!.startsWith('TITLE:')) {
+          return node.label!.substring(6).toUpperCase();
         }
         return BiowcPathwaygraph._calculateContextMenuOptions(
           node.type,
           'geneNames' in node ? node.geneNames : [],
-          node.label
+          node.label!
         )[0];
       })
       .each((d, i, nodes) => {
@@ -1602,7 +1620,7 @@ export class BiowcPathwaygraph extends LitElement {
           BiowcPathwaygraph._calculateContextMenuOptions(
             node.type,
             'geneNames' in node ? node.geneNames : [],
-            node.label
+            node.label!
           )
         )
         .join('div')

@@ -15,7 +15,6 @@ export default {
         nodeId: '2',
         geneNames: ['PrB', 'Protein B'],
         uniprotAccs: ['P85299'],
-        label: 'Protein B',
         type: 'gene_protein',
         x: 175,
         y: 50,
