@@ -1681,7 +1681,11 @@ export class BiowcPathwaygraph extends LitElement {
     const allPossibleNames = (label ? label.split(splitRegex) : []).concat(
       geneNames
     );
-    return [...new Set(allPossibleNames.filter(name => !!name && name !== ''))];
+    return [
+      ...new Set(allPossibleNames.filter(name => !!name && name !== '')),
+    ].sort((a, b) =>
+      a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase())
+    );
   }
 
   private static _computeRegulationClass(node: PathwayGraphNode) {
@@ -1835,6 +1839,7 @@ export class BiowcPathwaygraph extends LitElement {
       .on('drag', dragged)
       .on('end', dragended);
   }
+
   /* eslint-enable no-param-reassign */
 
   private _renderLegend() {
