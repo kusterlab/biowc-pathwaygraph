@@ -864,13 +864,13 @@ export class BiowcPathwaygraph extends LitElement {
         )
           return '';
         const node = d as GeneProteinNodeD3 | PTMSummaryNodeD3;
-        if (node.label!.startsWith('TITLE:')) {
+        if (node.label?.startsWith('TITLE:')) {
           return node.label!.substring(6).toUpperCase();
         }
         return BiowcPathwaygraph._calculateContextMenuOptions(
           node.type,
           'geneNames' in node ? node.geneNames : [],
-          node.label!
+          node.label
         )[0];
       })
       .each((d, i, nodes) => {
@@ -1011,7 +1011,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('textPath')
       .attr('xlink:href', (d, i) => `#edgepath-${i}`)
       .attr('startOffset', '50%')
-      .text(link => link.label!);
+      .text(link => link.label || '');
   }
 
   private _addAnimation() {
@@ -1620,7 +1620,7 @@ export class BiowcPathwaygraph extends LitElement {
           BiowcPathwaygraph._calculateContextMenuOptions(
             node.type,
             'geneNames' in node ? node.geneNames : [],
-            node.label!
+            node.label
           )
         )
         .join('div')
@@ -1669,7 +1669,7 @@ export class BiowcPathwaygraph extends LitElement {
   private static _calculateContextMenuOptions(
     type: string,
     geneNames: string[],
-    label: string
+    label: string | undefined
   ) {
     let splitRegex;
     if (type.includes('compound')) {

@@ -9,7 +9,7 @@ export default {
       {
         nodeId: '1', // TODO: Make optional and generate them if not present
         geneNames: ['Protein A'],
-        label: 'Protein A;A',
+        label: null,
         type: 'gene_protein',
         x: 50,
         y: 50,
