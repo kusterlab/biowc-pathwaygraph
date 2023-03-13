@@ -661,22 +661,25 @@ export class BiowcPathwaygraph extends LitElement {
             selected: true,
             visible: true,
           } as PathwayGraphNodeD3;
-          if (
-            Object.hasOwn(node, 'label') ||
-            Object.hasOwn(node, 'geneNames')
+          // Add label:
+          // - If the input node has a label already, just take it
+          // - Else if the input node has geneNames, use the first one...
+          //   - ...unless it is a PTM node - those do not get labels
+
+          if (Object.hasOwn(node, 'label') && !!(<GeneProteinNode>node).label) {
+            (<GeneProteinNodeD3>newNode).label = (<GeneProteinNode>node).label;
+          } else if (
+            Object.hasOwn(node, 'geneNames') &&
+            (<GeneProteinNode>node).geneNames.length > 0 &&
+            // If the node has a geneProteinNodeId, it is a PTM node so it doesn't get a label
+            !Object.hasOwn(node, 'geneProteinNodeId')
           ) {
-            if ((<GeneProteinNode>node).label) {
-              (<GeneProteinNodeD3>newNode).label = (<GeneProteinNode>(
-                node
-              )).label;
-            } else if (
-              !!(<GeneProteinNode>node).geneNames &&
-              (<GeneProteinNode>node).geneNames.length > 0
-            ) {
-              [(<GeneProteinNodeD3>newNode).label] = (<GeneProteinNode>(
-                node
-              )).geneNames;
-            }
+            // This sets 'newNode.label' to the first element of node.geneNames
+            // I think it's super unreadable so here is the reference:
+            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+            [(<GeneProteinNodeD3>newNode).label] = (<GeneProteinNode>(
+              node
+            )).geneNames;
           }
           this.d3Nodes!.push(newNode);
         }
