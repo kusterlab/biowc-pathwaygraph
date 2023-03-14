@@ -669,7 +669,7 @@ export class BiowcPathwaygraph extends LitElement {
           if (Object.hasOwn(node, 'label') && !!(<GeneProteinNode>node).label) {
             (<GeneProteinNodeD3>newNode).label = (<GeneProteinNode>node).label;
           } else if (
-            Object.hasOwn(node, 'geneNames') &&
+            !!(<GeneProteinNode>node).geneNames &&
             (<GeneProteinNode>node).geneNames.length > 0 &&
             // If the node has a geneProteinNodeId, it is a PTM node so it doesn't get a label
             !Object.hasOwn(node, 'geneProteinNodeId')
