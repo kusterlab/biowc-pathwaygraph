@@ -550,6 +550,9 @@ export class BiowcPathwaygraph extends LitElement {
     const nodesDict: { [key: string]: PathwayGraphNode } = {};
     for (const node of this.graphdataSkeleton.nodes) {
       nodesDict[node.nodeId] = node;
+      (<GeneProteinNode>node).nDown = 0;
+      (<GeneProteinNode>node).nUp = 0;
+      (<GeneProteinNode>node).nNot = 0;
     }
 
     if (this.fullProteomeInputList) {
@@ -638,7 +641,12 @@ export class BiowcPathwaygraph extends LitElement {
     this.d3Links = this.d3Links!.filter(
       link => !link.types.includes('summary')
     );
-    const d3NodeIds = new Set(this.d3Nodes!.map(node => node.nodeId));
+
+    const d3NodesDict: { [key: string]: PathwayGraphNodeD3 } = {};
+    for (const node of this.d3Nodes) {
+      d3NodesDict[node.nodeId] = node;
+    }
+
     const d3LinkIds = new Set(this.d3Links!.map(link => link.linkId));
     const graphdataNodeIds = new Set(
       this.graphdataSkeleton.nodes
@@ -654,7 +662,7 @@ export class BiowcPathwaygraph extends LitElement {
     this.graphdataSkeleton.nodes
       .concat(this.graphdataPTM!.nodes)
       .forEach(node => {
-        if (!d3NodeIds.has(node.nodeId)) {
+        if (!(node.nodeId in d3NodesDict)) {
           const newNode = {
             ...node,
             // label: node.label || node.geneNames,
@@ -675,13 +683,20 @@ export class BiowcPathwaygraph extends LitElement {
             !Object.hasOwn(node, 'geneProteinNodeId')
           ) {
             // This sets 'newNode.label' to the first element of node.geneNames
-            // I think it's super unreadable so here is the reference:
+            // The linter forces me to write it like this,
+            // however I think it's super unreadable so here is the reference:
             // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
             [(<GeneProteinNodeD3>newNode).label] = (<GeneProteinNode>(
               node
             )).geneNames;
           }
           this.d3Nodes!.push(newNode);
+        } else {
+          // If it exists already, still update nDown, nUp and nNot
+          const existingNode = d3NodesDict[node.nodeId] as GeneProteinNodeD3;
+          existingNode.nUp = (<GeneProteinNode>node).nUp;
+          existingNode.nDown = (<GeneProteinNode>node).nDown;
+          existingNode.nNot = (<GeneProteinNode>node).nNot;
         }
       });
 
