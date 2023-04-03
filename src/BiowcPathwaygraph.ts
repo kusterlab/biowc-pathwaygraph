@@ -1692,9 +1692,10 @@ export class BiowcPathwaygraph extends LitElement {
     let splitRegex;
     if (type.includes('compound')) {
       // Compounds may have a comma in their name, so do not split by that
-      splitRegex = /;|\//;
+      // We used to also split by '/' here, but that had unwanted side-effects (e.g. when a gene name was 'PKCI+/-').
+      splitRegex = /;/;
     } else {
-      splitRegex = /,|;|\//;
+      splitRegex = /,|;/;
     }
     const allPossibleNames = (label ? label.split(splitRegex) : []).concat(
       geneNames
