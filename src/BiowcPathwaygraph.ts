@@ -14,6 +14,8 @@ import styles from './biowc-pathwaygraph.css';
 
 type PossibleRegulationCategoriesType = 'up' | 'down' | 'not';
 
+type PossibleHueType = 'direction' | 'foldchange' | 'potency';
+
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
@@ -196,6 +198,9 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: false })
   fullProteomeInputList?: FullProteomeInputEntry[];
 
+  @property({ attribute: false })
+  hue!: PossibleHueType;
+
   graphdataPTM?: {
     nodes: (PTMNode | PTMSummaryNode)[];
     links: PathwayGraphLinkInput[];
@@ -207,6 +212,14 @@ export class BiowcPathwaygraph extends LitElement {
 
   // Can be 0, 1 or 2, to distinguish single- from double-click events
   recentClicks = 0;
+
+  maxPosFoldChange?: number;
+
+  maxNegFoldChange?: number;
+
+  maxPotency?: number;
+
+  minPotency?: number;
 
   render() {
     return html`
@@ -335,6 +348,7 @@ export class BiowcPathwaygraph extends LitElement {
     }
 
     this._createD3GraphObject();
+    this._calculateHueRange();
     this._renderGraph();
 
     super.updated(_changedProperties);
@@ -860,7 +874,8 @@ export class BiowcPathwaygraph extends LitElement {
           `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)}`
       )
       .attr('rx', NODE_HEIGHT)
-      .attr('ry', NODE_HEIGHT);
+      .attr('ry', NODE_HEIGHT)
+      .style('fill', d => this._computeNodeColor(d));
 
     // Add labels to the nodes
     nodesSvg.selectAll('.node-label').remove();
@@ -1722,6 +1737,191 @@ export class BiowcPathwaygraph extends LitElement {
     if (geneProteinNode.nNot! > 0) return 'not';
 
     return '';
+  }
+
+  private _computeNodeColor(node: PathwayGraphNodeD3) {
+    if (node.type === 'ptm') {
+      const upregulatedColor = getComputedStyle(this).getPropertyValue(
+        '--upregulated-color'
+      );
+      const downregulatedColor = getComputedStyle(this).getPropertyValue(
+        '--downregulated-color'
+      );
+      const unregulatedColor = getComputedStyle(this).getPropertyValue(
+        '--unregulated-color'
+      );
+      switch (this.hue) {
+        case 'direction':
+          switch ((<PTMNodeD3>node).regulation) {
+            case 'up':
+              return upregulatedColor;
+            case 'down':
+              return downregulatedColor;
+            case 'not':
+              return unregulatedColor;
+            default:
+              return '';
+          }
+        case 'foldchange':
+          // Interpolate between up and not or down and not, depending on direction
+          switch ((<PTMNodeD3>node).regulation) {
+            case 'up':
+              return d3v6.interpolate(
+                unregulatedColor,
+                upregulatedColor
+              )(
+                (Number((<PTMNodeD3>node).details!['Fold Change']) - 1) /
+                  (this.maxPosFoldChange! - 1)
+              );
+            case 'down':
+              return d3v6.interpolate(
+                unregulatedColor,
+                downregulatedColor
+              )(
+                (Number((<PTMNodeD3>node).details!['Fold Change']) - 1) /
+                  (this.maxNegFoldChange! - 1)
+              );
+            case 'not':
+              return 'var(--unregulated-color)';
+            default:
+              return '';
+          }
+        case 'potency':
+          return d3v6.interpolateViridis(
+            1 -
+              (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
+                this.minPotency!) /
+                (this.maxPotency! - this.minPotency!)
+          );
+        default:
+          return '';
+      }
+    }
+    // Default to whatever is in the css
+    return '';
+  }
+
+  private _calculateHueRange() {
+    switch (this.hue) {
+      case 'direction':
+        break;
+      case 'foldchange':
+        this.maxPosFoldChange = this.d3Nodes?.reduce(
+          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+            // Check if the node has details and if they include a fold change and that is positive (>1)
+            if (
+              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                'Fold Change'
+              ) &&
+              Number(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                  'Fold Change'
+                ]
+              ) > 1
+            ) {
+              // If yes, compare it with the currentMax
+              return Math.max(
+                Number(
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                    'Fold Change'
+                  ]
+                ),
+                currentMax
+              );
+            }
+
+            return currentMax;
+          },
+          1
+        );
+        this.maxNegFoldChange = this.d3Nodes?.reduce(
+          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+            // Check if the node has details and if they includes a fold change and that is negative (<1)
+            if (
+              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                'Fold Change'
+              ) &&
+              Number(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                  'Fold Change'
+                ]
+              ) < 1
+            ) {
+              // If yes, compare it with the currentMax (which is a min for negative fold change)
+              return Math.min(
+                Number(
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                    'Fold Change'
+                  ]
+                ),
+                currentMax
+              );
+            }
+
+            return currentMax;
+          },
+          1
+        );
+        break;
+      case 'potency':
+        this.maxPotency = this.d3Nodes?.reduce(
+          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+            // Check if the node has details and if they includes a fold change
+            if (
+              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                '-log(EC50)'
+              )
+            ) {
+              // If yes, compare it with the currentMax
+              return Math.max(
+                Number(
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                    '-log(EC50)'
+                  ]
+                ),
+                currentMax
+              );
+            }
+
+            return currentMax;
+          },
+          0
+        );
+        this.minPotency = this.d3Nodes?.reduce(
+          (currentMin: number, currentNode: PathwayGraphNodeD3) => {
+            // Check if the node has details and if they includes a fold change
+            if (
+              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                '-log(EC50)'
+              )
+            ) {
+              // If yes, compare it with the currentMin
+              return Math.min(
+                Number(
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                    '-log(EC50)'
+                  ]
+                ),
+                currentMin
+              );
+            }
+
+            return currentMin;
+          },
+          this.maxPotency!
+        );
+        break;
+      default:
+        break;
+    }
   }
 
   // Define drag behavior
