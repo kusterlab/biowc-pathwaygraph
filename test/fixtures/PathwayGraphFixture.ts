@@ -147,7 +147,53 @@ export default {
         },
       },
     ],
-
+    decryptmInputList: [
+      {
+        geneNames: ['Protein D'],
+        regulation: 'up',
+        details: {
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
+          '-log(EC50)': 5,
+          'Fold Change': 1.2,
+        },
+      },
+      {
+        geneNames: ['Protein D'],
+        regulation: 'up',
+        details: {
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
+          '-log(EC50)': 3,
+          'Fold Change': 1.2,
+        },
+      },
+      {
+        geneNames: ['Protein D'],
+        regulation: 'down',
+        details: {
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
+          '-log(EC50)': 8,
+          'Fold Change': 0.1,
+        },
+      },
+      {
+        geneNames: ['Protein A'],
+        regulation: 'up',
+        details: {
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
+          '-log(EC50)': 4,
+          'Fold Change': 3.1234,
+        },
+      },
+      {
+        geneNames: ['Protein C'],
+        regulation: 'down',
+        details: {
+          'Modified Sequence': 'TES(ph)TPEPT(ph)IDEK',
+          '-log(EC50)': 10,
+          'Fold Change': 0.5,
+        },
+      },
+    ],
     fpInputList: [
       {
         geneNames: ['Protein A'],
@@ -170,5 +216,6 @@ export default {
         details: {},
       },
     ],
+    hue: 'potency',
   },
 };

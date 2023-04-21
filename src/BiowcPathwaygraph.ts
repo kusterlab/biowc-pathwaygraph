@@ -309,6 +309,7 @@ export class BiowcPathwaygraph extends LitElement {
                 y2="10"
               />
             </pattern>
+            <linearGradient id="potency-linear-gradient"></linearGradient>
           </defs>
           <svg id="pathwayLegend" x="25" y="25" />
         </svg>
@@ -330,7 +331,6 @@ export class BiowcPathwaygraph extends LitElement {
     this.d3Links = [];
     this._getMainDiv().append('g').attr('id', 'linkG');
     this._getMainDiv().append('g').attr('id', 'nodeG');
-    this._renderLegend();
     this._enableZoomingAndPanning();
     super.firstUpdated(_changedProperties);
   }
@@ -349,6 +349,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._createD3GraphObject();
     this._calculateHueRange();
+    this._renderLegend();
     this._renderGraph();
 
     super.updated(_changedProperties);
@@ -2075,13 +2076,22 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Bring legend to front of the canvas
     legendSvg.node()!.parentNode!.appendChild(legendSvg.node()!);
+
+    // Determine width and height of the legend.
+    // Width is constant, height is larger if the legend contains a color scale,
+    // which is the case if hue = 'potency' or 'foldchange'
+    const legendWidth = 265;
+    const legendHeight = ['potency', 'foldchange'].includes(this.hue)
+      ? 235
+      : 165;
+
     // Draw the frame
     legendSvg
       .append('rect')
       .attr('x', 3)
       .attr('y', 3)
-      .attr('width', 265)
-      .attr('height', 165)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
       .attr('fill', 'white')
       .style('stroke-width', '1.5')
       .style('stroke', 'var(--legend-frame-color)');
@@ -2334,6 +2344,114 @@ export class BiowcPathwaygraph extends LitElement {
         'y',
         yOffset * scalingFactor - 8 + lineHeight * 5 + paragraphMargin * 2
       );
+    if (['potency', 'foldchange'].includes(this.hue)) {
+      const colorLegendGroupPosition = [
+        xOffset + 5,
+        yOffset * scalingFactor + lineHeight * 6 + paragraphMargin * 2 + 10,
+      ];
+      const colorLegendGroup = legendSvg
+        .append('g')
+        .attr(
+          'transform',
+          `translate(${colorLegendGroupPosition[0]},${colorLegendGroupPosition[1]})`
+        );
+
+      const colorLegendTitle = legendSvg
+        .append('text')
+        .attr('class', 'legend')
+        .attr('x', colorLegendGroupPosition[0] - 5)
+        .attr('y', colorLegendGroupPosition[1] - lineHeight / 2);
+
+      // Generate the linear gradient for the color legend
+      // (https://www.visualcinnamon.com/2016/05/smooth-color-legend-d3-svg-gradient/)
+      const linearGradient = this._getMainDiv().select<SVGElement>(
+        '#potency-linear-gradient'
+      );
+
+      linearGradient!.attr('x1', '0%').attr('x2', '100%');
+
+      colorLegendGroup
+        .append('rect')
+        .attr('width', legendWidth - 25)
+        .attr('height', 20)
+        .style('fill', 'url(#potency-linear-gradient)');
+
+      const steps = 100;
+      const gradientRange = Array.from({ length: steps }, (_, i) => i / steps);
+
+      let colorLegendXAxisScale;
+      let colorLegendXAxis: d3v6.Axis<d3v6.NumberValue> | d3v6.Axis<string>;
+
+      if (this.hue === 'potency') {
+        colorLegendTitle.text('pEC50:');
+        colorLegendXAxisScale = d3v6.scaleLinear();
+        colorLegendXAxis = d3v6.axisBottom(colorLegendXAxisScale);
+
+        linearGradient
+          .selectAll('stop')
+          .data(gradientRange)
+          .enter()
+          .append('stop')
+          .attr('offset', d => d)
+          .attr('stop-color', d => d3v6.interpolateViridis(1 - d));
+
+        colorLegendXAxisScale
+          .domain([this.minPotency!, this.maxPotency!])
+          .range([0, legendWidth - 25]);
+
+        colorLegendXAxis.ticks(4);
+      }
+
+      if (this.hue === 'foldchange') {
+        colorLegendTitle.text('Fold Change:');
+        colorLegendXAxisScale = d3v6.scalePoint();
+        colorLegendXAxis = d3v6.axisBottom(colorLegendXAxisScale);
+
+        const upregulatedColor = getComputedStyle(this).getPropertyValue(
+          '--upregulated-color'
+        );
+        const downregulatedColor = getComputedStyle(this).getPropertyValue(
+          '--downregulated-color'
+        );
+        const unregulatedColor = getComputedStyle(this).getPropertyValue(
+          '--unregulated-color'
+        );
+
+        linearGradient
+          .selectAll('stop')
+          .data(gradientRange)
+          .enter()
+          .append('stop')
+          .attr('offset', d => d)
+          .attr('stop-color', d => {
+            if (d < 0.5) {
+              return d3v6.interpolate(
+                downregulatedColor,
+                unregulatedColor
+              )(d / 0.5);
+            }
+            return d3v6.interpolate(
+              unregulatedColor,
+              upregulatedColor
+            )((d - 0.5) / 0.5);
+          });
+
+        colorLegendXAxisScale
+          .domain([
+            '0',
+            '0.5',
+            '1',
+            `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+            `${this.maxPosFoldChange!.toPrecision(2)}`,
+          ])
+          .range([0, legendWidth - 25]);
+      }
+
+      colorLegendGroup
+        .append('g')
+        .attr('transform', 'translate(0,25)')
+        .call(colorLegendXAxis!);
+    }
   }
 
   private _enableZoomingAndPanning() {
