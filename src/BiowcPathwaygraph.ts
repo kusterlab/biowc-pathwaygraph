@@ -2069,21 +2069,24 @@ export class BiowcPathwaygraph extends LitElement {
       return;
     }
 
-    // If the selector already has children, the legend has been drawn already
-    if (!legendSvg.select('*').empty()) {
-      return;
-    }
+    // If the selector already has children, the legend has been drawn already - remove it!
+    legendSvg.selectAll('*').remove();
 
     // Bring legend to front of the canvas
     legendSvg.node()!.parentNode!.appendChild(legendSvg.node()!);
 
+    // We will draw a color legend if EITHER
+    // a) The hue is set to potency and the min/max potency are well defined OR
+    // b) The hue is fold change and the maximal pos/neg fold changes are well defined
+    const drawColorLegend =
+      (this.hue === 'potency' && this.maxPotency !== this.minPotency) ||
+      (this.hue === 'foldchange' &&
+        this.maxPosFoldChange !== this.maxNegFoldChange);
+
     // Determine width and height of the legend.
-    // Width is constant, height is larger if the legend contains a color scale,
-    // which is the case if hue = 'potency' or 'foldchange'
+    // Width is constant, height is larger if the legend contains a color scale
     const legendWidth = 265;
-    const legendHeight = ['potency', 'foldchange'].includes(this.hue)
-      ? 235
-      : 165;
+    const legendHeight = drawColorLegend ? 235 : 165;
 
     // Draw the frame
     legendSvg
@@ -2344,7 +2347,8 @@ export class BiowcPathwaygraph extends LitElement {
         'y',
         yOffset * scalingFactor - 8 + lineHeight * 5 + paragraphMargin * 2
       );
-    if (['potency', 'foldchange'].includes(this.hue)) {
+
+    if (drawColorLegend) {
       const colorLegendGroupPosition = [
         xOffset + 5,
         yOffset * scalingFactor + lineHeight * 6 + paragraphMargin * 2 + 10,
@@ -2367,6 +2371,9 @@ export class BiowcPathwaygraph extends LitElement {
       const linearGradient = this._getMainDiv().select<SVGElement>(
         '#potency-linear-gradient'
       );
+
+      // In case the legend is being redrawn, we need to clear the gradient's stops
+      linearGradient.selectAll('*').remove();
 
       linearGradient!.attr('x1', '0%').attr('x2', '100%');
 
