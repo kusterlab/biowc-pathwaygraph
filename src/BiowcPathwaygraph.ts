@@ -38,6 +38,7 @@ interface PathwayGraphNode extends SimulationNodeDatum {
 interface GeneProteinNode extends PathwayGraphNode {
   geneNames: string[];
   uniprotAccs: string[];
+  defaultName?: string;
   label?: string;
   groupId?: string;
   // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
@@ -680,7 +681,6 @@ export class BiowcPathwaygraph extends LitElement {
         if (!(node.nodeId in d3NodesDict)) {
           const newNode = {
             ...node,
-            // label: node.label || node.geneNames,
             selected: true,
             visible: true,
           } as PathwayGraphNodeD3;
@@ -904,7 +904,8 @@ export class BiowcPathwaygraph extends LitElement {
         return BiowcPathwaygraph._calculateContextMenuOptions(
           node.type,
           'geneNames' in node ? node.geneNames : [],
-          node.label
+          node.label,
+          (<GeneProteinNode>node).defaultName
         )[0];
       })
       .each((d, i, nodes) => {
@@ -1654,7 +1655,8 @@ export class BiowcPathwaygraph extends LitElement {
           BiowcPathwaygraph._calculateContextMenuOptions(
             node.type,
             'geneNames' in node ? node.geneNames : [],
-            node.label
+            node.label,
+            (<GeneProteinNode>node).defaultName
           )
         )
         .join('div')
@@ -1703,7 +1705,8 @@ export class BiowcPathwaygraph extends LitElement {
   private static _calculateContextMenuOptions(
     type: string,
     geneNames: string[],
-    label: string | undefined
+    label: string | undefined,
+    defaultName: string | undefined
   ) {
     let splitRegex;
     if (type.includes('compound')) {
@@ -1718,9 +1721,12 @@ export class BiowcPathwaygraph extends LitElement {
     );
     return [
       ...new Set(allPossibleNames.filter(name => !!name && name !== '')),
-    ].sort((a, b) =>
-      a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase())
-    );
+    ].sort((a, b) => {
+      // Sort alphabetically, except if the node has a default name, this one always goes first
+      if (!!defaultName && a === defaultName) return -1;
+      if (!!defaultName && b === defaultName) return 1;
+      return a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase());
+    });
   }
 
   private static _computeRegulationClass(node: PathwayGraphNode) {
