@@ -821,8 +821,12 @@ export class BiowcPathwaygraph extends LitElement {
     // Initially, make all individual PTM nodes invisible. They should be physically present for the simulation to stabilize,
     // but visible only after the stabilization process is complete.
     const allPTMNodes = mainDiv.selectAll('g.ptm:not(.summary):not(.legend)');
-
     allPTMNodes.attr('display', 'none');
+
+    // PTMLinks should never be visible
+    this._getMainDiv()
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink')
+      .attr('display', 'none');
 
     setTimeout(() => {
       if (this.d3Nodes) {
