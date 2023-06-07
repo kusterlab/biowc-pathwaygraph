@@ -222,6 +222,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   minPotency?: number;
 
+  isNodeExpandAndCollapseAllowed: boolean = false;
+
   render() {
     return html`
       <div id="pathwayContainer">
@@ -818,9 +820,9 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Initially, make all individual PTM nodes invisible. They should be physically present for the simulation to stabilize,
     // but visible only after the stabilization process is complete.
-    mainDiv
-      .selectAll('g.ptm:not(.summary):not(.legend)')
-      .attr('display', 'none');
+    const allPTMNodes = mainDiv.selectAll('g.ptm:not(.summary):not(.legend)');
+
+    allPTMNodes.attr('display', 'none');
 
     setTimeout(() => {
       if (this.d3Nodes) {
@@ -835,9 +837,7 @@ export class BiowcPathwaygraph extends LitElement {
       this._refreshGraph(true);
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
       // because 'visible' is set to false so they are not part of the graph)
-      mainDiv
-        .selectAll('g.ptm:not(.summary):not(.legend)')
-        .attr('display', 'block');
+      allPTMNodes.attr('display', 'block');
     }, 2000);
   }
 
@@ -2799,6 +2799,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         }
         /* eslint-enable no-param-reassign */
       });
+
+    // Set permission flag for the 'expandAll' and 'collapseAll' functions to true
+    this.isNodeExpandAndCollapseAllowed = true;
   }
 
   private _refreshGraph(doEnableNodeExpandAndCollapse: boolean) {
@@ -3069,12 +3072,30 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   public collapseAllPTMNodes() {
+    if (!this.isNodeExpandAndCollapseAllowed) return;
+
     this._getMainDiv()
       .selectAll<SVGGElement, PTMNodeD3>('g.ptm:not(.summary):not(.legend)')
       .each((ptmNode: PTMNodeD3) => {
         /* eslint-disable no-param-reassign */
         ptmNode.visible = false;
         ptmNode.summaryNode!.visible = true;
+        /* eslint-enable no-param-reassign */
+      });
+    this._refreshGraph(true);
+  }
+
+  public expandAllPTMNodes() {
+    if (!this.isNodeExpandAndCollapseAllowed) return;
+
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
+      .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+        /* eslint-disable no-param-reassign */
+        ptmSummaryNode.visible = false;
+        ptmSummaryNode.ptmNodes?.forEach(n => {
+          n.visible = true;
+        });
         /* eslint-enable no-param-reassign */
       });
     this._refreshGraph(true);
