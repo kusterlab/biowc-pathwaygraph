@@ -999,9 +999,11 @@ export class BiowcPathwaygraph extends LitElement {
         }
         return 'url(#otherInteractionMarker)';
       })
-      .attr('stroke-dasharray', d =>
-        d.types.includes('binding/association') ? '3 3' : null
-      );
+      .attr('stroke-dasharray', d => {
+        if (d.types.includes('binding/association')) return '3 3';
+        if (d.types.includes('indirect effect')) return '7 2';
+        return null;
+      });
 
     // Add paths for the edgelabels
     const linkLabelPaths = linkG
@@ -2266,8 +2268,34 @@ export class BiowcPathwaygraph extends LitElement {
     legendSvg
       .append('text')
       .attr('class', 'legend')
-      .text('Other Interaction')
+      .text('Other')
       .attr('x', xOffset + 80 * scalingFactor)
+      .attr(
+        'y',
+        yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
+      );
+
+    legendSvg
+      .append('line')
+      .attr('class', 'link legend')
+      .attr('x1', xOffset + 92)
+      .attr(
+        'y1',
+        yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
+      )
+      .attr('x2', xOffset + 132)
+      .attr(
+        'y2',
+        yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
+      )
+      .attr('stroke-dasharray', '12 3')
+      .style('stroke-width', 7);
+
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Indirect Effect')
+      .attr('x', xOffset + 275 * scalingFactor)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
@@ -2286,7 +2314,7 @@ export class BiowcPathwaygraph extends LitElement {
         'y2',
         yOffset * scalingFactor + lineHeight * 4 + paragraphMargin * 1
       )
-      .attr('stroke-dasharray', '7 7')
+      .attr('stroke-dasharray', '6 3')
       .style('stroke-width', 7);
     legendSvg
       .append('text')
