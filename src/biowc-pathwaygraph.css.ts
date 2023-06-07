@@ -8,8 +8,8 @@ export default css`
     --pathway-color: #89b9ce;
     --gene-protein-color: #efefef;
     --compound-color: #e7d190;
-    --group-fill-color: #60bdbd;
-    --group-stroke-color: #468989;
+    --group-fill-color: #6c7a74;
+    --group-stroke-color: #3b423f;
     --link-color: #999999;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
