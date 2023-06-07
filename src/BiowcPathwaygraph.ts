@@ -825,7 +825,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     // PTMLinks should never be visible
     this._getMainDiv()
-      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.ptmlink')
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
       .attr('display', 'none');
 
     setTimeout(() => {
@@ -972,8 +972,8 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'group-path');
 
     // Draw links as lines with appropriate arrowheads
-    linkG
-      .selectAll('line')
+    const linksSvg = linkG
+      .selectAll('.linkgroup')
       .data(
         this.d3Links!.filter(
           link =>
@@ -982,7 +982,12 @@ export class BiowcPathwaygraph extends LitElement {
             (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
-      .join('line')
+      .join('g')
+      .attr('class', d => `linkgroup ${d.types.join(' ')}`);
+
+    linksSvg.selectAll('.link').remove(); // TODO: Check if we actually need to do this
+    linksSvg
+      .append('line')
       .attr('class', d => `link ${d.types.join(' ')}`)
       .attr('marker-end', d => {
         if (d.types.includes('inhibition')) {
@@ -999,8 +1004,8 @@ export class BiowcPathwaygraph extends LitElement {
       );
 
     // Add paths for the edgelabels
-    linkG
-      .selectAll('.edgepath')
+    const linkLabelPaths = linkG
+      .selectAll('.linklabelpathgroup')
       .data(
         this.d3Links!.filter(
           link =>
@@ -1012,7 +1017,12 @@ export class BiowcPathwaygraph extends LitElement {
             link.label !== ''
         )
       )
-      .join('path')
+      .join('g')
+      .attr('class', 'linklabelpathgroup');
+
+    linkLabelPaths.selectAll('.edgepath').remove(); // TODO: Check if we actually need to do this
+    linkLabelPaths
+      .append('path')
       .attr('class', 'edgepath')
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
