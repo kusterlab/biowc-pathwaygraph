@@ -2477,7 +2477,7 @@ export class BiowcPathwaygraph extends LitElement {
         .select('#linkG')
         .attr('transform', transform.toString());
 
-      // Semantic zooms, aka hide/show the summary nodes and the edgelabels
+      // Semantic zooms, right now this just hides/shows the edgelabels
       this._getMainDiv()
         .selectAll('.edgelabel:not(.legend)')
         .attr('visibility', transform.k < 1 ? 'hidden' : 'visible');
