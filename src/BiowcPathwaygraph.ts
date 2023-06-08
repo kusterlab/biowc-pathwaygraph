@@ -800,6 +800,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   private _renderGraph() {
     const mainDiv = this._getMainDiv();
+    this.isNodeExpandAndCollapseAllowed = false;
 
     // Initially draw the graph with all possible nodes present so the simulation reaches a steady state
     // After a few seconds redraw the graph filtered for summary PTM nodes
