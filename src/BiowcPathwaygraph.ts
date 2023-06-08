@@ -1733,7 +1733,7 @@ export class BiowcPathwaygraph extends LitElement {
         '--unregulated-color'
       );
       switch (this.hue) {
-        case 'direction':
+        case 'direction': {
           switch ((<PTMNodeD3>node).regulation) {
             case 'up':
               return upregulatedColor;
@@ -1744,37 +1744,45 @@ export class BiowcPathwaygraph extends LitElement {
             default:
               return '';
           }
-        case 'foldchange':
+        }
+        case 'foldchange': {
           // Interpolate between up and not or down and not, depending on direction
+          // The center of interpolation is 0 for log fold change and 1 for fold change
+          const interpolationCenter = this.maxNegFoldChange! < 0 ? 0 : 1;
+
           switch ((<PTMNodeD3>node).regulation) {
             case 'up':
               return d3v6.interpolate(
                 unregulatedColor,
                 upregulatedColor
               )(
-                (Number((<PTMNodeD3>node).details!['Fold Change']) - 1) /
-                  (this.maxPosFoldChange! - 1)
+                (Number((<PTMNodeD3>node).details!['Fold Change']) -
+                  interpolationCenter) /
+                  (this.maxPosFoldChange! - interpolationCenter)
               );
             case 'down':
               return d3v6.interpolate(
                 unregulatedColor,
                 downregulatedColor
               )(
-                (Number((<PTMNodeD3>node).details!['Fold Change']) - 1) /
-                  (this.maxNegFoldChange! - 1)
+                (Number((<PTMNodeD3>node).details!['Fold Change']) -
+                  interpolationCenter) /
+                  (this.maxNegFoldChange! - interpolationCenter)
               );
             case 'not':
               return 'var(--unregulated-color)';
             default:
               return '';
           }
-        case 'potency':
+        }
+        case 'potency': {
           return d3v6.interpolateViridis(
             1 -
               (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
                 this.minPotency!) /
                 (this.maxPotency! - this.minPotency!)
           );
+        }
         default:
           return '';
       }
@@ -1790,20 +1798,15 @@ export class BiowcPathwaygraph extends LitElement {
       case 'foldchange':
         this.maxPosFoldChange = this.d3Nodes?.reduce(
           (currentMax: number, currentNode: PathwayGraphNodeD3) => {
-            // Check if the node has details and if they include a fold change and that is positive (>1)
+            // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
               Object.hasOwn(
                 (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
                 'Fold Change'
-              ) &&
-              Number(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
-                  'Fold Change'
-                ]
-              ) > 1
+              )
             ) {
-              // If yes, compare it with the currentMax
+              // Compare it with the currentMax
               return Math.max(
                 Number(
                   (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
@@ -1813,25 +1816,19 @@ export class BiowcPathwaygraph extends LitElement {
                 currentMax
               );
             }
-
             return currentMax;
           },
-          1
+          0
         );
         this.maxNegFoldChange = this.d3Nodes?.reduce(
           (currentMax: number, currentNode: PathwayGraphNodeD3) => {
-            // Check if the node has details and if they includes a fold change and that is negative (<1)
+            // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
               Object.hasOwn(
                 (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
                 'Fold Change'
-              ) &&
-              Number(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
-                  'Fold Change'
-                ]
-              ) < 1
+              )
             ) {
               // If yes, compare it with the currentMax (which is a min for negative fold change)
               return Math.min(
@@ -1846,7 +1843,7 @@ export class BiowcPathwaygraph extends LitElement {
 
             return currentMax;
           },
-          1
+          0
         );
         break;
       case 'potency':
@@ -2450,15 +2447,30 @@ export class BiowcPathwaygraph extends LitElement {
             )((d - 0.5) / 0.5);
           });
 
-        colorLegendXAxisScale
-          .domain([
-            '0',
-            '0.5',
-            '1',
-            `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
-            `${this.maxPosFoldChange!.toPrecision(2)}`,
-          ])
-          .range([0, legendWidth - 25]);
+        // The domain of the x axis depends on whether the fold change is log transformed
+        // Log FC goes from -inf to +inf, with 0 in the center
+        // Non-log FC goes from 0 to +inf, with 1 in the center
+        if (this.maxNegFoldChange! < 0) {
+          colorLegendXAxisScale
+            .domain([
+              `${this.maxNegFoldChange!.toPrecision(2)}`,
+              `${(this.maxNegFoldChange! / 2).toPrecision(2)}`,
+              '0',
+              `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+              `${this.maxPosFoldChange!.toPrecision(2)}`,
+            ])
+            .range([0, legendWidth - 25]);
+        } else {
+          colorLegendXAxisScale
+            .domain([
+              '0',
+              '0.5',
+              '1',
+              `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+              `${this.maxPosFoldChange!.toPrecision(2)}`,
+            ])
+            .range([0, legendWidth - 25]);
+        }
       }
 
       colorLegendGroup
