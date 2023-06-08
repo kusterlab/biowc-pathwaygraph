@@ -128,6 +128,7 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
   textLength?: number;
   leftX?: number;
   rightX?: number;
+  currentDisplayedLabel?: string;
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
@@ -686,27 +687,13 @@ export class BiowcPathwaygraph extends LitElement {
             selected: true,
             visible: true,
           } as PathwayGraphNodeD3;
-          // Add label:
-          // - If the input node has a label already, just take it
-          // - Else if the input node has geneNames, use the first one...
-          //   - ...unless it is a PTM node - those do not get labels
+          // Set initial label by calculating all alternatives and choosing the first one
+          // The linter forces me to use array destructuring here, i.e. instead of
+          // x = y[0] I have to write [x] = y. I think this is very hard to read, but well...
+          // Reference: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
+          [newNode.currentDisplayedLabel] =
+            BiowcPathwaygraph._calcPossibleLabels(<GeneProteinNodeD3>newNode);
 
-          if (Object.hasOwn(node, 'label') && !!(<GeneProteinNode>node).label) {
-            (<GeneProteinNodeD3>newNode).label = (<GeneProteinNode>node).label;
-          } else if (
-            !!(<GeneProteinNode>node).geneNames &&
-            (<GeneProteinNode>node).geneNames.length > 0 &&
-            // If the node has a geneProteinNodeId, it is a PTM node so it doesn't get a label
-            !Object.hasOwn(node, 'geneProteinNodeId')
-          ) {
-            // This sets 'newNode.label' to the first element of node.geneNames
-            // The linter forces me to write it like this,
-            // however I think it's super unreadable so here is the reference:
-            // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment
-            [(<GeneProteinNodeD3>newNode).label] = (<GeneProteinNode>(
-              node
-            )).geneNames;
-          }
           this.d3Nodes!.push(newNode);
         } else {
           // If it exists already, still update nDown, nUp and nNot
@@ -894,24 +881,8 @@ export class BiowcPathwaygraph extends LitElement {
           )} `
       );
     nodesSvg
-      .selectAll('.node-label')
-      .text(d => {
-        if (
-          !Object.hasOwn(<PathwayGraphNodeD3>d, 'label') ||
-          !(<GeneProteinNode | PTMSummaryNodeD3>d).label
-        )
-          return '';
-        const node = d as GeneProteinNodeD3 | PTMSummaryNodeD3;
-        if (node.label?.startsWith('TITLE:')) {
-          return node.label!.substring(6).toUpperCase();
-        }
-        return BiowcPathwaygraph._calculateContextMenuOptions(
-          node.type,
-          'geneNames' in node ? node.geneNames : [],
-          node.label,
-          (<GeneProteinNode>node).defaultName
-        )[0];
-      })
+      .selectAll<SVGTextContentElement, PathwayGraphNodeD3>('.node-label')
+      .text(d => d.currentDisplayedLabel || '')
       .each((d, i, nodes) => {
         // Adjust width of the node based on the length of the text
         const circleWidth = NODE_HEIGHT * 2;
@@ -1667,14 +1638,7 @@ export class BiowcPathwaygraph extends LitElement {
 
       contextMenu
         .selectAll('.contextMenuEntry')
-        .data(
-          BiowcPathwaygraph._calculateContextMenuOptions(
-            node.type,
-            'geneNames' in node ? node.geneNames : [],
-            node.label,
-            (<GeneProteinNode>node).defaultName
-          )
-        )
+        .data(BiowcPathwaygraph._calcPossibleLabels(<GeneProteinNodeD3>node))
         .join('div')
         .attr('class', 'contextMenuEntry')
         .style('cursor', 'pointer');
@@ -1696,15 +1660,13 @@ export class BiowcPathwaygraph extends LitElement {
         // Set the text to the user's choice
         // const parentNodeId = (<PathwayGraphNodeD3>rightClickEvent.target?.parentNode)
 
-        this._getMainDiv()
-          .select(`#node-${node.nodeId}`)
-          .select('.node-label')
-          .text(<string>d);
-        // Yeah this was an interesting experiment but nah
-        // this._getMainDiv().select(`#node-${node.nodeId}`)
-        //   .attr('width', (this._getMainDiv().select(`#node-${node.nodeId}`)).getComputedTextLength() + NODE_HEIGHT)
+        /* eslint-disable-next-line no-param-reassign */
+        node.currentDisplayedLabel = <string>d;
+
         // @ts-ignore
         d3v6.select(this.shadowRoot).select('#nodeContextMenu').remove();
+
+        this._refreshGraph(true);
       });
     };
 
@@ -1718,29 +1680,26 @@ export class BiowcPathwaygraph extends LitElement {
       .on('contextmenu', onrightclick);
   }
 
-  private static _calculateContextMenuOptions(
-    type: string,
-    geneNames: string[],
-    label: string | undefined,
-    defaultName: string | undefined
-  ) {
+  private static _calcPossibleLabels(node: GeneProteinNodeD3) {
     let splitRegex;
-    if (type.includes('compound')) {
+    // Individual PTM nodes cannot have a label
+    if (node.type === 'ptm') return [];
+    if (node.type.includes('compound')) {
       // Compounds may have a comma in their name, so do not split by that
       // We used to also split by '/' here, but that had unwanted side-effects (e.g. when a gene name was 'PKCI+/-').
       splitRegex = /;/;
     } else {
       splitRegex = /,|;/;
     }
-    const allPossibleNames = (label ? label.split(splitRegex) : []).concat(
-      geneNames
-    );
+    const allPossibleNames = (
+      node.label ? node.label.split(splitRegex) : []
+    ).concat(node.geneNames || []);
     return [
       ...new Set(allPossibleNames.filter(name => !!name && name !== '')),
     ].sort((a, b) => {
       // Sort alphabetically, except if the node has a default name, this one always goes first
-      if (!!defaultName && a === defaultName) return -1;
-      if (!!defaultName && b === defaultName) return 1;
+      if (!!node.defaultName && a === node.defaultName) return -1;
+      if (!!node.defaultName && b === node.defaultName) return 1;
       return a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase());
     });
   }
