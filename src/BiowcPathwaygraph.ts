@@ -2947,7 +2947,28 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               Object.hasOwn(node, 'details') &&
               !!(<GeneProteinNodeD3 | PTMNodeD3>node).details
           )
-          .map(node => (<GeneProteinNodeD3 | PTMNodeD3>node).details!),
+          .map(node => {
+            const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node).details!;
+            // If a detail has format { display: boolean; value: string | number }, only pass the value
+            const detailsFlattened: { [key: string]: string | number } = {};
+            Object.keys(nodeDetails).forEach(detailKey => {
+              const nodeDetailValue = nodeDetails[detailKey] as {
+                display: boolean;
+                value: string | number;
+              };
+              if (
+                !!nodeDetailValue &&
+                Object.hasOwn(nodeDetailValue, 'value')
+              ) {
+                detailsFlattened[detailKey] = nodeDetailValue.value;
+              } else {
+                detailsFlattened[detailKey] = <string | number>(
+                  nodeDetails[detailKey]
+                );
+              }
+            });
+            return detailsFlattened;
+          }),
       })
     );
   }
