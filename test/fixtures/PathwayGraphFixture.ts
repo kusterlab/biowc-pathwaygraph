@@ -198,7 +198,9 @@ export default {
       {
         geneNames: ['Protein A'],
         regulation: 'down',
-        details: {},
+        details: {
+          'Fold Change': 3,
+        },
       },
       {
         uniprotAccs: ['P12345'],
@@ -213,7 +215,9 @@ export default {
       {
         geneNames: ['Protein E'],
         regulation: 'up',
-        details: {},
+        details: {
+          Description: 'A very interesting protein.',
+        },
       },
     ],
     hue: 'potency',

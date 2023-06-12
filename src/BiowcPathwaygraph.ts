@@ -1566,12 +1566,8 @@ export class BiowcPathwaygraph extends LitElement {
           } else {
             tooltip.html((<GeneProteinNodeD3>node).label || '');
           }
-          if (
-            (Object.hasOwn(node, 'label') &&
-              !!(<GeneProteinNode | PTMSummaryNodeD3>node).label) ||
-            // PTMs are the only nodes that have no label and still get a tooltip
-            node.type === 'ptm'
-          ) {
+          // All nodes get a tooltip, except for group nodes
+          if (node.type !== 'group') {
             tooltip.transition().duration(0).style('opacity', '1');
           }
         }
@@ -2580,8 +2576,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       node.geneNames ? node.geneNames.join(',') : node.label,
       tooltipStrongWidth
     )}${
-      (node.nUp || 0) + (node.nDown || 0) + (node.nNot || 0) > 0 ? '<br>' : ''
-    }${
       node.nUp && node.nUp > 0
         ? BiowcPathwaygraph._formatTextIfValuePresent(
             'Upregulated',
@@ -2616,7 +2610,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                 tooltipStrongWidth
               )
             )
-            .join('<br>')
+            .join('')
         : ''
     }</ul>`;
   }
