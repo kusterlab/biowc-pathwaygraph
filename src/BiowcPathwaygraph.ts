@@ -830,6 +830,9 @@ export class BiowcPathwaygraph extends LitElement {
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
       // because 'visible' is set to false so they are not part of the graph)
       allPTMNodes.attr('display', 'block');
+
+      // Now we can set the permission flag for the 'expandAll' and 'collapseAll' functions to true
+      this.isNodeExpandAndCollapseAllowed = true;
     }, 2000);
   }
 
@@ -2813,9 +2816,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         }
         /* eslint-enable no-param-reassign */
       });
-
-    // Set permission flag for the 'expandAll' and 'collapseAll' functions to true
-    this.isNodeExpandAndCollapseAllowed = true;
   }
 
   private _refreshGraph(doEnableNodeExpandAndCollapse: boolean) {
