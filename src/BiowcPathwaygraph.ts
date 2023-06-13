@@ -2913,56 +2913,73 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   private _sendSelectionDetailsToParent() {
-    const selectedNodes = this.d3Nodes!.filter(
-      // A PTM node counts as selected if either itself is visible and selected, or its summary node is.
-      node => {
-        if (node.type === 'ptm') {
-          const ptmNode = node as PTMNodeD3;
-          return (
-            (ptmNode.visible && ptmNode.selected) ||
-            (ptmNode.summaryNode &&
-              ptmNode.summaryNode.visible &&
-              ptmNode.summaryNode.selected)
-          );
+    let selectedNodes: PathwayGraphNodeD3[] = [];
+
+    // We cannot display PTM and FP curves at the same time right now
+    // So if there are PTM selections we only show that
+    // FP selections are only shown if there are not also PTM selections
+    let hasPTMCurves = false;
+    this.d3Nodes!.forEach(node => {
+      if (node.type === 'ptm') {
+        const ptmNode = node as PTMNodeD3;
+        // A PTM node counts as selected if either itself is visible and selected, or its summary node is.
+        if (
+          (ptmNode.visible && ptmNode.selected) ||
+          (ptmNode.summaryNode &&
+            ptmNode.summaryNode.visible &&
+            ptmNode.summaryNode.selected)
+        ) {
+          hasPTMCurves = true;
+          selectedNodes.push(ptmNode);
         }
-        if (node.type === 'gene_protein') {
-          return node.selected;
+      } else if (node.type === 'gene_protein') {
+        if (node.selected) {
+          selectedNodes.push(node);
         }
-        return false;
       }
-    );
+    });
+
+    // If we have selected ptmNodes, remove all FP nodes from the list
+    if (hasPTMCurves) {
+      selectedNodes = selectedNodes.filter(n => n.type === 'ptm');
+    }
+
     this.dispatchEvent(
       new CustomEvent('selectionDetails', {
         bubbles: true,
         cancelable: true,
-        detail: selectedNodes
-          .filter(
-            node =>
-              Object.hasOwn(node, 'details') &&
-              !!(<GeneProteinNodeD3 | PTMNodeD3>node).details
-          )
-          .map(node => {
-            const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node).details!;
-            // If a detail has format { display: boolean; value: string | number }, only pass the value
-            const detailsFlattened: { [key: string]: string | number } = {};
-            Object.keys(nodeDetails).forEach(detailKey => {
-              const nodeDetailValue = nodeDetails[detailKey] as {
-                display: boolean;
-                value: string | number;
-              };
-              if (
-                !!nodeDetailValue &&
-                Object.hasOwn(nodeDetailValue, 'value')
-              ) {
-                detailsFlattened[detailKey] = nodeDetailValue.value;
-              } else {
-                detailsFlattened[detailKey] = <string | number>(
-                  nodeDetails[detailKey]
-                );
-              }
-            });
-            return detailsFlattened;
-          }),
+        detail: {
+          isFullProteome: !hasPTMCurves,
+          selection: selectedNodes
+            .filter(
+              node =>
+                Object.hasOwn(node, 'details') &&
+                !!(<GeneProteinNodeD3 | PTMNodeD3>node).details
+            )
+            .map(node => {
+              const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node)
+                .details!;
+              // If a detail has format { display: boolean; value: string | number }, only pass the value
+              const detailsFlattened: { [key: string]: string | number } = {};
+              Object.keys(nodeDetails).forEach(detailKey => {
+                const nodeDetailValue = nodeDetails[detailKey] as {
+                  display: boolean;
+                  value: string | number;
+                };
+                if (
+                  !!nodeDetailValue &&
+                  Object.hasOwn(nodeDetailValue, 'value')
+                ) {
+                  detailsFlattened[detailKey] = nodeDetailValue.value;
+                } else {
+                  detailsFlattened[detailKey] = <string | number>(
+                    nodeDetails[detailKey]
+                  );
+                }
+              });
+              return detailsFlattened;
+            }),
+        },
       })
     );
   }
