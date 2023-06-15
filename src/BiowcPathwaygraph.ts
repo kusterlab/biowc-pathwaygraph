@@ -223,6 +223,14 @@ export class BiowcPathwaygraph extends LitElement {
 
   minPotency?: number;
 
+  anyDowngoingPTMs?: boolean;
+
+  anyUpgoingPTMs?: boolean;
+
+  allDowngoingLessThan0?: boolean;
+
+  allUpgoingGreaterThan1?: boolean;
+
   isNodeExpandAndCollapseAllowed: boolean = false;
 
   render() {
@@ -1722,73 +1730,76 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _computeNodeColor(node: PathwayGraphNodeD3) {
-    if (node.type === 'ptm') {
-      const upregulatedColor = getComputedStyle(this).getPropertyValue(
-        '--upregulated-color'
-      );
-      const downregulatedColor = getComputedStyle(this).getPropertyValue(
-        '--downregulated-color'
-      );
-      const unregulatedColor = getComputedStyle(this).getPropertyValue(
-        '--unregulated-color'
-      );
-      switch (this.hue) {
-        case 'direction': {
-          switch ((<PTMNodeD3>node).regulation) {
-            case 'up':
-              return upregulatedColor;
-            case 'down':
-              return downregulatedColor;
-            case 'not':
-              return unregulatedColor;
-            default:
-              return '';
-          }
-        }
-        case 'foldchange': {
-          // Interpolate between up and not or down and not, depending on direction
-          // The center of interpolation is 0 for log fold change and 1 for fold change
-          const interpolationCenter = this.maxNegFoldChange! < 0 ? 0 : 1;
-
-          switch ((<PTMNodeD3>node).regulation) {
-            case 'up':
-              return d3v6.interpolate(
-                unregulatedColor,
-                upregulatedColor
-              )(
-                (Number((<PTMNodeD3>node).details!['Fold Change']) -
-                  interpolationCenter) /
-                  (this.maxPosFoldChange! - interpolationCenter)
-              );
-            case 'down':
-              return d3v6.interpolate(
-                unregulatedColor,
-                downregulatedColor
-              )(
-                (Number((<PTMNodeD3>node).details!['Fold Change']) -
-                  interpolationCenter) /
-                  (this.maxNegFoldChange! - interpolationCenter)
-              );
-            case 'not':
-              return 'var(--unregulated-color)';
-            default:
-              return '';
-          }
-        }
-        case 'potency': {
-          return d3v6.interpolateViridis(
-            1 -
-              (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
-                this.minPotency!) /
-                (this.maxPotency! - this.minPotency!)
-          );
-        }
-        default:
-          return '';
-      }
+    if (node.type !== 'ptm') {
+      // Default to whatever is in the css
+      return '';
     }
-    // Default to whatever is in the css
-    return '';
+    const upregulatedColor = getComputedStyle(this).getPropertyValue(
+      '--upregulated-color'
+    );
+    const downregulatedColor = getComputedStyle(this).getPropertyValue(
+      '--downregulated-color'
+    );
+    const unregulatedColor = getComputedStyle(this).getPropertyValue(
+      '--unregulated-color'
+    );
+    switch (this.hue) {
+      case 'direction': {
+        switch ((<PTMNodeD3>node).regulation) {
+          case 'up':
+            return upregulatedColor;
+          case 'down':
+            return downregulatedColor;
+          case 'not':
+            return unregulatedColor;
+          default:
+            return '';
+        }
+      }
+      case 'foldchange': {
+        // Interpolate between up and not or down and not, depending on direction
+        // The center of interpolation is 0 for log fold change and 1 for fold change
+        const isLogFoldChange =
+          this.allDowngoingLessThan0 ||
+          (!this.anyDowngoingPTMs && !this.allUpgoingGreaterThan1);
+        const interpolationCenter = isLogFoldChange ? 0 : 1;
+
+        switch ((<PTMNodeD3>node).regulation) {
+          case 'up':
+            return d3v6.interpolate(
+              unregulatedColor,
+              upregulatedColor
+            )(
+              (Number((<PTMNodeD3>node).details!['Fold Change']) -
+                interpolationCenter) /
+                (this.maxPosFoldChange! - interpolationCenter)
+            );
+          case 'down':
+            return d3v6.interpolate(
+              unregulatedColor,
+              downregulatedColor
+            )(
+              (Number((<PTMNodeD3>node).details!['Fold Change']) -
+                interpolationCenter) /
+                (this.maxNegFoldChange! - interpolationCenter)
+            );
+          case 'not':
+            return 'var(--unregulated-color)';
+          default:
+            return '';
+        }
+      }
+      case 'potency': {
+        return d3v6.interpolateViridis(
+          1 -
+            (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
+              this.minPotency!) /
+              (this.maxPotency! - this.minPotency!)
+        );
+      }
+      default:
+        return '';
+    }
   }
 
   private _calculateHueRange() {
@@ -1796,9 +1807,12 @@ export class BiowcPathwaygraph extends LitElement {
       case 'direction':
         break;
       case 'foldchange':
-        this.maxPosFoldChange = this.d3Nodes
-          ?.filter(node => node.type === 'ptm')
-          .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
+        /* eslint-disable no-case-declarations */
+        const upNodes = this.d3Nodes?.filter(
+          node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'up'
+        );
+        this.maxPosFoldChange = upNodes?.reduce(
+          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -1811,10 +1825,21 @@ export class BiowcPathwaygraph extends LitElement {
               );
             }
             return currentMax;
-          }, 0);
-        this.maxNegFoldChange = this.d3Nodes
-          ?.filter(node => node.type === 'ptm')
-          .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
+          },
+          0
+        );
+
+        this.anyUpgoingPTMs = !!upNodes && upNodes.length > 0;
+        this.allUpgoingGreaterThan1 = upNodes?.every(
+          currentNode =>
+            Number((<PTMNodeD3>currentNode).details!['Fold Change']) >= 1
+        );
+
+        const downNodes = this.d3Nodes?.filter(
+          node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'down'
+        );
+        this.maxNegFoldChange = downNodes?.reduce(
+          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -1835,8 +1860,18 @@ export class BiowcPathwaygraph extends LitElement {
             }
 
             return currentMax;
-          }, 0);
+          },
+          0
+        );
+
+        this.anyDowngoingPTMs = !!downNodes && downNodes.length > 0;
+        this.allDowngoingLessThan0 = downNodes?.every(
+          currentNode =>
+            Number((<PTMNodeD3>currentNode).details!['Fold Change']) < 0
+        );
+
         break;
+      /* eslint-enable no-case-declarations */
       case 'potency':
         this.maxPotency = this.d3Nodes
           ?.filter(node => node.type === 'ptm')
@@ -2042,13 +2077,12 @@ export class BiowcPathwaygraph extends LitElement {
     // Bring legend to front of the canvas
     legendSvg.node()!.parentNode!.appendChild(legendSvg.node()!);
 
-    // We will draw a color legend if EITHER
-    // a) The hue is set to potency and the min/max potency are well defined OR
-    // b) The hue is fold change and the maximal pos/neg fold changes are well defined
+    // We will draw a color legend if
+    // a) We have regulated curves AND
+    // b) The hue is either potency or fold change
     const drawColorLegend =
-      (this.hue === 'potency' && this.maxPotency !== this.minPotency) ||
-      (this.hue === 'foldchange' &&
-        this.maxPosFoldChange !== this.maxNegFoldChange);
+      (this.anyUpgoingPTMs || this.anyDowngoingPTMs) &&
+      (this.hue === 'potency' || this.hue === 'foldchange');
 
     // Determine width and height of the legend.
     // Width is constant, height is larger if the legend contains a color scale
@@ -2424,6 +2458,12 @@ export class BiowcPathwaygraph extends LitElement {
           .append('stop')
           .attr('offset', d => d)
           .attr('stop-color', d => {
+            if (!this.anyDowngoingPTMs) {
+              return d3v6.interpolate(unregulatedColor, upregulatedColor)(d);
+            }
+            if (!this.anyUpgoingPTMs) {
+              return d3v6.interpolate(downregulatedColor, unregulatedColor)(d);
+            }
             if (d < 0.5) {
               return d3v6.interpolate(
                 downregulatedColor,
@@ -2436,30 +2476,51 @@ export class BiowcPathwaygraph extends LitElement {
             )((d - 0.5) / 0.5);
           });
 
+        const isLogFoldChange =
+          this.allDowngoingLessThan0 ||
+          (!this.anyDowngoingPTMs && !this.allUpgoingGreaterThan1);
+
         // The domain of the x axis depends on whether the fold change is log transformed
         // Log FC goes from -inf to +inf, with 0 in the center
         // Non-log FC goes from 0 to +inf, with 1 in the center
-        if (this.maxNegFoldChange! < 0) {
-          colorLegendXAxisScale
-            .domain([
-              `${this.maxNegFoldChange!.toPrecision(2)}`,
-              `${(this.maxNegFoldChange! / 2).toPrecision(2)}`,
-              '0',
-              `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
-              `${this.maxPosFoldChange!.toPrecision(2)}`,
-            ])
-            .range([0, legendWidth - 25]);
+        const domain: string[] = [];
+        if (isLogFoldChange) {
+          if (this.anyDowngoingPTMs) {
+            domain.push(
+              ...[
+                `${this.maxNegFoldChange!.toPrecision(2)}`,
+                `${(this.maxNegFoldChange! / 2).toPrecision(2)}`,
+              ]
+            );
+          }
+          domain.push('0');
+          if (this.anyUpgoingPTMs) {
+            domain.push(
+              ...[
+                `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+                `${this.maxPosFoldChange!.toPrecision(2)}`,
+              ]
+            );
+          }
         } else {
-          colorLegendXAxisScale
-            .domain([
-              '0',
-              '0.5',
-              '1',
-              `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
-              `${this.maxPosFoldChange!.toPrecision(2)}`,
-            ])
-            .range([0, legendWidth - 25]);
+          if (this.anyDowngoingPTMs) {
+            domain.push(...['0', '0.5']);
+          }
+          domain.push('1');
+          if (this.anyUpgoingPTMs) {
+            domain.push(
+              ...[
+                `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+                `${this.maxPosFoldChange!.toPrecision(2)}`,
+              ]
+            );
+          }
         }
+        console.log(`Domain: ${domain}`);
+
+        colorLegendXAxisScale
+          .domain(<Iterable<string>>domain)
+          .range([0, legendWidth - 25]);
       }
 
       colorLegendGroup
