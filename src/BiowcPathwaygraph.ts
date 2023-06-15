@@ -2516,7 +2516,6 @@ export class BiowcPathwaygraph extends LitElement {
             );
           }
         }
-        console.log(`Domain: ${domain}`);
 
         colorLegendXAxisScale
           .domain(<Iterable<string>>domain)
