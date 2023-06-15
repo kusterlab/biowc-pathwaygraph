@@ -1796,32 +1796,25 @@ export class BiowcPathwaygraph extends LitElement {
       case 'direction':
         break;
       case 'foldchange':
-        this.maxPosFoldChange = this.d3Nodes?.reduce(
-          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+        this.maxPosFoldChange = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
-              Object.hasOwn(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
-                'Fold Change'
-              )
+              Object.hasOwn((<PTMNodeD3>currentNode).details!, 'Fold Change')
             ) {
               // Compare it with the currentMax
               return Math.max(
-                Number(
-                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
-                    'Fold Change'
-                  ]
-                ),
+                Number((<PTMNodeD3>currentNode).details!['Fold Change']),
                 currentMax
               );
             }
             return currentMax;
-          },
-          0
-        );
-        this.maxNegFoldChange = this.d3Nodes?.reduce(
-          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+          }, 0);
+        this.maxNegFoldChange = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -1842,13 +1835,12 @@ export class BiowcPathwaygraph extends LitElement {
             }
 
             return currentMax;
-          },
-          0
-        );
+          }, 0);
         break;
       case 'potency':
-        this.maxPotency = this.d3Nodes?.reduce(
-          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+        this.maxPotency = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has details and if they includes a fold change
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -1869,11 +1861,10 @@ export class BiowcPathwaygraph extends LitElement {
             }
 
             return currentMax;
-          },
-          0
-        );
-        this.minPotency = this.d3Nodes?.reduce(
-          (currentMin: number, currentNode: PathwayGraphNodeD3) => {
+          }, 0);
+        this.minPotency = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .reduce((currentMin: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has details and if they includes a fold change
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -1894,9 +1885,7 @@ export class BiowcPathwaygraph extends LitElement {
             }
 
             return currentMin;
-          },
-          this.maxPotency!
-        );
+          }, this.maxPotency!);
         break;
       default:
         break;
