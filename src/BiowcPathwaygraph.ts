@@ -630,8 +630,11 @@ export class BiowcPathwaygraph extends LitElement {
                 // Concatenate the details
                 if (fullProteomeInputEntry.details) {
                   nodesDictEntry.details = nodesDictEntry.details || {};
-                  Object.keys(fullProteomeInputEntry.details).forEach(
-                    detailKey => {
+                  Object.keys(fullProteomeInputEntry.details)
+                    .filter(
+                      detailKey => fullProteomeInputEntry.details![detailKey]
+                    )
+                    .forEach(detailKey => {
                       if (Object.hasOwn(nodesDictEntry.details!, detailKey)) {
                         nodesDictEntry.details![detailKey] = `${String(
                           nodesDictEntry.details![detailKey]
@@ -642,8 +645,7 @@ export class BiowcPathwaygraph extends LitElement {
                         nodesDictEntry.details![detailKey] =
                           fullProteomeInputEntry.details![detailKey];
                       }
-                    }
-                  );
+                    });
                 }
               }
             }
