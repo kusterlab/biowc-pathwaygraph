@@ -233,6 +233,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   isNodeExpandAndCollapseAllowed: boolean = false;
 
+  currentTimeoutId?: NodeJS.Timeout;
+
   render() {
     return html`
       <div id="pathwayContainer">
@@ -826,7 +828,10 @@ export class BiowcPathwaygraph extends LitElement {
       .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
       .attr('display', 'none');
 
-    setTimeout(() => {
+    // If a timeout is already running, cancel it (can happen if user clicks too fast)
+    if (this.currentTimeoutId) clearTimeout(this.currentTimeoutId);
+
+    this.currentTimeoutId = setTimeout(() => {
       if (this.d3Nodes) {
         for (const node of this.d3Nodes) {
           // Set all individual PTM nodes to invisible
@@ -1805,14 +1810,21 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _calculateHueRange() {
+    const downNodes = this.d3Nodes?.filter(
+      node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'down'
+    );
+    this.anyDowngoingPTMs = !!downNodes && downNodes.length > 0;
+    const upNodes = this.d3Nodes?.filter(
+      node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'up'
+    );
+    this.anyUpgoingPTMs = !!upNodes && upNodes.length > 0;
+
     switch (this.hue) {
       case 'direction':
         break;
       case 'foldchange':
         /* eslint-disable no-case-declarations */
-        const upNodes = this.d3Nodes?.filter(
-          node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'up'
-        );
+
         this.maxPosFoldChange = upNodes?.reduce(
           (currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
@@ -1831,15 +1843,11 @@ export class BiowcPathwaygraph extends LitElement {
           0
         );
 
-        this.anyUpgoingPTMs = !!upNodes && upNodes.length > 0;
         this.allUpgoingGreaterThan1 = upNodes?.every(
           currentNode =>
             Number((<PTMNodeD3>currentNode).details!['Fold Change']) >= 1
         );
 
-        const downNodes = this.d3Nodes?.filter(
-          node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'down'
-        );
         this.maxNegFoldChange = downNodes?.reduce(
           (currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
@@ -1866,7 +1874,6 @@ export class BiowcPathwaygraph extends LitElement {
           0
         );
 
-        this.anyDowngoingPTMs = !!downNodes && downNodes.length > 0;
         this.allDowngoingLessThan0 = downNodes?.every(
           currentNode =>
             Number((<PTMNodeD3>currentNode).details!['Fold Change']) < 0
