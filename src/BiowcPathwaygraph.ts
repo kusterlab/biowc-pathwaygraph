@@ -1736,6 +1736,13 @@ export class BiowcPathwaygraph extends LitElement {
     return '';
   }
 
+  private static _getNodeFoldChange(node: PathwayGraphNodeD3) {
+    return (
+      Number((<PTMNodeD3>node).details!['Fold Change']) ||
+      Number((<PTMNodeD3>node).details!['Log Fold Change'])
+    );
+  }
+
   private _computeNodeColor(node: PathwayGraphNodeD3) {
     if (node.type !== 'ptm') {
       // Default to whatever is in the css
@@ -1777,7 +1784,7 @@ export class BiowcPathwaygraph extends LitElement {
               unregulatedColor,
               upregulatedColor
             )(
-              (Number((<PTMNodeD3>node).details!['Fold Change']) -
+              (BiowcPathwaygraph._getNodeFoldChange(node) -
                 interpolationCenter) /
                 (this.maxPosFoldChange! - interpolationCenter)
             );
@@ -1786,7 +1793,7 @@ export class BiowcPathwaygraph extends LitElement {
               unregulatedColor,
               downregulatedColor
             )(
-              (Number((<PTMNodeD3>node).details!['Fold Change']) -
+              (BiowcPathwaygraph._getNodeFoldChange(node) -
                 interpolationCenter) /
                 (this.maxNegFoldChange! - interpolationCenter)
             );
@@ -1830,11 +1837,18 @@ export class BiowcPathwaygraph extends LitElement {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
-              Object.hasOwn((<PTMNodeD3>currentNode).details!, 'Fold Change')
+              (Object.hasOwn(
+                (<PTMNodeD3>currentNode).details!,
+                'Fold Change'
+              ) ||
+                Object.hasOwn(
+                  (<PTMNodeD3>currentNode).details!,
+                  'Log Fold Change'
+                ))
             ) {
               // Compare it with the currentMax
               return Math.max(
-                Number((<PTMNodeD3>currentNode).details!['Fold Change']),
+                BiowcPathwaygraph._getNodeFoldChange(currentNode),
                 currentMax
               );
             }
@@ -1844,8 +1858,7 @@ export class BiowcPathwaygraph extends LitElement {
         );
 
         this.allUpgoingGreaterThan1 = upNodes?.every(
-          currentNode =>
-            Number((<PTMNodeD3>currentNode).details!['Fold Change']) >= 1
+          currentNode => BiowcPathwaygraph._getNodeFoldChange(currentNode) >= 1
         );
 
         this.maxNegFoldChange = downNodes?.reduce(
@@ -1853,30 +1866,28 @@ export class BiowcPathwaygraph extends LitElement {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
-              Object.hasOwn(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+              (Object.hasOwn(
+                (<PTMNodeD3>currentNode).details!,
                 'Fold Change'
-              )
+              ) ||
+                Object.hasOwn(
+                  (<PTMNodeD3>currentNode).details!,
+                  'Log Fold Change'
+                ))
             ) {
               // If yes, compare it with the currentMax (which is a min for negative fold change)
               return Math.min(
-                Number(
-                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
-                    'Fold Change'
-                  ]
-                ),
+                BiowcPathwaygraph._getNodeFoldChange(currentNode),
                 currentMax
               );
             }
-
             return currentMax;
           },
           0
         );
 
         this.allDowngoingLessThan0 = downNodes?.every(
-          currentNode =>
-            Number((<PTMNodeD3>currentNode).details!['Fold Change']) < 0
+          currentNode => BiowcPathwaygraph._getNodeFoldChange(currentNode) < 0
         );
 
         break;
