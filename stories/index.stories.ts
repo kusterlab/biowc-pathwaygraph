@@ -20,6 +20,8 @@ interface Story<T> {
 }
 
 interface ArgTypes {
+  storyTitle: string;
+  storyDescription: string;
   pathwayMetaData?: object;
   graphdataSkeleton?: object;
   ptmInputList?: object;
@@ -27,6 +29,8 @@ interface ArgTypes {
 }
 
 const Template: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div>${args.storyTitle}</div>
+  <div>${args.storyDescription}</div>
   <biowc-pathwaygraph
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
@@ -37,7 +41,10 @@ const Template: Story<ArgTypes> = (args: ArgTypes) => html`
 `;
 
 export const MinimalSkeletonGraph = Template.bind({});
-MinimalSkeletonGraph.args = {};
+MinimalSkeletonGraph.args = {
+  storyTitle: 'Minimal Skeleton Graph',
+  storyDescription: 'This is a graph without any PTMs. Just the skeleton.',
+};
 MinimalSkeletonGraph.args.graphdataSkeleton = {
   nodes: Story1Fixture.pathway1.nodes,
   links: Story1Fixture.pathway1.links,
