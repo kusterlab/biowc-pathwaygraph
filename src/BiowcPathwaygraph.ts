@@ -3110,6 +3110,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   public downloadSvg() {
+    // Make sure ptmlinks are invisible (they should be already
+    // but due to some bug they sometimes aren't)
+    this._getMainDiv()
+      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
+      .attr('display', 'none');
+
     const serializedSVG = this._prepareForExport();
     const blob = new Blob([serializedSVG], { type: 'image/svg+xml' });
     const url = URL.createObjectURL(blob);
