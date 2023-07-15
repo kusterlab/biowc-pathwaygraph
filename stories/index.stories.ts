@@ -199,14 +199,77 @@ ColoringNodesByPotency.args = {
 };
 
 // Todo: Demo Public methods (download, collapse (in same story as expand), select downstream)
-const TemplateWithButton: Story<ArgTypes> = (args: ArgTypes) => html`
+// Couldn't figure out how to hand method calls over as arguments, so I had to write an
+// Individual Template for each function. If anyone knows this feel free to write a pull request
+const ExpandAndCollapseAllButtonTemplate: Story<ArgTypes> = (
+  args: ArgTypes
+) => html`
+  <div>${args.storyTitle}</div>
+  <div>${args.storyDescription}</div>
+  <button onclick="document.getElementById('pathwaygraph').expandAllPTMNodes()">
+    Expand All
+  </button>
+  <button
+    onclick="document.getElementById('pathwaygraph').collapseAllPTMNodes()"
+  >
+    Collapse All
+  </button>
+  <biowc-pathwaygraph
+    id="pathwaygraph"
+    .pathwayMetaData=${args.pathwayMetaData}
+    .graphdataSkeleton=${args.graphdataSkeleton}
+    .ptmInputList=${args.ptmInputList}
+    .fullProteomeInputList=${args.fullProteomeInputList}
+    .hue=${args.hue}
+  >
+  </biowc-pathwaygraph>
+`;
+export const ExpandAndCollapseAll = ExpandAndCollapseAllButtonTemplate.bind({});
+ExpandAndCollapseAll.args = {
+  ...PTMGraphWithDetails.args,
+  hue: 'potency',
+  storyTitle: 'Expand and collapse all',
+  storyDescription:
+    'biowc-pathwaygraph has a couple of public functions that can be used to interface it with parent components. ' +
+    'The first two are `expandAllPTMNodes` and `collapseAllPTMNodes`. Click the buttons to see how they work!',
+};
+
+const SelectDownstreamButtonTemplate: Story<ArgTypes> = (
+  args: ArgTypes
+) => html`
   <div>${args.storyTitle}</div>
   <div>${args.storyDescription}</div>
   <button
-    id="button"
-    onclick="document.getElementById('pathwaygraph').expandAllPTMNodes()"
+    onclick="document.getElementById('pathwaygraph').selectNodesDownstreamOfSelection()"
   >
-    Click me!
+    Select Downstream Subgraph
+  </button>
+  <biowc-pathwaygraph
+    id="pathwaygraph"
+    .pathwayMetaData=${args.pathwayMetaData}
+    .graphdataSkeleton=${args.graphdataSkeleton}
+    .ptmInputList=${args.ptmInputList}
+    .fullProteomeInputList=${args.fullProteomeInputList}
+    .hue=${args.hue}
+  >
+  </biowc-pathwaygraph>
+`;
+export const SelectDownstreamSubgraph = SelectDownstreamButtonTemplate.bind({});
+SelectDownstreamSubgraph.args = {
+  ...NodeTypes.args,
+  hue: 'potency',
+  storyTitle: 'Select Downstream Subgraph',
+  storyDescription:
+    'The `selectNodesDownstreamOfSelection` method traverses the graph ' +
+    'and highlights every node that is downstream of the current selection. Try it out by first selecting ' +
+    'a node in the graph and then clicking the button.',
+};
+
+const DownloadSVGTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div>${args.storyTitle}</div>
+  <div>${args.storyDescription}</div>
+  <button onclick="document.getElementById('pathwaygraph').downloadSvg()">
+    Download
   </button>
   <biowc-pathwaygraph
     id="pathwaygraph"
@@ -219,10 +282,13 @@ const TemplateWithButton: Story<ArgTypes> = (args: ArgTypes) => html`
   </biowc-pathwaygraph>
 `;
 
-export const ExpandAllFunction = TemplateWithButton.bind({});
-ExpandAllFunction.args = {
-  ...PTMGraphWithDetails.args,
+export const DownloadGraphAsSVG = DownloadSVGTemplate.bind({});
+DownloadGraphAsSVG.args = {
+  ...ColoringNodesByPotency.args,
   hue: 'potency',
-  storyTitle: 'Blah',
-  storyDescription: 'Blahblah',
+  storyTitle: 'Download Graph as SVG',
+  storyDescription:
+    'Finally, there is the `downloadSvg`, which downloads the current canvas ' +
+    'in Scalable Vector Graphics format, including PTM nodes, selections, and rearrangements made ' +
+    'by the user.',
 };
