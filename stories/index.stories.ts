@@ -292,3 +292,5 @@ DownloadGraphAsSVG.args = {
     'in Scalable Vector Graphics format, including PTM nodes, selections, and rearrangements made ' +
     'by the user.',
 };
+
+// TODO: Events: nodeDetails and selectionDetails are dispatched when?

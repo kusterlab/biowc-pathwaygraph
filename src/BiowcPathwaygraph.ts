@@ -21,15 +21,8 @@ const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
 const DBL_CLICK_TIMEOUT = 200;
 
-// TODO: This is not used anywhere yet, check if it actually is needed
-interface PathwayMetadata {
-  identifier: string;
-  org: string;
-  pathwaytitle: string;
-}
-
 interface PathwayGraphNode extends SimulationNodeDatum {
-  nodeId: string; // TODO: Refactor from 'id' - do not require, should be set in here if not set by user
+  nodeId: string;
   type: string; // TODO: Enumerate all possible types
   x: number; // Maybe exclamation mark is better here, check what it is used for
   y: number;
@@ -183,14 +176,10 @@ export class BiowcPathwaygraph extends LitElement {
   tooltipHorizontalOffset: number = 0;
 
   @property({ attribute: false })
-  pathwayMetaData!: PathwayMetadata;
-
-  @property({ attribute: false })
   graphdataSkeleton!: {
     nodes: PathwayGraphNode[];
     links: (PathwayGraphLinkInput | PathwayGraphLink)[];
     // A dictionary that maps gene names and Uniprot IDs to Node IDs
-    // TODO: If nodes and links change, this should be updated
     geneToNodeMap?: { [key: string]: GeneProteinNode[] };
   };
 
@@ -350,7 +339,6 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   protected updated(_changedProperties: PropertyValues) {
-    // TODO: only if it has changed
     this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
 
     // Map PTM Input to Skeleton Nodes
@@ -1103,7 +1091,7 @@ export class BiowcPathwaygraph extends LitElement {
       .force(
         'collide',
         d3v6
-          .forceCollide() // TODO: The old version was .forceCollide(this.nodes.filter((node) => node.visible)) but forceCollide does not take nodes as argument, only the radius. So has this ever worked as intended?
+          .forceCollide()
           .radius(node =>
             (<PathwayGraphNodeD3>node).type.includes('ptm') ? 7 : 0
           )
@@ -1119,50 +1107,6 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv()
       .selectAll<SVGElement, PathwayGraphNodeD3>('.group-path')
       .call(this._dragGroups(simulation));
-
-    // TODO: Continue here!
-    // function pathLineIntersection(pathEl : SVGPathElement, xOffset: number, yOffset:number, scale:number, line : Selection<any, any, any, any>) {
-    //   const nSegments = 10;
-    //
-    // function btwn(a : number, b1 : number, b2: number)  {
-    //   if ((a >= b1) && (a <= b2)) { return true; }
-    //   if ((a >= b2) && (a <= b1)) { return true; }
-    //   return false;
-    // }
-    //
-    // function lineLineIntersect(line1 : { x1: number; x2: number; y1: number; y2: number; }, line2: { x1: number; x2: number; y1: number; y2: number; }) {
-    //   console.log(`Trying to intersect pathline: ${JSON.stringify(line1)} with lineline: ${JSON.stringify(line2)}`)
-    //   const {x1} = line1; const {x2} = line1; const x3 = line2.x1; const x4 = line2.x2;
-    //   const {y1} = line1; const {y2} = line1; const y3 = line2.y1; const y4 = line2.y2;
-    //   const ptDenom = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
-    //   const ptXNum = (x1*y2 - y1*x2) * (x3 - x4) - (x1 - x2) * (x3*y4 - y3*x4);
-    //   const ptYNum = (x1*y2 - y1*x2) * (y3 - y4) - (y1 - y2) * (x3*y4 - y3*x4);
-    //   if (ptDenom === 0) { return "parallel"; }
-    //     const pt = {'x': ptXNum / ptDenom, 'y': ptYNum / ptDenom};
-    //     if (btwn(pt.x, x1, x2) && btwn(pt.y, y1, y2) && btwn(pt.x, x3, x4) && btwn(pt.y, y3, y4)) { return pt; }
-    //      return "not in range";
-    //
-    // }
-    //
-    //
-    //   const pathLength = pathEl.getTotalLength();
-    //   const pts = []
-    //   for (let i=0; i<nSegments; i+=1) {
-    //     const pos1 = pathEl.getPointAtLength(pathLength * i / nSegments);
-    //     const pos2 = pathEl.getPointAtLength(pathLength * (i+1) / nSegments);
-    //     const line1 = {x1: (pos1.x*scale+xOffset), x2: (pos2.x*scale+xOffset), y1: (pos1.y*scale+yOffset), y2: (pos2.y*scale+yOffset)};
-    //     const line2 = {x1: Number(line.attr('x1')), x2: Number(line.attr('x2')),
-    //       y1: Number(line.attr('y1')), y2: Number(line.attr('y2'))};
-    //     const pt = lineLineIntersect(line1, line2);
-    //     if (typeof(pt) !== "string") {
-    //       pts.push(pt);
-    //     }
-    //   }
-    //
-    //   return pts;
-    //
-    // }
-    //
 
     // Define animation
     simulation.nodes(this.d3Nodes!).on('tick', () => {
@@ -1196,7 +1140,6 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Set new positions of the links
       // This mess makes the arrowheads end exactly at the rim of the target node.
-      // TODO: With the whole group business, this mess should be factored out.
       function getXCoordinate(
         link: PathwayGraphLinkD3,
         endpoint: 'source' | 'target',
@@ -1333,11 +1276,6 @@ export class BiowcPathwaygraph extends LitElement {
               } else {
                 sourceY = targetY;
               }
-              // // TODO: Skip the stuff above, only this
-              // if(sourceGroupNode.centroid){
-              //   // eslint-disable-next-line prefer-destructuring
-              //   sourceY = sourceGroupNode.centroid[1]
-              // }
             }
           } else {
             sourceY = getYCoordinate(link, 'source');
@@ -2746,7 +2684,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             // If the node is either a Gene/Protein node or a  (non-summary) PTM node
             // and it's a non-CTRL selection event,
             // throw an event to display the tooltip information permanently in the parent
-            // TODO: Can we declare this event somewhere before so people know they can use it?
             if (
               node.type.includes('ptm') &&
               !node.type.includes('summary') &&
@@ -2826,7 +2763,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           new CustomEvent('nodeDetails', {
             bubbles: true,
             cancelable: true,
-            detail: undefined, // TODO: Maybe empty string or empty html instead
+            detail: undefined,
           })
         );
 
@@ -3126,7 +3063,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
-  // Todo: Document to user that this exists, as well as the events a parent could listen to
   public selectNodesDownstreamOfSelection() {
     this.d3Nodes!.filter(node => node.selected).forEach(node =>
       this._selectDownstreamNodesWorker(node)

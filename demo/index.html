@@ -14,21 +14,17 @@
   <script type="module">
     import { html, render } from 'lit';
     import '../dist/src/biowc-pathwaygraph.js';
-    import PathwayGraphFixture from '../dist/test/fixtures/PathwayGraphFixture.js';
+    import StoryFixtures from '../dist/test/fixtures/StoryFixtures.js';
 
 
     render(
       html`
         <biowc-pathwaygraph
-          .pathwayMetaData = ${PathwayGraphFixture.examplePathway1.metaData}
-          .graphdataSkeleton = ${ {nodes: PathwayGraphFixture.examplePathway1.nodes,
-            links: [...PathwayGraphFixture.examplePathway1.links,
-              ...PathwayGraphFixture.examplePathway1.sourceAnchor,
-              ...PathwayGraphFixture.examplePathway1.targetAnchor,
-              ...PathwayGraphFixture.examplePathway1.doubleAnchor]} }
-          .ptmInputList = ${PathwayGraphFixture.examplePathway1.decryptmInputList}
-          .fullProteomeInputList = ${PathwayGraphFixture.examplePathway1.fpInputList}
-          .hue= ${PathwayGraphFixture.examplePathway1.hue}
+          .graphdataSkeleton = ${ {nodes: StoryFixtures.simplePTMGraphFixture.nodes,
+            links: StoryFixtures.simplePTMGraphFixture.links} }
+          .ptmInputList = ${StoryFixtures.ptmGraphWithDetailsFixture.ptmInputList}
+          .fullProteomeInputList = ${StoryFixtures.proteinExpressionFixture.fullProteomeInputList}
+          .hue= ${'foldchange'}
         >
         </biowc-pathwaygraph>
       `,
