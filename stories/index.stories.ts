@@ -60,7 +60,8 @@ SimpleSkeletonGraph.args = {
     "These two parts of the skeleton are defined under the 'nodes' and 'links' properties of a biowc-pathwaygraph component instance. " +
     'The graph is then automatically rendered. ' +
     'The graph is interactive: You can drag the nodes around and the edges will follow.' +
-    'Click on a node to select it. Press CTRL to select multiple nodes. Click the canvas to clear the selection.',
+    'Click on a node to select it. Press CTRL to select multiple nodes. Click the canvas to clear the selection. ' +
+    "If a single node is selected, `biowc-pathwaygraph` dispatches a `nodeDetails` event containing the node's tooltip text. ",
 };
 
 // Node types
@@ -148,7 +149,11 @@ PTMGraphWithDetails.args = {
     "In the `details` property of `ptmInputList`'s elements, " +
     'you can but arbitrary key-value pairs with information.' +
     'This information is then displayed as a tooltip. ' +
-    'Expand one of the PTM nodes and hover over it to see it!',
+    'Expand one of the PTM nodes and hover over it to see it! ' +
+    'Same as for other nodes, if a single PTM node is selected, its tooltip text is ' +
+    'emitted as a `nodeDetails` event that a parent component may listen to. ' +
+    'Additionally, a `selectionDetails` event is emitted which contains the ' +
+    'details dictionary for every selected node.',
 };
 
 // PTM Graph with FPs

@@ -3122,7 +3122,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       new CustomEvent('nodeDetails', {
         bubbles: true,
         cancelable: true,
-        detail: undefined, // TODO: Maybe empty string or empty html instead
+        detail: undefined,
       })
     );
     /* eslint-enable no-param-reassign */
