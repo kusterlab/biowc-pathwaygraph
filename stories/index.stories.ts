@@ -61,7 +61,7 @@ SimpleSkeletonGraph.args = {
     'The graph is then automatically rendered. ' +
     'The graph is interactive: You can drag the nodes around and the edges will follow.' +
     'Click on a node to select it. Press CTRL to select multiple nodes. Click the canvas to clear the selection. ' +
-    "If a single node is selected, `biowc-pathwaygraph` dispatches a `nodeDetails` event containing the node's tooltip text. ",
+    "If a single node is selected, `biowc-pathwaygraph` dispatches a `selectedNodeTooltip` event containing the node's tooltip text. ",
 };
 
 // Node types
@@ -151,7 +151,7 @@ PTMGraphWithDetails.args = {
     'This information is then displayed as a tooltip. ' +
     'Expand one of the PTM nodes and hover over it to see it! ' +
     'Same as for other nodes, if a single PTM node is selected, its tooltip text is ' +
-    'emitted as a `nodeDetails` event that a parent component may listen to. ' +
+    'emitted as a `selectedNodeTooltip` event that a parent component may listen to. ' +
     'Additionally, a `selectionDetails` event is emitted which contains the ' +
     'details dictionary for every selected node.',
 };
@@ -298,4 +298,4 @@ DownloadGraphAsSVG.args = {
     'by the user.',
 };
 
-// TODO: Events: nodeDetails and selectionDetails are dispatched when?
+// TODO: Events: selectedNodeTooltip and selectionDetails are dispatched when?
