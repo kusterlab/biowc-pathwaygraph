@@ -1,4 +1,13 @@
-# \<biowc-pathwaygraph>
+# biowc-pathwaygraph
+
+`biowc-pathwaygraph` is a WebComponent for interactive visualization of signaling pathway diagrams.
+In addition to rendering the genes, proteins and compounds within a pathway, PTM and expression data can be projected onto the diagram.  
+<TODO: Insert screenshot here>
+
+Our `storybook` contains an overview of the features of `biowc-pathwaygraph`. Here's how to run it:  
+1. Clone this repository
+2. Install the dependencies: `npm install`
+3. Start Storybook: `npm run storybook` 
 
 This webcomponent follows the [open-wc](https://github.com/open-wc/open-wc) recommendation.
 

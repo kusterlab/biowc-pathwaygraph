@@ -2690,7 +2690,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               !e.ctrlKey
             ) {
               this.dispatchEvent(
-                new CustomEvent('nodeDetails', {
+                new CustomEvent('selectedNodeTooltip', {
                   bubbles: true,
                   cancelable: true,
                   detail: BiowcPathwaygraph._getPTMTooltipText(
@@ -2700,7 +2700,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               );
             } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
               this.dispatchEvent(
-                new CustomEvent('nodeDetails', {
+                new CustomEvent('selectedNodeTooltip', {
                   bubbles: true,
                   cancelable: true,
                   detail: BiowcPathwaygraph._getGeneProteinTooltipText(
@@ -2710,7 +2710,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               );
             } else {
               this.dispatchEvent(
-                new CustomEvent('nodeDetails', {
+                new CustomEvent('selectedNodeTooltip', {
                   bubbles: true,
                   cancelable: true,
                   detail: undefined,
@@ -2760,7 +2760,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
         // If there's a parent listening for details, tell it to clear that
         this.dispatchEvent(
-          new CustomEvent('nodeDetails', {
+          new CustomEvent('selectedNodeTooltip', {
             bubbles: true,
             cancelable: true,
             detail: undefined,
@@ -3119,7 +3119,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
     // After selecting downstream nodes, multiple PTMs are selected so the infobox needs to be disabled
     this.dispatchEvent(
-      new CustomEvent('nodeDetails', {
+      new CustomEvent('selectedNodeTooltip', {
         bubbles: true,
         cancelable: true,
         detail: undefined,
