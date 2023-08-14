@@ -194,7 +194,7 @@ export const ColoringNodesByPotency = Template.bind({});
 ColoringNodesByPotency.args = {
   ...PTMGraphWithDetails.args,
   hue: 'potency',
-  storyTitle: 'Coloring Nodes By Fold Change (decryptM Data)',
+  storyTitle: 'Coloring Nodes By Potency (decryptM Data)',
   storyDescription:
     'If you have decryptM data, each peptide of the `ptmInputList` ' +
     "has a '-log(EC50)' value in its details. For this type of data, a third color scheme exists, which " +
@@ -203,7 +203,7 @@ ColoringNodesByPotency.args = {
     '(negative log EC50 value).',
 };
 
-// Todo: Demo Public methods (download, collapse (in same story as expand), select downstream)
+// Demo Public methods (download, collapse (in same story as expand), select downstream)
 // Couldn't figure out how to hand method calls over as arguments, so I had to write an
 // Individual Template for each function. If anyone knows this feel free to write a pull request
 const ExpandAndCollapseAllButtonTemplate: Story<ArgTypes> = (
