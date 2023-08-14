@@ -1,0 +1,17 @@
+image: node:18.12-bullseye
+
+stages:
+  - npm
+  - test
+
+npm:
+  stage: npm
+  script:
+    - npm install
+
+test:
+  stage: test
+  dependencies:
+    - npm
+  script:
+    - npm test
