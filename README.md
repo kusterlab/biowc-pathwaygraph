@@ -11,7 +11,8 @@ In addition to rendering the genes, proteins and compounds within a pathway, PTM
 <p>
 <img src="demo/Screenshot.png" alt='Screenshot' width='500' >
 </p>
-Our `storybook` contains an overview of the features of `biowc-pathwaygraph`. Here's how to run it:  
+
+Our  `storybook` contains an overview of the features of `biowc-pathwaygraph`. Here's how to run it:  
 1. Clone this repository
 2. Install the dependencies: `npm install`
 3. Start Storybook: `npm run storybook` 
@@ -26,13 +27,7 @@ npm i biowc-pathwaygraph
 
 ## Usage
 
-```html
-<script type="module">
-  import 'biowc-pathwaygraph/biowc-pathwaygraph.js';
-</script>
-
-<biowc-pathwaygraph></biowc-pathwaygraph>
-```
+Please check `demo/index.html` for a minimal working example.
 
 ## Linting and formatting
 
@@ -60,20 +55,6 @@ To run the tests in interactive watch mode run:
 
 ```bash
 npm run test:watch
-```
-
-## Demoing with Storybook
-
-To run a local instance of Storybook for your component, run
-
-```bash
-npm run storybook
-```
-
-To build a production version of Storybook, run
-
-```bash
-npm run storybook:build
 ```
 
 
