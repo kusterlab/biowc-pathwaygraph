@@ -1883,9 +1883,16 @@ export class BiowcPathwaygraph extends LitElement {
             return currentMin;
           }, this.maxPotency!);
 
-        // If they are not yet defined, set min and max values to min and max potency (the user may change this later):
-        this.colorRangeMin = this.colorRangeMin || this.minPotency;
-        this.colorRangeMax = this.colorRangeMax || this.maxPotency;
+        // Set min and max values to min and max potency (the user may change this later):
+        this.colorRangeMin = this.minPotency;
+        this.colorRangeMax = this.maxPotency;
+        this.dispatchEvent(
+          new CustomEvent('initializeColorRange', {
+            bubbles: true,
+            cancelable: true,
+            detail: [this.colorRangeMin, this.colorRangeMax],
+          })
+        );
         break;
       default:
         break;
