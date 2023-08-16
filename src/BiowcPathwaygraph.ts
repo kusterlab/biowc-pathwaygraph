@@ -212,6 +212,10 @@ export class BiowcPathwaygraph extends LitElement {
 
   minPotency?: number;
 
+  colorRangeMin?: number;
+
+  colorRangeMax?: number;
+
   anyDowngoingPTMs?: boolean;
 
   anyUpgoingPTMs?: boolean;
@@ -1745,8 +1749,8 @@ export class BiowcPathwaygraph extends LitElement {
         return d3v6.interpolateViridis(
           1 -
             (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
-              this.minPotency!) /
-              (this.maxPotency! - this.minPotency!)
+              this.colorRangeMin!) /
+              (this.colorRangeMax! - this.colorRangeMin!)
         );
       }
       default:
@@ -1827,7 +1831,6 @@ export class BiowcPathwaygraph extends LitElement {
         this.allDowngoingLessThan0 = downNodes?.every(
           currentNode => BiowcPathwaygraph._getNodeFoldChange(currentNode) < 0
         );
-
         break;
       /* eslint-enable no-case-declarations */
       case 'potency':
@@ -1879,6 +1882,17 @@ export class BiowcPathwaygraph extends LitElement {
 
             return currentMin;
           }, this.maxPotency!);
+
+        // Set min and max values to min and max potency (the user may change this later):
+        this.colorRangeMin = this.minPotency;
+        this.colorRangeMax = this.maxPotency;
+        this.dispatchEvent(
+          new CustomEvent('initializeColorRange', {
+            bubbles: true,
+            cancelable: true,
+            detail: [this.colorRangeMin, this.colorRangeMax],
+          })
+        );
         break;
       default:
         break;
@@ -2388,7 +2402,7 @@ export class BiowcPathwaygraph extends LitElement {
           .attr('stop-color', d => d3v6.interpolateViridis(1 - d));
 
         colorLegendXAxisScale
-          .domain([this.minPotency!, this.maxPotency!])
+          .domain([this.colorRangeMin!, this.colorRangeMax!])
           .range([0, legendWidth - 25]);
 
         colorLegendXAxis.ticks(4);
@@ -3156,5 +3170,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         /* eslint-enable no-param-reassign */
       });
     this._refreshGraph(true);
+  }
+
+  public setColorRange(range: [number, number]) {
+    [this.colorRangeMin, this.colorRangeMax] = range;
+    this._refreshGraph(true);
+    this._renderLegend();
   }
 }
