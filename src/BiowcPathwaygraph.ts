@@ -228,6 +228,14 @@ export class BiowcPathwaygraph extends LitElement {
 
   currentTimeoutId?: NodeJS.Timeout;
 
+  potencyColorScale: string[] = [
+    '#ffffff',
+    '#FED702',
+    '#6C8C54',
+    '#0065bd',
+    '#FF0080',
+  ];
+
   render() {
     return html`
       <div id="pathwayContainer">
@@ -983,7 +991,7 @@ export class BiowcPathwaygraph extends LitElement {
       })
       .attr('stroke-dasharray', d => {
         if (d.types.includes('binding/association')) return '3 3';
-        if (d.types.includes('indirect effect')) return '7 2';
+        if (d.types.includes('indirect')) return '7 2';
         return null;
       });
 
@@ -1746,11 +1754,10 @@ export class BiowcPathwaygraph extends LitElement {
         }
       }
       case 'potency': {
-        return d3v6.interpolateViridis(
-          1 -
-            (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
-              this.colorRangeMin!) /
-              (this.colorRangeMax! - this.colorRangeMin!)
+        return d3v6.interpolateRgbBasis(this.potencyColorScale)(
+          (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
+            this.colorRangeMin!) /
+            (this.colorRangeMax! - this.colorRangeMin!)
         );
       }
       default:
@@ -2245,7 +2252,7 @@ export class BiowcPathwaygraph extends LitElement {
     legendSvg
       .append('text')
       .attr('class', 'legend')
-      .text('Indirect Effect')
+      .text('Indirect')
       .attr('x', xOffset + 275 * scalingFactor)
       .attr(
         'y',
@@ -2399,8 +2406,9 @@ export class BiowcPathwaygraph extends LitElement {
           .enter()
           .append('stop')
           .attr('offset', d => d)
-          .attr('stop-color', d => d3v6.interpolateViridis(1 - d));
-
+          .attr('stop-color', d =>
+            d3v6.interpolateRgbBasis(this.potencyColorScale)(d)
+          );
         colorLegendXAxisScale
           .domain([this.colorRangeMin!, this.colorRangeMax!])
           .range([0, legendWidth - 25]);
