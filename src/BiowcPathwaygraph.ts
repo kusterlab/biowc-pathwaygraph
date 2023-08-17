@@ -2106,8 +2106,8 @@ export class BiowcPathwaygraph extends LitElement {
 
     legendSvg
       .append('rect')
-      .attr('class', 'node-rect compound legend')
-      .attr('x', xOffset + 135)
+      .attr('class', 'node-rect pathway legend')
+      .attr('x', xOffset + 120)
       .attr('y', yOffset + lineHeight * 0 + paragraphMargin * 0)
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
@@ -2116,8 +2116,8 @@ export class BiowcPathwaygraph extends LitElement {
     legendSvg
       .append('text')
       .attr('class', 'legend')
-      .text('Compound')
-      .attr('x', xOffset + 160)
+      .text('Pathway')
+      .attr('x', xOffset + 145)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 0 + paragraphMargin * 0
@@ -2144,8 +2144,8 @@ export class BiowcPathwaygraph extends LitElement {
 
     legendSvg
       .append('rect')
-      .attr('class', 'node-rect pathway legend')
-      .attr('x', xOffset + 135)
+      .attr('class', 'node-rect compound legend')
+      .attr('x', xOffset + 75)
       .attr('y', yOffset + lineHeight * 1 + paragraphMargin * 0)
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
@@ -2154,8 +2154,8 @@ export class BiowcPathwaygraph extends LitElement {
     legendSvg
       .append('text')
       .attr('class', 'legend')
-      .text('Pathway')
-      .attr('x', xOffset + 160)
+      .text('Metabolite/Compound')
+      .attr('x', xOffset + 100)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 1 + paragraphMargin * 0
