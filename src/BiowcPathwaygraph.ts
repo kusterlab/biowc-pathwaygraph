@@ -2066,7 +2066,7 @@ export class BiowcPathwaygraph extends LitElement {
     // Determine width and height of the legend.
     // Width is constant, height is larger if the legend contains a color scale
     const legendWidth = 265;
-    const legendHeight = drawColorLegend ? 235 : 165;
+    const legendHeight = drawColorLegend ? 255 : 180;
 
     // Draw the frame
     legendSvg
@@ -2098,7 +2098,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Gene/Protein')
-      .attr('x', xOffset + 25)
+      .attr('x', xOffset + 22)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 0 + paragraphMargin * 0
@@ -2117,7 +2117,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Pathway')
-      .attr('x', xOffset + 145)
+      .attr('x', xOffset + 142)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 0 + paragraphMargin * 0
@@ -2136,7 +2136,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Group')
-      .attr('x', xOffset + 25)
+      .attr('x', xOffset + 22)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 1 + paragraphMargin * 0
@@ -2155,7 +2155,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Metabolite/Compound')
-      .attr('x', xOffset + 100)
+      .attr('x', xOffset + 97)
       .attr(
         'y',
         yOffset * scalingFactor + 3 + lineHeight * 1 + paragraphMargin * 0
@@ -2179,7 +2179,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Activation')
-      .attr('x', xOffset + 80 * scalingFactor)
+      .attr('x', xOffset + 38)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 2 + paragraphMargin * 1
@@ -2203,7 +2203,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Inhibition')
-      .attr('x', xOffset + 170)
+      .attr('x', xOffset + 168)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 2 + paragraphMargin * 1
@@ -2227,7 +2227,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Other')
-      .attr('x', xOffset + 80 * scalingFactor)
+      .attr('x', xOffset + 38)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
@@ -2253,7 +2253,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Indirect')
-      .attr('x', xOffset + 275 * scalingFactor)
+      .attr('x', xOffset + 136)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 3 + paragraphMargin * 1
@@ -2278,7 +2278,7 @@ export class BiowcPathwaygraph extends LitElement {
       .append('text')
       .attr('class', 'legend')
       .text('Binding/Association')
-      .attr('x', xOffset + 80 * scalingFactor)
+      .attr('x', xOffset + 38)
       .attr(
         'y',
         yOffset * scalingFactor + lineHeight * 4 + paragraphMargin * 1
@@ -2354,10 +2354,32 @@ export class BiowcPathwaygraph extends LitElement {
         yOffset * scalingFactor - 8 + lineHeight * 5 + paragraphMargin * 2
       );
 
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('+p/-p')
+      .attr('x', xOffset)
+      .attr(
+        'y',
+        yOffset * scalingFactor - 8 + lineHeight * 6 + paragraphMargin * 2
+      )
+      .style('font-family', 'Roboto')
+      .style('font-size', '12pt');
+
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('(De-)Phosphorylation')
+      .attr('x', xOffset + 50)
+      .attr(
+        'y',
+        yOffset * scalingFactor - 8 + lineHeight * 6 + paragraphMargin * 2
+      );
+
     if (drawColorLegend) {
       const colorLegendGroupPosition = [
         xOffset + 5,
-        yOffset * scalingFactor + lineHeight * 6 + paragraphMargin * 2 + 10,
+        yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 2 + 10,
       ];
       const colorLegendGroup = legendSvg
         .append('g')
