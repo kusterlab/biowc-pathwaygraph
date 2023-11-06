@@ -3034,6 +3034,20 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     );
   }
 
+  private static _getCoordinatesFromTranslate(
+    elem: Selection<SVGElement, unknown, any, undefined>
+  ) {
+    const transformString = elem.attr('transform');
+    const transformMatch = transformString.match(/\(([0-9.]+),([0-9.]+)\)/);
+    // transformMatch has three entries: The entire match as string, the first group (the x coord), and the second group (the y coord)
+    if (!transformMatch) {
+      return [0, 0];
+    }
+    const transformXCoordinate = parseFloat(transformMatch[1]);
+    const transformYCoordinate = parseFloat(transformMatch[2]);
+    return [transformXCoordinate, transformYCoordinate];
+  }
+
   private _prepareForExport() {
     // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
     // into the svg and the rest of the stylesheet.
@@ -3042,6 +3056,34 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     const hostRule = styles.styleSheet?.cssRules[0].cssText!;
 
     const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
+
+    // To calculate the size of the exported svg, get the current x and y translate of the canvas
+    // and add the largest x/y coordinates across all nodes
+    const [nodeGTransformX, nodeGTransformY] =
+      BiowcPathwaygraph._getCoordinatesFromTranslate(
+        this._getMainDiv().select('#nodeG')
+      );
+
+    // Set the maximum values initially to the size of the legend, this should be the minimal frame for the exported plot
+    const legendSVG = this._getMainDiv()
+      .select<SVGElement>('#pathwayLegend')
+      .select('rect');
+    let [maxNodeX, maxNodeY] = [
+      Number(legendSVG.attr('width')),
+      Number(legendSVG.attr('height')),
+    ];
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGElement, PathwayGraphNodeD3>('.node')
+      .each(function () {
+        const [currentNodeX, currentNodeY] =
+          BiowcPathwaygraph._getCoordinatesFromTranslate(d3v6.select(this));
+        maxNodeX = Math.max(currentNodeX, maxNodeX);
+        maxNodeY = Math.max(currentNodeY, maxNodeY);
+      });
+
+    svg.setAttribute('width', (nodeGTransformX + maxNodeX + 25).toString());
+    svg.setAttribute('height', (nodeGTransformY + maxNodeY + 25).toString());
 
     let serializedSVG = svg.outerHTML!;
     let cssRules = styles.cssText;
