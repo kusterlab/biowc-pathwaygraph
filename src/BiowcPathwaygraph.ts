@@ -2090,6 +2090,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect gene_protein legend')
       .attr('x', xOffset)
       .attr('y', yOffset + lineHeight * 0 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2109,6 +2110,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect pathway legend')
       .attr('x', xOffset + 120)
       .attr('y', yOffset + lineHeight * 0 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2128,6 +2130,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect group-path legend')
       .attr('x', xOffset)
       .attr('y', yOffset + lineHeight * 1 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2147,6 +2150,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect compound legend')
       .attr('x', xOffset + 75)
       .attr('y', yOffset + lineHeight * 1 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2289,6 +2293,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm up legend')
       .attr('x', xOffset)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -2314,6 +2319,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm down legend')
       .attr('x', xOffset + 55)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -2339,6 +2345,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm not legend')
       .attr('x', xOffset + 130)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -3080,8 +3087,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       .select<SVGElement>('#pathwayLegend')
       .select('rect');
     let [maxNodeX, maxNodeY] = [
-      Number(legendSVG.attr('width')),
-      Number(legendSVG.attr('height')),
+      Number(legendSVG.attr('width')) + 10,
+      Number(legendSVG.attr('height')) + 10,
     ];
     this._getMainDiv()
       .select('#nodeG')

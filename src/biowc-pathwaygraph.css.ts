@@ -107,10 +107,6 @@ export default css`
     stroke-width: 2.5px;
   }
 
-  .legend.node-rect {
-    transform: translate(0px, -15px);
-  }
-
   .legend.group-path {
     stroke-width: 3px;
   }
