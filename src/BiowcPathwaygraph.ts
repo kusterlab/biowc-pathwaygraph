@@ -3148,26 +3148,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       }
     }
 
-    // Now another problem: Illustrator cannot display <line> elements for some reason.
-    // So we need to add a <path> for every line and set the opacity of the line to 0
-    // We cannot just replace the line by a path, since the marker-end part of the line needs to be displayed
-    // (and yes, for some reason, Illustrator does display the marker-end)
-    const linkG = this._getMainDiv().select('#linkG');
-    this._getMainDiv()
-      .selectAll<SVGLineElement, any>('line')
-      .each(function (line) {
-        if (!!line && !!line.sourceX) {
-          linkG
-            .append('path')
-            .attr(
-              'd',
-              `M${line.sourceX} ${line.sourceY}, ${line.targetX} ${line.targetY}`
-            )
-            .attr('style', d3v6.select(this).attr('style'));
-          d3v6.select(this).style('opacity', 0);
-        }
-      });
-
     let serializedSVG = svg.outerHTML!;
 
     // Now the ':hostRule':
