@@ -3066,12 +3066,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   private _prepareForExport() {
-    // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
-    // into the svg and the rest of the stylesheet.
-    // I only have a clumsy solution for that: extract the css rule into a key-value pair and
-    // going over the whole svg+css and replacing every occurrence one by one
-    const hostRule = styles.styleSheet?.cssRules[0].cssText!;
-
     const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
 
     // To calculate the size of the exported svg, get the current x and y translate of the canvas
@@ -3112,13 +3106,56 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       (nodeGTransformY + maxNodeY * scale + 25).toString()
     );
 
-    let serializedSVG = svg.outerHTML!;
-    let cssRules = styles.cssText;
-    // Trim away the hostRule from the remaining rules - if they are part of the style, some SVG viewers may have rendering issues
-    cssRules = cssRules
-      .slice(cssRules.indexOf('}') + 1)
-      .replace(/\r?\n|\r/g, '');
+    // In order to make the svg readable by Illustrator, we need to inline the styles.
+    // The 0-th rule is the hostRule which we process separately below, so we start at 1 here.
+    for (
+      let index = 1;
+      index < styles.styleSheet?.cssRules.length!;
+      index += 1
+    ) {
+      const currentRule = <CSSStyleRule>styles.styleSheet?.cssRules[index];
+      for (let i = 0; i < currentRule.style.length; i += 1) {
+        // Everything except for 'fill' we can just overwrite
+        if (currentRule.style[i] !== 'fill') {
+          this._getMainDiv()
+            .selectAll(currentRule.selectorText)
+            .style(
+              currentRule.style[i],
+              currentRule.style.getPropertyValue(currentRule.style[i])
+            );
+        } else {
+        /*
+          'fill' of ptmnodes is a bit tricky.
+          In general, it is defined in the stylesheet so if we don't set the value here it is lost in the downloaded SVG.
+          But it might have been changed if the user switched the color scheme, and then we don't want to override it with the original colour.
+          We are using a hacky trick here: If we access the by node.style('fill') (which would be the cleaner way), we will always get a RESOLVED value
+          and cannot tell if it comes from the stylesheet or from a dynamic override.
+          However, by using node.attr('style') instead, we get the INLINE style as a string. So there we can check if it contains a 'fill' key,
+          and only set it if it isn't there yet. Yay!
+         */
+          this._getMainDiv()
+            .selectAll(currentRule.selectorText)
+            .each(function () {
+              const node = d3v6.select(this);
+              if (
+                !node.attr('class').includes('ptm') ||
+                !node.attr('style').includes('fill:')
+              ) {
+                node.style('fill', currentRule.style.getPropertyValue('fill'));
+              }
+            });
+        }
+      }
+    }
 
+    let serializedSVG = svg.outerHTML!;
+
+    // Now the ':hostRule':
+    // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
+    // into the svg and the rest of the stylesheet.
+    // I only have a clumsy solution for that: extract the css rule into a key-value pair and
+    // going over the whole svg+css and replacing every occurrence one by one
+    const hostRule = styles.styleSheet?.cssRules[0].cssText!;
     hostRule
       .slice(8, -2)
       .split(';')
@@ -3128,15 +3165,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           const key = `var(${propertySplit[0].trim()})`;
           const value = propertySplit[1].trim();
           serializedSVG = serializedSVG.replaceAll(key, value);
-          cssRules = cssRules.replaceAll(key, value);
         }
       });
-
-    // Inject the styles into the svg
-    serializedSVG = `${serializedSVG.slice(
-      0,
-      -6
-    )}<style>${cssRules}</style>${serializedSVG.slice(-6)}`;
 
     // Load xmlns
     if (

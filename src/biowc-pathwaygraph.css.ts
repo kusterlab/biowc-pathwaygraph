@@ -40,7 +40,10 @@ export default css`
     cursor: move;
   }
 
-  .node-rect.pathway,
+  .node-rect.pathway {
+    fill: var(--pathway-color);
+  }
+
   .node-rect.misc {
     fill: var(--pathway-color);
   }
@@ -124,10 +127,6 @@ export default css`
   .node-label.ptm.summary {
     font-size: 10px;
     font-weight: bold;
-  }
-
-  .node-label.ptm {
-    font-size: 7px;
   }
 
   .edgelabel {
