@@ -2597,7 +2597,7 @@ padding-left: ${keyIndent}px;
 font-size: 12pt;
 font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${
           strongWidth - keyIndent!
-        }px'>${key}:</strong>${valueText}</li>`
+        }px'>${key}:</strong> ${valueText}</li>`
       : '';
   }
 
