@@ -3036,7 +3036,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             .map(node => {
               const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node)
                 .details!;
-              // If a detail has format { display: boolean; value: string | number }, only pass the value
+              // If a detail has format { display: boolean; text: string | number }, only pass the value
               const detailsFlattened: { [key: string]: string | number } = {};
               Object.keys(nodeDetails).forEach(detailKey => {
                 const nodeDetailValue = nodeDetails[detailKey] as {
@@ -3045,7 +3045,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                 };
                 if (
                   !!nodeDetailValue &&
-                  Object.hasOwn(nodeDetailValue, 'value')
+                  Object.hasOwn(nodeDetailValue, 'text')
                 ) {
                   detailsFlattened[detailKey] = nodeDetailValue.text;
                 } else {
