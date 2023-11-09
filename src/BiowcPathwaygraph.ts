@@ -40,7 +40,7 @@ interface GeneProteinNode extends PathwayGraphNode {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
   // The following are only defined if Full Proteome Data was supplied
   nUp?: number;
@@ -56,7 +56,7 @@ interface PTMInputEntry {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
 }
 
@@ -66,7 +66,7 @@ interface PTMNode extends PathwayGraphNode {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
@@ -89,7 +89,7 @@ interface FullProteomeInputEntry {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
 }
 
@@ -2570,14 +2570,34 @@ export class BiowcPathwaygraph extends LitElement {
 
   // Helper function for the two tooltip text functions
   private static _formatTextIfValuePresent(
-    text: string,
-    value: any,
+    key: string,
+    value:
+      | string
+      | number
+      | { display: boolean; text: string | number; indentKey?: boolean }
+      | undefined,
     strongWidth: number
   ) {
+    let keyIndent;
+    let valueText;
+    if (!value) {
+      return '';
+    }
+    if (typeof value === 'string' || typeof value === 'number') {
+      keyIndent = 0;
+      valueText = value;
+    } else {
+      keyIndent = value.indentKey ? 25 : 0;
+      valueText = value.text;
+    }
+
     return value
       ? `<li class='tooltip-list-item' style='margin: 5px 0;
+padding-left: ${keyIndent}px;
 font-size: 12pt;
-font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${strongWidth}px'>${text}:</strong> ${value}</li>`
+font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${
+          strongWidth - keyIndent!
+        }px'>${key}:</strong>${valueText}</li>`
       : '';
   }
 
@@ -3021,13 +3041,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               Object.keys(nodeDetails).forEach(detailKey => {
                 const nodeDetailValue = nodeDetails[detailKey] as {
                   display: boolean;
-                  value: string | number;
+                  text: string | number;
                 };
                 if (
                   !!nodeDetailValue &&
                   Object.hasOwn(nodeDetailValue, 'value')
                 ) {
-                  detailsFlattened[detailKey] = nodeDetailValue.value;
+                  detailsFlattened[detailKey] = nodeDetailValue.text;
                 } else {
                   detailsFlattened[detailKey] = <string | number>(
                     nodeDetails[detailKey]
