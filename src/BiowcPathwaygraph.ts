@@ -848,6 +848,9 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Now we can set the permission flag for the 'expandAll' and 'collapseAll' functions to true
       this.isNodeExpandAndCollapseAllowed = true;
+      if (this.hue === 'foldchange' || this.hue === 'potency') {
+        this.expandAllPTMNodes();
+      }
     }, 2000);
   }
 
