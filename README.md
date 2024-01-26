@@ -1,6 +1,5 @@
 # biowc-pathwaygraph
 ![Pipeline](https://github.com/kusterlab/biowc-pathwaygraph/actions/workflows/node.js.yml/badge.svg)
-[![Documentation Status](https://readthedocs.org/projects/biowc-pathwaygraph/badge/?version=latest)](https://biowc-pathwaygraph.readthedocs.io/en/latest/?badge=latest)
 [![version](https://img.shields.io/npm/v/biowc-pathwaygraph.svg?logo=npm)](https://www.npmjs.com/package/biowc-pathwaygraph)
 [![Downloads](https://img.shields.io/npm/dt/biowc-pathwaygraph.svg?label=Downloads)](https://www.npmjs.com/package/biowc-pathwaygraph)
 [![License](https://img.shields.io/npm/l/biowc-pathwaygraph?label=License)](https://www.apache.org/licenses/LICENSE-2.0)

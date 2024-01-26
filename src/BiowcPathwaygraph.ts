@@ -21,13 +21,20 @@ const PTM_NODE_WIDTH = 15;
 const PTM_NODE_HEIGHT = 10;
 const DBL_CLICK_TIMEOUT = 200;
 
+/**
+ * Internal representation of any node in the pathway.
+ * All other node representations inherit from it.
+ */
 interface PathwayGraphNode extends SimulationNodeDatum {
   nodeId: string;
-  type: string; // TODO: Enumerate all possible types
+  type: string;
   x: number; // Maybe exclamation mark is better here, check what it is used for
   y: number;
 }
 
+/**
+ * Represents a gene_protein node.
+ */
 interface GeneProteinNode extends PathwayGraphNode {
   geneNames: string[];
   uniprotAccs: string[];
@@ -48,6 +55,9 @@ interface GeneProteinNode extends PathwayGraphNode {
   nNot?: number;
 }
 
+/**
+ * An entry in the ptmInputList.
+ */
 interface PTMInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
@@ -60,6 +70,9 @@ interface PTMInputEntry {
   };
 }
 
+/**
+ * Represents a PTM node, generated from the {@link ptmInputList}.
+ */
 interface PTMNode extends PathwayGraphNode {
   geneProteinNodeId: string;
   details?: {
@@ -74,6 +87,9 @@ interface PTMNode extends PathwayGraphNode {
   summaryNodeId?: string;
 }
 
+/**
+ * Represents a PTM summary node, generated from the {@link ptmInputList}.
+ */
 interface PTMSummaryNode extends PathwayGraphNode {
   geneProteinNodeId?: string;
   label: string;
@@ -81,6 +97,9 @@ interface PTMSummaryNode extends PathwayGraphNode {
   regulation: PossibleRegulationCategoriesType;
 }
 
+/**
+ * An entry in the {@link fullProteomeInputList}.
+ */
 interface FullProteomeInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
@@ -93,19 +112,30 @@ interface FullProteomeInputEntry {
   };
 }
 
+/**
+ * The raw version of a link.
+ * The references to source and target only exist as strings {@link sourceId} and {@link targetId},
+ */
 interface PathwayGraphLinkInput {
-  linkId?: string;
+  linkId: string;
   sourceId: string;
   targetId: string;
-  types: string[]; // TODO: Enumerate all link types
+  types: string[];
   label?: string;
 }
 
+/**
+ * The internal representation of a link.
+ * This interface is different from {@link PathwayGraphLinkInput} because
+ * the references to {@link SimulationLinkDatum.source} and {@link SimulationLinkDatum.target} are now objects
+ * of type {@link PathwayGraphNode} (or, in the case of edges that start/end
+ * on other edges, they can also be {@link PathwayGraphLink}s themselves).
+ */
 interface PathwayGraphLink
   extends SimulationLinkDatum<PathwayGraphNode | PathwayGraphLink>,
     SimulationNodeDatum {
   linkId: string;
-  types: string[]; // TODO: Enumerate all link types
+  types: string[];
   sourceId: string;
   targetId: string;
   label?: string;
