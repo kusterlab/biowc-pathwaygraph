@@ -40,7 +40,10 @@ export default css`
     cursor: move;
   }
 
-  .node-rect.pathway,
+  .node-rect.pathway {
+    fill: var(--pathway-color);
+  }
+
   .node-rect.misc {
     fill: var(--pathway-color);
   }
@@ -107,10 +110,6 @@ export default css`
     stroke-width: 2.5px;
   }
 
-  .legend.node-rect {
-    transform: translate(0px, -15px);
-  }
-
   .legend.group-path {
     stroke-width: 3px;
   }
@@ -128,10 +127,6 @@ export default css`
   .node-label.ptm.summary {
     font-size: 10px;
     font-weight: bold;
-  }
-
-  .node-label.ptm {
-    font-size: 7px;
   }
 
   .edgelabel {

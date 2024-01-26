@@ -276,6 +276,15 @@ export default {
           'Fold Change': 0.9,
           'p Value': 0.0003,
           '-log(EC50)': 6,
+          MyUmbrellaTerm: ' ',
+          Subterm1: { text: 'Neque porro', display: true, indentKey: true },
+          Subterm2: { text: 'quisquam est', display: true, indentKey: true },
+          Subterm3: {
+            text: 'qui dolorem ipsum',
+            display: true,
+            indentKey: true,
+          },
+          'Something else': 'Hello!',
         },
       },
       {

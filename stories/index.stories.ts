@@ -184,9 +184,11 @@ ColoringNodesByFoldChange.args = {
   storyDescription:
     'If the details of the `ptmInputList` contain fold changes or log fold changes, ' +
     "you can change the color scheme of the graph by setting the `hue` property to 'foldchange'. " +
-    'The legend will then be extended by a dynamic color bar that ranges from the smallest' +
+    'The legend will then be extended by a dynamic color bar that ranges from the smallest ' +
     'to the largest value, and each PTM node will be colored accordingly. ' +
-    '(This also works for log fold changes, where downregulations would be negative.)',
+    '(This also works for log fold changes, where downregulations would be negative.) ' +
+    'Since the color-coding only works for individual nodes, not for summary nodes, the nodes are automatically expanded when this color scheme is selected. ' +
+    'Be aware that it always takes a short time until the simulation stabilizes, therefore the automatic expansion of nodes only becomes visible after 2 seconds.',
 };
 
 // DecryptM Graph with Potency Hue
@@ -199,8 +201,10 @@ ColoringNodesByPotency.args = {
     'If you have decryptM data, each peptide of the `ptmInputList` ' +
     "has a '-log(EC50)' value in its details. For this type of data, a third color scheme exists, which " +
     "you can activate by setting `hue` to 'potency'. The dynamic color bar will then " +
-    "be use the 'viridis' color scale and will range from the lowest to the highest potency " +
-    '(negative log EC50 value).',
+    'use a different color scale and will range from the lowest to the highest potency ' +
+    '(negative log EC50 value). ' +
+    'Since the color-coding only works for individual nodes, not for summary nodes, the nodes are automatically expanded when this color scheme is selected. ' +
+    'Be aware that it always takes a short time until the simulation stabilizes, therefore the automatic expansion of nodes only becomes visible after 2 seconds.',
 };
 
 // Demo Public methods (download, collapse (in same story as expand), select downstream)

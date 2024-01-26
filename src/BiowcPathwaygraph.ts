@@ -47,7 +47,7 @@ interface GeneProteinNode extends PathwayGraphNode {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
   // The following are only defined if Full Proteome Data was supplied
   nUp?: number;
@@ -66,7 +66,7 @@ interface PTMInputEntry {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
 }
 
@@ -79,7 +79,7 @@ interface PTMNode extends PathwayGraphNode {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
@@ -108,7 +108,7 @@ interface FullProteomeInputEntry {
     [key: string]:
       | string
       | number
-      | { display: boolean; value: string | number };
+      | { display: boolean; text: string | number; indentKey?: boolean };
   };
 }
 
@@ -878,6 +878,9 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Now we can set the permission flag for the 'expandAll' and 'collapseAll' functions to true
       this.isNodeExpandAndCollapseAllowed = true;
+      if (this.hue === 'foldchange' || this.hue === 'potency') {
+        this.expandAllPTMNodes();
+      }
     }, 2000);
   }
 
@@ -2120,6 +2123,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect gene_protein legend')
       .attr('x', xOffset)
       .attr('y', yOffset + lineHeight * 0 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2139,6 +2143,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect pathway legend')
       .attr('x', xOffset + 120)
       .attr('y', yOffset + lineHeight * 0 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2158,6 +2163,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect group-path legend')
       .attr('x', xOffset)
       .attr('y', yOffset + lineHeight * 1 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2177,6 +2183,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect compound legend')
       .attr('x', xOffset + 75)
       .attr('y', yOffset + lineHeight * 1 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 10 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 35 * scalingFactor)
@@ -2319,6 +2326,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm up legend')
       .attr('x', xOffset)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -2344,6 +2352,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm down legend')
       .attr('x', xOffset + 55)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -2369,6 +2378,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'node-rect ptm not legend')
       .attr('x', xOffset + 130)
       .attr('y', yOffset * scalingFactor + lineHeight * 5 + paragraphMargin * 2)
+      .attr('transform', 'translate(0,-15)')
       .attr('rx', 30 * scalingFactor)
       .attr('ry', 30 * scalingFactor)
       .attr('width', 30 * scalingFactor)
@@ -2593,14 +2603,34 @@ export class BiowcPathwaygraph extends LitElement {
 
   // Helper function for the two tooltip text functions
   private static _formatTextIfValuePresent(
-    text: string,
-    value: any,
+    key: string,
+    value:
+      | string
+      | number
+      | { display: boolean; text: string | number; indentKey?: boolean }
+      | undefined,
     strongWidth: number
   ) {
+    let keyIndent;
+    let valueText;
+    if (!value) {
+      return '';
+    }
+    if (typeof value === 'string' || typeof value === 'number') {
+      keyIndent = 0;
+      valueText = value;
+    } else {
+      keyIndent = value.indentKey ? 25 : 0;
+      valueText = value.text;
+    }
+
     return value
       ? `<li class='tooltip-list-item' style='margin: 5px 0;
+padding-left: ${keyIndent}px;
 font-size: 12pt;
-font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${strongWidth}px'>${text}:</strong> ${value}</li>`
+font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${
+          strongWidth - keyIndent!
+        }px'>${key}:</strong> ${valueText}</li>`
       : '';
   }
 
@@ -3039,18 +3069,18 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             .map(node => {
               const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node)
                 .details!;
-              // If a detail has format { display: boolean; value: string | number }, only pass the value
+              // If a detail has format { display: boolean; text: string | number }, only pass the value
               const detailsFlattened: { [key: string]: string | number } = {};
               Object.keys(nodeDetails).forEach(detailKey => {
                 const nodeDetailValue = nodeDetails[detailKey] as {
                   display: boolean;
-                  value: string | number;
+                  text: string | number;
                 };
                 if (
                   !!nodeDetailValue &&
-                  Object.hasOwn(nodeDetailValue, 'value')
+                  Object.hasOwn(nodeDetailValue, 'text')
                 ) {
-                  detailsFlattened[detailKey] = nodeDetailValue.value;
+                  detailsFlattened[detailKey] = nodeDetailValue.text;
                 } else {
                   detailsFlattened[detailKey] = <string | number>(
                     nodeDetails[detailKey]
@@ -3064,22 +3094,121 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     );
   }
 
+  private static _getCoordinatesFromTranslate(
+    elem: Selection<SVGElement, unknown, any, undefined>,
+    withScale: Boolean
+  ) {
+    const transformString = elem.attr('transform');
+    const transformMatch = transformString.match(/\(([0-9.-]+),([0-9.-]+)\)/);
+    // transformMatch has three entries: The entire match as string, the first group (the x coord), and the second group (the y coord)
+    if (!transformMatch) {
+      return [0, 0];
+    }
+    const transformXCoordinate = parseFloat(transformMatch[1]);
+    const transformYCoordinate = parseFloat(transformMatch[2]);
+    const res = [transformXCoordinate, transformYCoordinate];
+
+    if (withScale) {
+      const scale = parseFloat(
+        transformString.split(' ')[1].match(/[0-9.-]+/)![0]
+      );
+      res.push(scale);
+    }
+
+    return res;
+  }
+
   private _prepareForExport() {
+    const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
+
+    // To calculate the size of the exported svg, get the current x and y translate of the canvas
+    // and add the largest x/y coordinates across all nodes
+    const [nodeGTransformX, nodeGTransformY, scale] =
+      BiowcPathwaygraph._getCoordinatesFromTranslate(
+        this._getMainDiv().select('#nodeG'),
+        true
+      );
+
+    // Set the maximum values initially to the size of the legend, this should be the minimal frame for the exported plot
+    const legendSVG = this._getMainDiv()
+      .select<SVGElement>('#pathwayLegend')
+      .select('rect');
+    let [maxNodeX, maxNodeY] = [
+      Number(legendSVG.attr('width')) + 10,
+      Number(legendSVG.attr('height')) + 10,
+    ];
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGElement, PathwayGraphNodeD3>('.node')
+      .each(function () {
+        const [currentNodeX, currentNodeY] =
+          BiowcPathwaygraph._getCoordinatesFromTranslate(
+            d3v6.select(this),
+            false
+          );
+        maxNodeX = Math.max(currentNodeX, maxNodeX);
+        maxNodeY = Math.max(currentNodeY, maxNodeY);
+      });
+
+    svg.setAttribute(
+      'width',
+      (nodeGTransformX + maxNodeX * scale + 25).toString()
+    );
+    svg.setAttribute(
+      'height',
+      (nodeGTransformY + maxNodeY * scale + 25).toString()
+    );
+
+    // In order to make the svg readable by Illustrator, we need to inline the styles.
+    // The 0-th rule is the hostRule which we process separately below, so we start at 1 here.
+    for (
+      let index = 1;
+      index < styles.styleSheet?.cssRules.length!;
+      index += 1
+    ) {
+      const currentRule = <CSSStyleRule>styles.styleSheet?.cssRules[index];
+      for (let i = 0; i < currentRule.style.length; i += 1) {
+        // Everything except for 'fill' we can just overwrite
+        if (currentRule.style[i] !== 'fill') {
+          this._getMainDiv()
+            .selectAll(currentRule.selectorText)
+            .style(
+              currentRule.style[i],
+              currentRule.style.getPropertyValue(currentRule.style[i])
+            );
+        } else {
+          /*
+          'fill' of ptmnodes is a bit tricky.
+          In general, it is defined in the stylesheet so if we don't set the value here it is lost in the downloaded SVG.
+          But it might have been changed if the user switched the color scheme, and then we don't want to override it with the original colour.
+          We are using a hacky trick here: If we access the by node.style('fill') (which would be the cleaner way), we will always get a RESOLVED value
+          and cannot tell if it comes from the stylesheet or from a dynamic override.
+          However, by using node.attr('style') instead, we get the INLINE style as a string. So there we can check if it contains a 'fill' key,
+          and only set it if it isn't there yet. Yay!
+         */
+          this._getMainDiv()
+            .selectAll(currentRule.selectorText)
+            .each(function () {
+              const node = d3v6.select(this);
+              if (
+                !node.attr('class').includes('ptm') ||
+                !node.attr('style').includes('fill:')
+              ) {
+                node.style('fill', currentRule.style.getPropertyValue('fill'));
+              }
+            });
+        }
+      }
+    }
+
+    let serializedSVG = svg.outerHTML!;
+
+    // Now the ':hostRule':
     // We need to inject the css custom properties (the '--<name>:' variables at the top of the stylesheet)
     // into the svg and the rest of the stylesheet.
     // I only have a clumsy solution for that: extract the css rule into a key-value pair and
     // going over the whole svg+css and replacing every occurrence one by one
     const hostRule = styles.styleSheet?.cssRules[0].cssText!;
-
-    const svg = this.shadowRoot?.querySelector('svg') as SVGSVGElement;
-
-    let serializedSVG = svg.outerHTML!;
-    let cssRules = styles.cssText;
-    // Trim away the hostRule from the remaining rules - if they are part of the style, some SVG viewers may have rendering issues
-    cssRules = cssRules
-      .slice(cssRules.indexOf('}') + 1)
-      .replace(/\r?\n|\r/g, '');
-
     hostRule
       .slice(8, -2)
       .split(';')
@@ -3089,15 +3218,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           const key = `var(${propertySplit[0].trim()})`;
           const value = propertySplit[1].trim();
           serializedSVG = serializedSVG.replaceAll(key, value);
-          cssRules = cssRules.replaceAll(key, value);
         }
       });
-
-    // Inject the styles into the svg
-    serializedSVG = `${serializedSVG.slice(
-      0,
-      -6
-    )}<style>${cssRules}</style>${serializedSVG.slice(-6)}`;
 
     // Load xmlns
     if (

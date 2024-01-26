@@ -72,3 +72,10 @@ npm start
 ```
 
 To run a local development server that serves the basic demo located in `demo/index.html`
+
+## Reference
+If `biowc-pathwaygraph` is useful for your research, please cite the following publication:  
+
+ **PTMNavigator: Interactive Visualization of Differentially Regulated Post-Translational Modifications in Cellular Signaling Pathways**  
+Julian Müller, Florian P. Bayer, Mathias Wilhelm, Bernhard Kuster, Matthew The  
+_bioRxiv_ 2023.08.31.555601; doi: https://doi.org/10.1101/2023.08.31.555601

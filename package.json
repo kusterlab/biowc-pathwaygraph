@@ -3,7 +3,7 @@
   "description": "Webcomponent biowc-pathwaygraph following open-wc recommendations",
   "license": "Apache-2.0",
   "author": "biowc-pathwaygraph",
-  "version": "0.0.11",
+  "version": "0.0.16",
   "main": "dist/src/index.js",
   "module": "dist/src/index.js",
   "exports": {
