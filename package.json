@@ -23,6 +23,7 @@
     "storybook:build": "tsc && npm run analyze -- --exclude dist && build-storybook"
   },
   "dependencies": {
+    "@api-client/context-menu": "^0.4.1",
     "d3": "^6.2.0",
     "lit": "^2.0.2"
   },

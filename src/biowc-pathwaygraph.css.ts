@@ -14,6 +14,14 @@ export default css`
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
     --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
+    /*This cryptic variable controls how selected context menu items look like. If we omit it they become black.*/
+    --dark-divider-opacity: 0.12;
+    /*And this one is for the intransparency of the whole context menu*/
+    --primary-background-color: #ffffff;
+    /*This is for the styling of the context menu border*/
+    --context-menu-border-radius: 4px;
+    --context-menu-shadow: 0 0 1px 1px;
+    --context-menu-background-color: #f9f9fb;
   }
 
   .link {
@@ -150,36 +158,5 @@ export default css`
     fill: var(--group-fill-color);
     stroke-width: 1px;
     stroke: var(--group-stroke-color);
-  }
-
-  .contextMenu {
-    position: absolute;
-    border: 1px solid;
-  }
-
-  .contextMenuEntry {
-    cursor: pointer;
-    text-align: center;
-    background-color: white;
-    border: 1px solid;
-    padding: 2px 5px;
-  }
-
-  .contextMenuTitle {
-    text-align: center;
-    background-color: #bebebe;
-    border: 2px solid;
-    padding: 2px 5px;
-  }
-
-  .contextMenuTitle text {
-    font-family: var(--font-stack);
-    font-size: 14px;
-    font-weight: bold;
-  }
-
-  .contextMenuEntry text {
-    font-family: var(--font-stack);
-    font-size: 14px;
   }
 `;

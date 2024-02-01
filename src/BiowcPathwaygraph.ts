@@ -7,9 +7,14 @@ import {
   Simulation,
   SimulationLinkDatum,
   SimulationNodeDatum,
-  ValueFn,
   ZoomTransform,
 } from 'd3';
+import {
+  CommandBase,
+  ContextMenu,
+  ExecuteOptions,
+} from '@api-client/context-menu';
+import { ContextMenuCommand } from '@api-client/context-menu/src/types';
 import styles from './biowc-pathwaygraph.css';
 
 type PossibleRegulationCategoriesType = 'up' | 'down' | 'not';
@@ -144,6 +149,12 @@ interface PathwayGraphLink
 // The nodes and links in the D3 graph have additional properties
 interface PathwayGraphNodeD3 extends PathwayGraphNode {
   selected?: boolean;
+  // This property toggles between showing individual PTM nodes and PTM summary nodes (it is always only true for one of the two)
+  // TODO: This could be refactored:
+  //  - The name is too generic
+  //  - The property is only used for PTM and PTMSummary objects
+  //  - There is a functional dependency: If a PTM node has visible=True, its summary node must have visible=False and vice versa
+  //  this could be regulated by one single variable instead
   visible?: boolean;
   isCircle?: boolean;
   rectX?: number;
@@ -155,7 +166,7 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
-  // Interfaces are hoisted so we can reference GroupNodeD3 before defining it
+  // Interfaces are hoisted, so we can reference GroupNodeD3 before defining it
   // eslint-disable-next-line no-use-before-define
   groupNode?: GroupNodeD3;
 }
@@ -172,7 +183,7 @@ interface GroupNodeD3 extends PathwayGraphNodeD3 {
 
 interface PTMNodeD3 extends PTMNode, PathwayGraphNodeD3 {
   geneProteinNode?: GeneProteinNodeD3;
-  // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
+  // Interfaces are hoisted, so we can reference PTMSummaryNode before defining it
   // eslint-disable-next-line no-use-before-define
   summaryNode?: PTMSummaryNodeD3;
 }
@@ -265,6 +276,12 @@ export class BiowcPathwaygraph extends LitElement {
     '#0065bd',
     '#FF0080',
   ];
+
+  contextMenu?: ContextMenu;
+
+  contextMenuCommands?: (ContextMenuCommand | CommandBase)[];
+
+  contextMenuStore?: Map<string, any>;
 
   render() {
     return html`
@@ -377,6 +394,15 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv().append('g').attr('id', 'linkG');
     this._getMainDiv().append('g').attr('id', 'nodeG');
     this._enableZoomingAndPanning();
+
+    // Initialize the store of the context menu here, so it is not overwritten when the graph is updated
+    this.contextMenuStore = new Map<string, any>([
+      ['hue', this.hue],
+      ['show-up', true],
+      ['show-down', true],
+      ['show-not', true],
+    ]);
+
     super.firstUpdated(_changedProperties);
   }
 
@@ -395,6 +421,7 @@ export class BiowcPathwaygraph extends LitElement {
     this._calculateHueRange();
     this._renderLegend();
     this._renderGraph();
+    this._initContextMenu();
 
     super.updated(_changedProperties);
   }
@@ -762,7 +789,7 @@ export class BiowcPathwaygraph extends LitElement {
       graphdataLinkIds.has(link.linkId)
     );
 
-    // Now we need to setup some references within the D3 Graph Data
+    // Now we need to set up some references within the D3 Graph Data
     // First we create maps of id to nodes/links for quicker access
     const nodeIdToNodeMap: { [key: string]: PathwayGraphNodeD3 } = {};
     for (const node of this.d3Nodes!) {
@@ -873,7 +900,7 @@ export class BiowcPathwaygraph extends LitElement {
       }
       this._refreshGraph(true);
       // Now make the PTM nodes visible again (in principle, in practice they are all invisible at this point
-      // because 'visible' is set to false so they are not part of the graph)
+      // because 'visible' is set to false, so they are not part of the graph)
       allPTMNodes.attr('display', 'block');
 
       // Now we can set the permission flag for the 'expandAll' and 'collapseAll' functions to true
@@ -897,7 +924,26 @@ export class BiowcPathwaygraph extends LitElement {
             if (nodeB.type === 'group') return 1;
             return 0;
           })
-          .filter(node => node.visible),
+          .filter(node => {
+            // If it's not visible it's not visible, easy.
+            if (!node.visible) {
+              return false;
+            }
+            // If it is visible, it's easy for all non-PTM nodes.
+            if (!node.type.includes('ptm')) {
+              return true;
+            }
+            // For the PTM nodes, we need to check the current state of the context menu - which categories are shown?
+            const ptmnode = <PTMNodeD3 | PTMSummaryNodeD3>node;
+            return (
+              (ptmnode.regulation === 'up' &&
+                this.contextMenuStore?.get('show-up')) ||
+              (ptmnode.regulation === 'down' &&
+                this.contextMenuStore?.get('show-down')) ||
+              (ptmnode.regulation === 'not' &&
+                this.contextMenuStore?.get('show-not'))
+            );
+          }),
         d => (<PathwayGraphNodeD3>d).nodeId
       )
       .join('g')
@@ -1604,80 +1650,6 @@ export class BiowcPathwaygraph extends LitElement {
       .on('mouseleave', mouseleave);
   }
 
-  private _addContextMenu() {
-    // The context menu should be created when a node is right-clicked
-    const onrightclick = (
-      rightClickEvent: MouseEvent,
-      node: GeneProteinNodeD3 | PTMSummaryNodeD3
-    ) => {
-      // Remove a possible previously existing context menu
-
-      // @ts-ignore
-      d3v6.select(this.shadowRoot).selectAll('.contextMenu').remove();
-      // Do not show the regular context menu of the browser
-      rightClickEvent.preventDefault();
-
-      // Hide the tooltip when the context menu is shown
-      this._getMainDiv().select('#nodetooltip').style('opacity', '0');
-      const contextMenu = d3v6
-        // @ts-ignore
-        .select(this.shadowRoot)
-        .select('#pathwayContainer')
-        .append('div')
-        .attr('class', 'contextMenu')
-        .attr('id', 'nodeContextMenu');
-
-      // Before we add the entries, add a title to the menu
-      contextMenu
-        .append('div')
-        .attr('class', 'contextMenuTitle')
-        .append('text')
-        .text('Alternative Names');
-
-      contextMenu
-        .selectAll('.contextMenuEntry')
-        .data(BiowcPathwaygraph._calcPossibleLabels(<GeneProteinNodeD3>node))
-        .join('div')
-        .attr('class', 'contextMenuEntry')
-        .style('cursor', 'pointer');
-
-      contextMenu
-        .style('top', `${rightClickEvent.pageY + this.tooltipVerticalOffset}px`)
-        .style(
-          'left',
-          `${rightClickEvent.pageX + this.tooltipHorizontalOffset + 15}px`
-        );
-
-      const contextMenuEntry = contextMenu.selectAll('.contextMenuEntry');
-
-      contextMenuEntry
-        .append('text')
-        .text((entry => entry) as ValueFn<SVGTextElement, unknown, string>);
-
-      contextMenuEntry.on('click', (contextMenuEntryClickEvent, d) => {
-        // Set the text to the user's choice
-        // const parentNodeId = (<PathwayGraphNodeD3>rightClickEvent.target?.parentNode)
-
-        /* eslint-disable-next-line no-param-reassign */
-        node.currentDisplayedLabel = <string>d;
-
-        // @ts-ignore
-        d3v6.select(this.shadowRoot).select('#nodeContextMenu').remove();
-
-        this._refreshGraph(true);
-      });
-    };
-
-    // Equip all nodes with the feature we just defined
-    this._getMainDiv()
-      .select('#nodeG')
-      .selectAll<SVGElement, GeneProteinNodeD3 | PTMSummaryNodeD3>(
-        '.gene_protein,.compound'
-      )
-      // .selectAll('g')
-      .on('contextmenu', onrightclick);
-  }
-
   private static _calcPossibleLabels(node: GeneProteinNodeD3) {
     let splitRegex;
     // Individual PTM nodes cannot have a label
@@ -1877,7 +1849,7 @@ export class BiowcPathwaygraph extends LitElement {
         this.maxPotency = this.d3Nodes
           ?.filter(node => node.type === 'ptm')
           .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
-            // Check if the node has details and if they includes a fold change
+            // Check if the node has details and if they include a fold change
             if (
               Object.hasOwn(currentNode, 'details') &&
               Object.hasOwn(
@@ -1901,7 +1873,7 @@ export class BiowcPathwaygraph extends LitElement {
         this.minPotency = this.d3Nodes
           ?.filter(node => node.type === 'ptm')
           .reduce((currentMin: number, currentNode: PathwayGraphNodeD3) => {
-            // Check if the node has details and if they includes a fold change
+            // Check if the node has details and if they include an EC50
             if (
               Object.hasOwn(currentNode, 'details') &&
               Object.hasOwn(
@@ -2735,11 +2707,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       .on('click', (e, node) => {
         // Do not propagate event to canvas, because that would remove the highlighting
         e.stopPropagation();
-        // Check if it is a doubleclick
+        // Check if it is a double click
         this.recentClicks += 1;
         if (this.recentClicks === 1) {
           // Wait for a possible doubleclick using a timeout
-          // If a doubleclick happens within DBL_CLICK_TIMEOUT milliseconds,
+          // If a double click happens within DBL_CLICK_TIMEOUT milliseconds,
           // the event is canceled using clearTimeout below
           dblClickTimer = setTimeout(() => {
             this.recentClicks = 0;
@@ -2839,41 +2811,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           this.recentClicks = 0;
         }
       });
-
-    // Handle click on canvas
-    this._getMainDiv().on('click', () => {
-      const maybeContextMenu = d3v6
-        // Remove a possible context menu
-        // @ts-ignore
-        .select(this.shadowRoot)
-        .selectAll('.contextMenu');
-
-      if (maybeContextMenu.size() > 0) {
-        // Don't do anything else in that case
-        maybeContextMenu.remove();
-      } else {
-        // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
-        this._getMainDiv()
-          .select('#nodeG')
-          .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-          .each(d => {
-            /* eslint-disable no-param-reassign */
-            d.selected = true;
-            /* eslint-enable no-param-reassign */
-          });
-
-        // If there's a parent listening for details, tell it to clear that
-        this.dispatchEvent(
-          new CustomEvent('selectedNodeTooltip', {
-            bubbles: true,
-            cancelable: true,
-            detail: undefined,
-          })
-        );
-
-        this._onSelectedNodesChanged();
-      }
-    });
   }
 
   private _onSelectedNodesChanged() {
@@ -2926,12 +2863,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._drawGraph();
     this._addAnimation();
     this._addTooltips();
-    this._addContextMenu();
     this._enableNodeSelection();
     if (doEnableNodeExpandAndCollapse) {
       this._enableNodeExpandAndCollapse();
     }
     this._highlightSelectedNodes();
+    this._initContextMenu();
   }
 
   private _highlightSelectedNodes() {
@@ -3322,6 +3259,222 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       })
     );
     /* eslint-enable no-param-reassign */
+  }
+
+  private _initContextMenu() {
+    if (this.contextMenu) this.contextMenu.disconnect();
+
+    // @ts-ignore
+    const container = d3v6
+      .select(this.shadowRoot)
+      .select('#pathwayContainer')
+      .node();
+    this.contextMenu = new ContextMenu(<HTMLElement>container);
+    this.contextMenuCommands = <ContextMenuCommand[]>[
+      // Context Menu for Canvas
+      {
+        target: 'svg',
+        label: 'Expand All',
+        execute: () => {
+          this.expandAllPTMNodes();
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Collapse All',
+        execute: () => {
+          this.collapseAllPTMNodes();
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Clear Selection',
+        execute: () => {
+          // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
+          this._getMainDiv()
+            .select('#nodeG')
+            .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+            .each(d => {
+              /* eslint-disable no-param-reassign */
+              d.selected = true;
+              /* eslint-enable no-param-reassign */
+            });
+
+          // If there's a parent listening for details, tell it to clear that
+          this.dispatchEvent(
+            new CustomEvent('selectedNodeTooltip', {
+              bubbles: true,
+              cancelable: true,
+              detail: undefined,
+            })
+          );
+
+          this._onSelectedNodesChanged();
+        },
+      },
+      {
+        target: 'svg',
+        type: 'separator',
+      },
+      {
+        target: 'svg',
+        label: 'Show...',
+        execute: ctx => {
+          // For hue, initialize to initial hue. Nothing is working so far...
+          const storeId = `show-${ctx.item.id}`;
+          ctx.store.set(storeId, !ctx.store.get(storeId));
+          this._refreshGraph(true);
+        },
+        children: [
+          {
+            type: 'radio',
+            id: 'up',
+            label: 'Upregulated PTMs',
+            checked: ctx => ctx.store.get('show-up'),
+          },
+          {
+            type: 'radio',
+            id: 'down',
+            label: 'Downregulated PTMs',
+            checked: ctx => ctx.store.get('show-down'),
+          },
+          {
+            type: 'radio',
+            id: 'not',
+            label: 'Not regulated PTMs',
+            checked: ctx => ctx.store.get('show-not'),
+          },
+        ],
+      },
+      {
+        target: 'svg',
+        label: 'Color Scheme',
+        execute: ctx => {
+          this.hue = <PossibleHueType>ctx.item.id;
+          ctx.store.set('hue', ctx.item.id);
+        },
+        children: [
+          {
+            type: 'radio',
+            id: 'direction',
+            label: 'By Direction',
+            checked: ctx => ctx.store.get('hue') === 'direction',
+          },
+          {
+            type: 'radio',
+            id: 'foldchange',
+            label: 'By Fold Change',
+            checked: ctx => ctx.store.get('hue') === 'foldchange',
+            enabled: () =>
+              this.d3Nodes?.some(
+                node =>
+                  node?.type === 'ptm' &&
+                  !!(<PTMNodeD3>node).details &&
+                  (Object.hasOwn((<PTMNodeD3>node).details!, 'Fold Change') ||
+                    Object.hasOwn(
+                      (<PTMNodeD3>node).details!,
+                      'Log Fold Change'
+                    ))
+              ),
+          },
+          {
+            type: 'radio',
+            id: 'potency',
+            label: 'By Potency',
+            checked: ctx => ctx.store.get('hue') === 'potency',
+            enabled: () =>
+              this.d3Nodes?.some(
+                node =>
+                  node?.type === 'ptm' &&
+                  !!(<PTMNodeD3>node).details &&
+                  Object.hasOwn((<PTMNodeD3>node).details!, '-log(EC50)')
+              ),
+          },
+        ],
+      },
+    ];
+    const geneProteinPathwayCompoundsNodes = [
+      'rect.node-rect.gene_protein',
+      'rect.node-rect.gene_protein.down',
+      'rect.node-rect.gene_protein.up',
+      'rect.node-rect.gene_protein.both',
+      'rect.node-rect.gene_protein.not',
+      'rect.node-rect.pathway',
+      'rect.node-rect.compound',
+    ];
+    this.contextMenuCommands.push(
+      ...[
+        // Context Menu for Gene/Protein Nodes
+        {
+          target: geneProteinPathwayCompoundsNodes.concat(['path.group-path']),
+          label: 'Select Graph Downstream of...',
+          execute: () => {},
+          children: [
+            {
+              label: '...this Node',
+              execute: (ctx: ExecuteOptions) => {
+                // Unselect everything except for the current node
+                // @ts-ignore
+                const currentNodeId = ctx.target.__data__.nodeId;
+                this._getMainDiv()
+                  .select('#nodeG')
+                  .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+                  .each(d => {
+                    /* eslint-disable no-param-reassign */
+                    d.selected = d.nodeId === currentNodeId;
+                    /* eslint-enable no-param-reassign */
+                  });
+                // Select downstream
+                this.selectNodesDownstreamOfSelection();
+              },
+            },
+            {
+              label: '...the Current Selection',
+              execute: () => this.selectNodesDownstreamOfSelection(),
+            },
+          ],
+        },
+        {
+          target: geneProteinPathwayCompoundsNodes,
+          label: 'Alternative Names',
+          // Children will be created dynamically!
+        },
+      ]
+    );
+
+    // Add the store - it is saved as a separate variable, so it is persistent across incarnations of the contextmenu
+    this.contextMenu.store = this.contextMenuStore!;
+
+    // Now we set up an event listener for nodes that dynamically creates the children of the 'Alternative Names' menu entry
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGElement, GeneProteinNodeD3 | PTMSummaryNodeD3>(
+        '.gene_protein,.compound,.pathway'
+      )
+      .on('contextmenu', (e, node) => {
+        // Hide the tooltip when the context menu is shown
+        this._getMainDiv().select('#nodetooltip').style('opacity', '0');
+        const nameAlternatives = BiowcPathwaygraph._calcPossibleLabels(
+          <GeneProteinNodeD3>node
+        );
+        const alternativeNamesCommand =
+          this.contextMenuCommands!.pop() as ContextMenuCommand;
+        alternativeNamesCommand!.children = nameAlternatives.map(
+          alternative => ({
+            label: alternative,
+            execute: () => {
+              // eslint-disable-next-line no-param-reassign
+              node.currentDisplayedLabel = alternative;
+              this._refreshGraph(true);
+            },
+          })
+        );
+        this.contextMenuCommands!.push(alternativeNamesCommand);
+        this.contextMenu?.registerCommands(this.contextMenuCommands!);
+      });
+
+    this.contextMenu.registerCommands(this.contextMenuCommands);
+    this.contextMenu.connect();
   }
 
   public collapseAllPTMNodes() {
