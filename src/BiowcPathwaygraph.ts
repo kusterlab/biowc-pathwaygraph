@@ -3264,8 +3264,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   private _initContextMenu() {
     if (this.contextMenu) this.contextMenu.disconnect();
 
-    // @ts-ignore
     const container = d3v6
+      // @ts-ignore
       .select(this.shadowRoot)
       .select('#pathwayContainer')
       .node();
