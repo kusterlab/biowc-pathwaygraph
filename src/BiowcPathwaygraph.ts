@@ -935,14 +935,16 @@ export class BiowcPathwaygraph extends LitElement {
             }
             // For the PTM nodes, we need to check the current state of the context menu - which categories are shown?
             const ptmnode = <PTMNodeD3 | PTMSummaryNodeD3>node;
-            return (
+            const showPtmNode =
               (ptmnode.regulation === 'up' &&
                 this.contextMenuStore?.get('show-up')) ||
               (ptmnode.regulation === 'down' &&
                 this.contextMenuStore?.get('show-down')) ||
               (ptmnode.regulation === 'not' &&
-                this.contextMenuStore?.get('show-not'))
-            );
+                this.contextMenuStore?.get('show-not'));
+            // A node that is not shown cannot be selected
+            if (!showPtmNode) ptmnode.selected = false;
+            return showPtmNode;
           }),
         d => (<PathwayGraphNodeD3>d).nodeId
       )
@@ -3387,7 +3389,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                 node =>
                   node?.type === 'ptm' &&
                   !!(<PTMNodeD3>node).details &&
-                  Object.hasOwn((<PTMNodeD3>node).details!, '-log(EC50)')
+                  !!(<PTMNodeD3>node).details!['-log(EC50)']
               ),
           },
         ],
