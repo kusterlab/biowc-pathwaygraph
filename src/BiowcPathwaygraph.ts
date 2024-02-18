@@ -375,6 +375,31 @@ export class BiowcPathwaygraph extends LitElement {
           </defs>
           <svg id="pathwayLegend" x="25" y="25" />
         </svg>
+        <div id="potencyRangeSlider" class="slider" style="visibility: hidden">
+          <div class="sliders_control">
+            <label for="fromSlider" style="margin-right: 10px"
+              >pEC50 Range:</label
+            >
+            <input
+              type="range"
+              min="0"
+              max="24"
+              value="5"
+              id="fromSlider"
+              step="1"
+            />
+            <input
+              type="range"
+              min="0"
+              max="24"
+              value="9"
+              id="toSlider"
+              step="1"
+            />
+            <output for="fromSlider" id="fromSliderOutput"></output>
+            <output for="toSlider" id="toSliderOutput"></output>
+          </div>
+        </div>
       </div>
       <canvas id="canvasId" style="display: none"></canvas>
     `;
@@ -422,6 +447,7 @@ export class BiowcPathwaygraph extends LitElement {
     this._renderLegend();
     this._renderGraph();
     this._initContextMenu();
+    this._updateRangeSliderVisibility();
 
     super.updated(_changedProperties);
   }
@@ -1900,13 +1926,6 @@ export class BiowcPathwaygraph extends LitElement {
         // Set min and max values to min and max potency (the user may change this later):
         this.colorRangeMin = this.minPotency;
         this.colorRangeMax = this.maxPotency;
-        this.dispatchEvent(
-          new CustomEvent('initializeColorRange', {
-            bubbles: true,
-            cancelable: true,
-            detail: [this.colorRangeMin, this.colorRangeMax],
-          })
-        );
         break;
       default:
         break;
@@ -2871,6 +2890,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     }
     this._highlightSelectedNodes();
     this._initContextMenu();
+    this._updateRangeSliderVisibility();
   }
 
   private _highlightSelectedNodes() {
@@ -3479,6 +3499,132 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this.contextMenu.connect();
   }
 
+  private _updateRangeSliderVisibility() {
+    const potencyRangeSliderDiv: HTMLDivElement =
+      this.shadowRoot?.querySelector('#potencyRangeSlider')!;
+    if (this.hue === 'potency') {
+      if (potencyRangeSliderDiv.style.visibility === 'hidden') {
+        this._initRangeSlider();
+      }
+      potencyRangeSliderDiv.style.visibility = 'visible';
+    } else {
+      potencyRangeSliderDiv.style.visibility = 'hidden';
+    }
+  }
+
+  private _initRangeSlider() {
+    const fromSlider: HTMLInputElement =
+      this.shadowRoot?.querySelector('#fromSlider')!;
+    const toSlider: HTMLInputElement =
+      this.shadowRoot?.querySelector('#toSlider')!;
+
+    fromSlider.min = String(Math.floor(this.colorRangeMin!));
+    fromSlider.max = String(Math.ceil(this.colorRangeMax!));
+
+    toSlider.min = String(Math.floor(this.colorRangeMin!));
+    toSlider.max = String(Math.ceil(this.colorRangeMax!));
+
+    // We use 5-9 as the default range for the sliders. So if it is within the range, set the sliders to those values
+    fromSlider.value = String(Math.max(Number(fromSlider.min), 5));
+    toSlider.value = String(Math.min(Number(toSlider.max), 9));
+
+    const fromSliderOutput: HTMLOutputElement =
+      this.shadowRoot?.querySelector('#fromSliderOutput')!;
+    const toSliderOutput: HTMLOutputElement =
+      this.shadowRoot?.querySelector('#toSliderOutput')!;
+    fromSliderOutput.value = fromSlider.value;
+    toSliderOutput.value = toSlider.value;
+
+    const sliderWidth = 90; // This was trial and error, don't ask
+    const nSteps = Number(fromSlider.max) - Number(fromSlider.min);
+    const outputStepSize = sliderWidth / nSteps;
+    const fromXOffset = 2; // This was trial and error
+    const toXOffset = -5; // This was trial and error
+
+    fromSliderOutput.style.left = `${String(
+      fromXOffset +
+        outputStepSize * (Number(fromSlider.value) - Number(fromSlider.min))
+    )}%`;
+    toSliderOutput.style.left = `${String(
+      toXOffset +
+        outputStepSize * (Number(toSlider.value) - Number(toSlider.min))
+    )}%`;
+
+    BiowcPathwaygraph._fillSlider(
+      fromSlider,
+      toSlider,
+      '#C6C6C6',
+      'var(--color-range-slider-fill-color)',
+      toSlider
+    );
+
+    fromSlider.oninput = () => {
+      const fromValue = Number(fromSlider.value);
+      const toValue = Number(toSlider.value);
+      BiowcPathwaygraph._fillSlider(
+        fromSlider,
+        toSlider,
+        '#C6C6C6',
+        'var(--color-range-slider-fill-color)',
+        toSlider
+      );
+      fromSlider.value = String(Math.min(fromValue, toValue));
+      fromSliderOutput.value = fromSlider.value;
+      fromSliderOutput.style.left = `${String(
+        fromXOffset +
+          outputStepSize * (Number(fromSlider.value) - Number(fromSlider.min))
+      )}%`;
+      this._setColorRange([fromValue, toValue]);
+    };
+
+    toSlider.oninput = () => {
+      const fromValue = Number(fromSlider.value);
+      const toValue = Number(toSlider.value);
+      BiowcPathwaygraph._fillSlider(
+        fromSlider,
+        toSlider,
+        '#C6C6C6',
+        'var(--color-range-slider-fill-color)',
+        toSlider
+      );
+      toSlider.value = String(Math.max(fromValue, toValue));
+      toSliderOutput.value = toSlider.value;
+      toSliderOutput.style.left = `${String(
+        toXOffset +
+          outputStepSize * (Number(toSlider.value) - Number(toSlider.min))
+      )}%`;
+      this._setColorRange([fromValue, toValue]);
+    };
+  }
+
+  private static _fillSlider(
+    from: HTMLInputElement,
+    to: HTMLInputElement,
+    sliderColor: string,
+    rangeColor: string,
+    controlSlider: HTMLInputElement
+  ) {
+    const rangeDistance = Number(to.max) - Number(to.min);
+    const fromPosition = Number(from.value) - Number(to.min);
+    const toPosition = Number(to.value) - Number(to.min);
+    /* eslint-disable no-param-reassign */
+    controlSlider.style.background = `linear-gradient(
+      to right,
+      ${sliderColor} 0%,
+      ${sliderColor} ${(fromPosition / rangeDistance) * 100}%,
+      ${rangeColor} ${(fromPosition / rangeDistance) * 100}%,
+      ${rangeColor} ${(toPosition / rangeDistance) * 100}%,
+      ${sliderColor} ${(toPosition / rangeDistance) * 100}%,
+      ${sliderColor} 100%)`;
+    /* eslint-enable no-param-reassign */
+  }
+
+  private _setColorRange(range: [number, number]) {
+    [this.colorRangeMin, this.colorRangeMax] = range;
+    this._refreshGraph(true);
+    this._renderLegend();
+  }
+
   public collapseAllPTMNodes() {
     if (!this.isNodeExpandAndCollapseAllowed) return;
 
@@ -3507,11 +3653,5 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         /* eslint-enable no-param-reassign */
       });
     this._refreshGraph(true);
-  }
-
-  public setColorRange(range: [number, number]) {
-    [this.colorRangeMin, this.colorRangeMax] = range;
-    this._refreshGraph(true);
-    this._renderLegend();
   }
 }

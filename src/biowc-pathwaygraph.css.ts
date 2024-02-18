@@ -14,6 +14,7 @@ export default css`
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
     --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
+    --color-range-slider-fill-color: #606060;
     /*This cryptic variable controls how selected context menu items look like. If we omit it they become black.*/
     --dark-divider-opacity: 0.12;
     /*And this one is for the intransparency of the whole context menu*/
@@ -158,5 +159,74 @@ export default css`
     fill: var(--group-fill-color);
     stroke-width: 1px;
     stroke: var(--group-stroke-color);
+  }
+
+  #potencyRangeSlider {
+    position: absolute;
+    top: 210px;
+    left: 40px;
+    font-size: 11pt;
+    font-family: var(--font-stack);
+    display: flex;
+    flex-direction: column;
+    width: 150px;
+    height: 50px;
+    margin: 100px auto;
+    background: white;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    pointer-events: all;
+    width: 10px;
+    height: 10px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #c6c6c6;
+    cursor: pointer;
+  }
+
+  input[type='range']::-moz-range-thumb {
+    -webkit-appearance: none;
+    pointer-events: all;
+    width: 10px;
+    height: 10px;
+    background-color: #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px #c6c6c6;
+    cursor: pointer;
+  }
+
+  input[type='range']::-webkit-slider-thumb:hover {
+    background: #f7f7f7;
+  }
+
+  input[type='range']::-webkit-slider-thumb:active {
+    box-shadow: inset 0 0 3px #387bbe, 0 0 9px #387bbe;
+    -webkit-box-shadow: inset 0 0 3px #387bbe, 0 0 9px #387bbe;
+  }
+
+  input[type='range'] {
+    height: 2px;
+    width: 100%;
+    position: absolute;
+    background-color: #c6c6c6;
+    pointer-events: none;
+  }
+
+  #fromSlider {
+    z-index: 1;
+    background-color: transparent;
+  }
+
+  .sliders_control {
+    position: relative;
+    min-height: 50px;
+  }
+
+  output {
+    position: relative;
+    top: 15px;
+    z-index: 1;
   }
 `;
