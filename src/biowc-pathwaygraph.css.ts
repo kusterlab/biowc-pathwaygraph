@@ -161,6 +161,10 @@ export default css`
     stroke: var(--group-stroke-color);
   }
 
+  #pathwayContainer {
+    position: relative;
+  }
+
   #potencyRangeSlider {
     position: absolute;
     top: 210px;

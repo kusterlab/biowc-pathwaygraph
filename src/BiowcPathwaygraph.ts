@@ -3518,11 +3518,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     const toSlider: HTMLInputElement =
       this.shadowRoot?.querySelector('#toSlider')!;
 
-    fromSlider.min = String(Math.floor(this.colorRangeMin!));
-    fromSlider.max = String(Math.ceil(this.colorRangeMax!));
+    fromSlider.min = String(Math.min(Math.floor(this.colorRangeMin!), 5));
+    fromSlider.max = String(Math.max(Math.ceil(this.colorRangeMax!), 9));
 
-    toSlider.min = String(Math.floor(this.colorRangeMin!));
-    toSlider.max = String(Math.ceil(this.colorRangeMax!));
+    toSlider.min = String(Math.min(Math.floor(this.colorRangeMin!), 5));
+    toSlider.max = String(Math.max(Math.ceil(this.colorRangeMax!), 9));
 
     // We use 5-9 as the default range for the sliders. So if it is within the range, set the sliders to those values
     fromSlider.value = String(Math.max(Number(fromSlider.min), 5));
