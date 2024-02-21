@@ -485,8 +485,7 @@ export class BiowcPathwaygraph extends LitElement {
             </div>
           </div>
             <div class='form-wrapper'>
-              <p>
-              After clicking "Confirm", please click on the Source Node, then on the Target Node.
+              <p id='add-edge-info-text'>
               </p>
             </div>
             <div>
@@ -714,6 +713,13 @@ export class BiowcPathwaygraph extends LitElement {
       addEdgeForm.reset();
       // Simulate a change on the select so it snaps back into default state
       addEdgeTypeSelect.dispatchEvent(new Event('change'));
+      // Remove highlighting of node, if present
+      this.d3Nodes?.forEach(d => {
+        /* eslint-disable-next-line no-param-reassign */
+        (<GeneProteinNodeD3>d).isHighlighted = false;
+      });
+      this._refreshGraph(true);
+      this.isAddingEdge = false;
     };
   }
 
@@ -3113,24 +3119,37 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             (<GeneProteinNodeD3>node).isHighlighted = true;
             this._refreshGraph(true);
           } else {
+            this.contextMenuStore!.set('newEdgeTarget', node.nodeId);
+
+            (<GeneProteinNodeD3>node).isHighlighted = true;
+            this._refreshGraph(true);
+          }
+
+          if (
+            this.contextMenuStore!.has('newEdgeSource') &&
+            this.contextMenuStore!.has('newEdgeTarget')
+          ) {
             const sourceId = this.contextMenuStore!.get('newEdgeSource');
+            const targetId = this.contextMenuStore!.get('newEdgeTarget');
 
             const newEdge = {
               linkId: `customRelation-${
                 crypto.getRandomValues(new Uint32Array(1))[0]
               }`,
               sourceId,
-              targetId: node.nodeId,
-              types: [this.contextMenuStore!.get('newEdgeType')], // TODO: Get from context menu - save in store and delete afterwards
+              targetId,
+              types: [this.contextMenuStore!.get('newEdgeType')],
               label: this.contextMenuStore!.get('newEdgeLabel'),
             };
             this.graphdataSkeleton.links.push(newEdge);
 
-            const sourceNode: PathwayGraphNodeD3 = this.d3Nodes!.filter(
-              nd => nd.nodeId === sourceId
-            )[0];
-            (<GeneProteinNodeD3>sourceNode).isHighlighted = false;
+            this.d3Nodes!.filter(nd =>
+              [sourceId, targetId].includes(nd.nodeId)
+            ).forEach(nd => {
+              (<GeneProteinNodeD3>nd).isHighlighted = false;
+            });
             this.contextMenuStore!.delete('newEdgeSource');
+            this.contextMenuStore!.delete('newEdgeTarget');
             this.contextMenuStore!.delete('newEdgeType');
             this.contextMenuStore!.delete('newEdgeLabel');
             this.isAddingEdge = false;
@@ -3805,6 +3824,10 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'svg',
         label: 'Add Edge',
         execute: () => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Source Node, then on the Target Node.';
           const addEdgeDialog: HTMLDialogElement =
             this.shadowRoot?.querySelector('#add-edge-dialog')!;
           addEdgeDialog.showModal();
@@ -3821,18 +3844,46 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
           'path.group-path',
         ]),
-        label: 'Add Edge from this Node',
-        execute: () => {
-          console.log('TODO: Implement');
+        label: 'Add Edge FROM this Node',
+        execute: ctx => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Target Node.';
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
+          // @ts-ignore
+          const { nodeId } = ctx.target.__data__;
+          this.contextMenuStore!.set('newEdgeSource', nodeId);
+
+          // @ts-ignore
+          ctx.target.__data__.isHighlighted = true;
+          this._refreshGraph(true);
+          this.isAddingEdge = true;
         },
       },
       {
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
           'path.group-path',
         ]),
-        label: 'Add Edge to this Node',
-        execute: () => {
-          console.log('TODO: Implement');
+        label: 'Add Edge TO this Node',
+        execute: ctx => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Source Node.';
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
+          // @ts-ignore
+          const { nodeId } = ctx.target.__data__;
+          this.contextMenuStore!.set('newEdgeTarget', nodeId);
+
+          // @ts-ignore
+          ctx.target.__data__.isHighlighted = true;
+          this._refreshGraph(true);
+          this.isAddingEdge = true;
         },
       },
       {
