@@ -501,8 +501,32 @@ export class BiowcPathwaygraph extends LitElement {
       ['show-not', true],
     ]);
 
-    // Initialize the "Add Node" and "Add Edge" Forms
-    // TODO: Make this its own method, it deserves it.
+    this._initEditModeForms();
+    super.firstUpdated(_changedProperties);
+  }
+
+  protected updated(_changedProperties: PropertyValues) {
+    this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
+
+    // Map PTM Input to Skeleton Nodes
+    this.graphdataPTM = this._addPTMInformationToPathway();
+    // Add Full Proteome Input to Skeleton Nodes
+    if (this.fullProteomeInputList) {
+      this.graphdataSkeleton.nodes =
+        this._addFullProteomeInformationToPathway();
+    }
+
+    this._createD3GraphObject();
+    this._calculateHueRange();
+    this._renderLegend();
+    this._renderGraph();
+    this._initContextMenu();
+    this._updateRangeSliderVisibility();
+
+    super.updated(_changedProperties);
+  }
+
+  private _initEditModeForms() {
     const addNodeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
       '#add-node-type-select'
     )!;
@@ -584,6 +608,15 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Refresh
       this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+
+      // Reset the state of the form
+      addNodeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addNodeTypeSelect.dispatchEvent(new Event('change'));
+      // Close the dialog
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#add-node-dialog')!
+      )).close();
     };
     const cancelButton: HTMLButtonElement = this.shadowRoot?.querySelector(
       '#add-node-cancel-button'
@@ -597,29 +630,6 @@ export class BiowcPathwaygraph extends LitElement {
       // Simulate a change on the select so it snaps back into default state
       addNodeTypeSelect.dispatchEvent(new Event('change'));
     };
-
-    super.firstUpdated(_changedProperties);
-  }
-
-  protected updated(_changedProperties: PropertyValues) {
-    this.graphdataSkeleton.geneToNodeMap = this._createPathwayGeneToNodeMap();
-
-    // Map PTM Input to Skeleton Nodes
-    this.graphdataPTM = this._addPTMInformationToPathway();
-    // Add Full Proteome Input to Skeleton Nodes
-    if (this.fullProteomeInputList) {
-      this.graphdataSkeleton.nodes =
-        this._addFullProteomeInformationToPathway();
-    }
-
-    this._createD3GraphObject();
-    this._calculateHueRange();
-    this._renderLegend();
-    this._renderGraph();
-    this._initContextMenu();
-    this._updateRangeSliderVisibility();
-
-    super.updated(_changedProperties);
   }
 
   private _createPathwayGeneToNodeMap(): { [key: string]: GeneProteinNode[] } {
