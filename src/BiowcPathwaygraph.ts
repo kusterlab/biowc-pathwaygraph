@@ -3925,17 +3925,17 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: 'line.link',
         label: 'Change Edge Type',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          // @ts-ignore
+          ctx.target.__data__.types = [ctx.item.id];
+          this._refreshGraph(true);
         },
         children: BiowcPathwaygraph.edgeTypes.map(edgeType => ({
           type: 'radio',
           id: edgeType.id,
           label: edgeType.label,
-          checked: ctx => {
-            console.log(ctx.target);
-            return false;
-          },
+          // @ts-ignore
+          checked: ctx => ctx.target.__data__.types.includes(edgeType.id),
         })),
       },
       {
