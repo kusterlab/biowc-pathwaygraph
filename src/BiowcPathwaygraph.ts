@@ -171,6 +171,7 @@ interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
   // Interfaces are hoisted, so we can reference GroupNodeD3 before defining it
   // eslint-disable-next-line no-use-before-define
   groupNode?: GroupNodeD3;
+  isHighlighted: boolean;
 }
 
 interface GroupNodeD3 extends PathwayGraphNodeD3 {
@@ -287,6 +288,8 @@ export class BiowcPathwaygraph extends LitElement {
   contextMenuCommands?: (ContextMenuCommand | CommandBase)[];
 
   contextMenuStore?: Map<string, any>;
+
+  isAddingEdge: Boolean = false;
 
   // TODO: Is there no way I can generalize this to rect.node-rect?
   static geneProteinPathwayCompoundsNodes: string[] = [
@@ -431,7 +434,7 @@ export class BiowcPathwaygraph extends LitElement {
           </div>
         </div>
         <dialog id='add-node-dialog'>
-          <form id='add-node-form'>
+          <form id='add-node-form' novalidate>
             <div class='form-wrapper'>
             <label>Node Type:</label>
               <select class='form-element' id='add-node-type-select' name='nodeType'>
@@ -464,6 +467,31 @@ export class BiowcPathwaygraph extends LitElement {
             <div>
               <button id="add-node-confirm-button" formmethod="dialog">Confirm</button>
               <button id="add-node-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
+        <dialog id='add-edge-dialog'>
+          <form id='add-edge-form' novalidate>
+          <div class='form-wrapper'>
+            <label>Edge Type:</label>
+            <select class='form-element' id='add-edge-type-select' name='edgeType'>
+              <option value="default" selected disabled >Choose…</option>
+            </select>
+            <div class='form-wrapper'>
+              <label id='add-edge-label-label'>
+                Label (optional):
+              </label>
+              <input class='form-element' type='text' name='edgeLabel'>
+            </div>
+          </div>
+            <div class='form-wrapper'>
+              <p>
+              After clicking "Confirm", please click on the Source Node, then on the Target Node.
+              </p>
+            </div>
+            <div>
+              <button id="add-edge-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="add-edge-cancel-button" formmethod="dialog">Cancel</button>
             </div>
           </form>
         </dialog>
@@ -558,10 +586,9 @@ export class BiowcPathwaygraph extends LitElement {
 
     const addNodeForm: HTMLFormElement =
       this.shadowRoot?.querySelector('#add-node-form')!;
-    const confirmButton: HTMLButtonElement = this.shadowRoot?.querySelector(
-      '#add-node-confirm-button'
-    )!;
-    confirmButton.onclick = e => {
+    const addNodeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-node-confirm-button')!;
+    addNodeConfirmButton.onclick = e => {
       const formData: FormData = new FormData(addNodeForm);
 
       // nodeType and nodePrimaryName are required
@@ -573,6 +600,9 @@ export class BiowcPathwaygraph extends LitElement {
       // Some regex like s.match(/\(\d+,\d+\)/)
       const nodeType = String(formData.get('nodeType')!);
       const nodeAddPoint: Point = this.contextMenuStore?.get('clickPoint')!;
+      // Clear the clickPoint, it has served its purpose
+      this.contextMenuStore?.delete('clickPoint');
+
       const transformString = this._getMainDiv()
         .select('#nodeG')
         .attr('transform');
@@ -604,24 +634,22 @@ export class BiowcPathwaygraph extends LitElement {
 
       // Add it to the graphdataSkeleton
       this.graphdataSkeleton.nodes.push(newNode);
-      this.graphdataSkeleton.nodes = [...this.graphdataSkeleton.nodes];
 
       // Refresh
       this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
 
-      // Reset the state of the form
-      addNodeForm.reset();
       // Simulate a change on the select so it snaps back into default state
       addNodeTypeSelect.dispatchEvent(new Event('change'));
       // Close the dialog
       (<HTMLDialogElement>(
         this.shadowRoot?.querySelector('#add-node-dialog')!
       )).close();
+      // Reset the state of the form
+      addNodeForm.reset();
     };
-    const cancelButton: HTMLButtonElement = this.shadowRoot?.querySelector(
-      '#add-node-cancel-button'
-    )!;
-    cancelButton.onclick = () => {
+    const addNodeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-node-cancel-button')!;
+    addNodeCancelButton.onclick = () => {
       (<HTMLDialogElement>(
         this.shadowRoot?.querySelector('#add-node-dialog')!
       )).close();
@@ -629,6 +657,63 @@ export class BiowcPathwaygraph extends LitElement {
       addNodeForm.reset();
       // Simulate a change on the select so it snaps back into default state
       addNodeTypeSelect.dispatchEvent(new Event('change'));
+    };
+
+    const addEdgeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
+      '#add-edge-type-select'
+    )!;
+    BiowcPathwaygraph.edgeTypes.forEach(edgeType => {
+      const option = document.createElement('option');
+      option.value = edgeType.id;
+      option.label = edgeType.label;
+      addEdgeTypeSelect.options.add(option);
+    });
+
+    const addEdgeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#add-edge-form')!;
+    const addEdgeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-edge-confirm-button')!;
+    addEdgeConfirmButton.onclick = e => {
+      const formData: FormData = new FormData(addEdgeForm);
+
+      // edgeType is required
+      if (!formData.get('edgeType')) {
+        e.preventDefault();
+        return;
+      }
+
+      this.isAddingEdge = true;
+
+      // Save the type and label in the store, so they can be retrieved when the edge is ready
+      this.contextMenuStore!.set(
+        'newEdgeType',
+        String(formData.get('edgeType'))
+      );
+      this.contextMenuStore!.set(
+        'newEdgeLabel',
+        String(formData.get('edgeLabel'))
+      );
+
+      // Reset the state of the form
+      addEdgeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addEdgeTypeSelect.dispatchEvent(new Event('change'));
+      // Close the dialog
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#add-edge-dialog')!
+      )).close();
+    };
+
+    const addEdgeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-edge-cancel-button')!;
+    addEdgeCancelButton.onclick = () => {
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#add-edge-dialog')!
+      )).close();
+      // Reset the state of the form
+      addEdgeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addEdgeTypeSelect.dispatchEvent(new Event('change'));
     };
   }
 
@@ -1157,7 +1242,10 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr(
         'class',
-        d => `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} `
+        d =>
+          `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} ${
+            (<GeneProteinNodeD3>d).isHighlighted ? 'highlight' : ''
+          } `
       )
       .attr('id', d => `node-${d.nodeId}`);
 
@@ -1169,7 +1257,9 @@ export class BiowcPathwaygraph extends LitElement {
       .attr(
         'class',
         d =>
-          `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)}`
+          `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(
+            d
+          )} ${(<GeneProteinNodeD3>d).isHighlighted ? 'highlight' : ''}`
       )
       .attr('rx', NODE_HEIGHT)
       .attr('ry', NODE_HEIGHT)
@@ -2906,110 +2996,148 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       .select('#nodeG')
       .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
       .on('click', (e, node) => {
-        // Do not propagate event to canvas, because that would remove the highlighting
-        e.stopPropagation();
-        // Check if it is a double click
-        this.recentClicks += 1;
-        if (this.recentClicks === 1) {
-          // Wait for a possible doubleclick using a timeout
-          // If a double click happens within DBL_CLICK_TIMEOUT milliseconds,
-          // the event is canceled using clearTimeout below
-          dblClickTimer = setTimeout(() => {
-            this.recentClicks = 0;
-            // Unless the CTRL key is pressed, unselect everything first
-            if (!e.ctrlKey) {
+        // Selection is only active in viewing mode, not in editing mode
+        if (this.applicationMode === 'viewing') {
+          // Do not propagate event to canvas, because that would remove the highlighting
+          e.stopPropagation();
+          // Check if it is a double click
+          this.recentClicks += 1;
+          if (this.recentClicks === 1) {
+            // Wait for a possible doubleclick using a timeout
+            // If a double click happens within DBL_CLICK_TIMEOUT milliseconds,
+            // the event is canceled using clearTimeout below
+            dblClickTimer = setTimeout(() => {
+              this.recentClicks = 0;
+              // Unless the CTRL key is pressed, unselect everything first
+              if (!e.ctrlKey) {
+                this._getMainDiv()
+                  .select('#nodeG')
+                  .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+                  .each(d => {
+                    /* eslint-disable no-param-reassign */
+                    d.selected = false;
+                    /* eslint-enable no-param-reassign */
+                  });
+              }
+              // CTRL + Click on a selected node deselects the node, otherwise the node becomes selected
+              const isSelected = !(e.ctrlKey && node.selected);
+              // Apply this new value to the node itself and all attached ptm nodes
+              /* eslint-disable no-param-reassign */
+              node.selected = isSelected;
+              /* eslint-enable no-param-reassign */
               this._getMainDiv()
-                .select('#nodeG')
-                .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-                .each(d => {
+                .selectAll<SVGLineElement, PathwayGraphLinkD3>(
+                  '.ptmlink:not(.legend)'
+                )
+                .each(l => {
                   /* eslint-disable no-param-reassign */
-                  d.selected = false;
+                  // If clicked node is a protein, select all its PTM nodes
+                  if (l.target === node)
+                    (<PTMNodeD3>l.source).selected = isSelected;
+                  // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
+                  // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
+                  if (l.source === node && isSelected) {
+                    (<GeneProteinNodeD3>l.target).selected = true;
+                  }
                   /* eslint-enable no-param-reassign */
                 });
-            }
-            // CTRL + Click on a selected node deselects the node, otherwise the node becomes selected
-            const isSelected = !(e.ctrlKey && node.selected);
-            // Apply this new value to the node itself and all attached ptm nodes
-            /* eslint-disable no-param-reassign */
-            node.selected = isSelected;
-            /* eslint-enable no-param-reassign */
-            this._getMainDiv()
-              .selectAll<SVGLineElement, PathwayGraphLinkD3>(
-                '.ptmlink:not(.legend)'
-              )
-              .each(l => {
-                /* eslint-disable no-param-reassign */
-                // If clicked node is a protein, select all its PTM nodes
-                if (l.target === node)
-                  (<PTMNodeD3>l.source).selected = isSelected;
-                // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
-                // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
-                if (l.source === node && isSelected) {
-                  (<GeneProteinNodeD3>l.target).selected = true;
-                }
-                /* eslint-enable no-param-reassign */
-              });
-            // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
-            if (node.type.includes('summary')) {
-              (<PTMSummaryNodeD3>node).ptmNodes!.forEach(d => {
-                /* eslint-disable no-param-reassign */
-                d.selected = isSelected;
-                /* eslint-enable no-param-reassign */
-              });
-            }
+              // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
+              if (node.type.includes('summary')) {
+                (<PTMSummaryNodeD3>node).ptmNodes!.forEach(d => {
+                  /* eslint-disable no-param-reassign */
+                  d.selected = isSelected;
+                  /* eslint-enable no-param-reassign */
+                });
+              }
 
-            // If the node is either a Gene/Protein node or a  (non-summary) PTM node
-            // and it's a non-CTRL selection event,
-            // throw an event to display the tooltip information permanently in the parent
-            if (
-              node.type.includes('ptm') &&
-              !node.type.includes('summary') &&
-              !e.ctrlKey
-            ) {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: BiowcPathwaygraph._getPTMTooltipText(
-                    node as PTMNodeD3
-                  ),
-                })
-              );
-            } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: BiowcPathwaygraph._getGeneProteinTooltipText(
-                    node as GeneProteinNodeD3
-                  ),
-                })
-              );
-            } else {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: undefined,
-                })
-              );
-            }
+              // If the node is either a Gene/Protein node or a  (non-summary) PTM node
+              // and it's a non-CTRL selection event,
+              // throw an event to display the tooltip information permanently in the parent
+              if (
+                node.type.includes('ptm') &&
+                !node.type.includes('summary') &&
+                !e.ctrlKey
+              ) {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: BiowcPathwaygraph._getPTMTooltipText(
+                      node as PTMNodeD3
+                    ),
+                  })
+                );
+              } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: BiowcPathwaygraph._getGeneProteinTooltipText(
+                      node as GeneProteinNodeD3
+                    ),
+                  })
+                );
+              } else {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: undefined,
+                  })
+                );
+              }
 
-            // If the node is a group, select all its members
-            if (node.type === 'group') {
-              (<GroupNodeD3>node).componentNodes.forEach(comp => {
-                /* eslint-disable no-param-reassign */
-                comp.selected = isSelected;
-                /* eslint-enable no-param-reassign */
-              });
-            }
+              // If the node is a group, select all its members
+              if (node.type === 'group') {
+                (<GroupNodeD3>node).componentNodes.forEach(comp => {
+                  /* eslint-disable no-param-reassign */
+                  comp.selected = isSelected;
+                  /* eslint-enable no-param-reassign */
+                });
+              }
 
-            this._onSelectedNodesChanged();
-          }, DBL_CLICK_TIMEOUT);
-        } else {
-          // If it is a doubleclick, the above code wrapped in the timeout should not be executed
-          clearTimeout(dblClickTimer);
-          this.recentClicks = 0;
+              this._onSelectedNodesChanged();
+            }, DBL_CLICK_TIMEOUT);
+          } else {
+            // If it is a doubleclick, the above code wrapped in the timeout should not be executed
+            clearTimeout(dblClickTimer);
+            this.recentClicks = 0;
+          }
+        }
+        // Logic for adding an edge
+        if (this.isAddingEdge) {
+          /* eslint-disable no-param-reassign */
+          if (!this.contextMenuStore!.has('newEdgeSource')) {
+            this.contextMenuStore!.set('newEdgeSource', node.nodeId);
+
+            (<GeneProteinNodeD3>node).isHighlighted = true;
+            this._refreshGraph(true);
+          } else {
+            const sourceId = this.contextMenuStore!.get('newEdgeSource');
+
+            const newEdge = {
+              linkId: `customRelation-${
+                crypto.getRandomValues(new Uint32Array(1))[0]
+              }`,
+              sourceId,
+              targetId: node.nodeId,
+              types: [this.contextMenuStore!.get('newEdgeType')], // TODO: Get from context menu - save in store and delete afterwards
+              label: this.contextMenuStore!.get('newEdgeLabel'),
+            };
+            this.graphdataSkeleton.links.push(newEdge);
+
+            const sourceNode: PathwayGraphNodeD3 = this.d3Nodes!.filter(
+              nd => nd.nodeId === sourceId
+            )[0];
+            (<GeneProteinNodeD3>sourceNode).isHighlighted = false;
+            this.contextMenuStore!.delete('newEdgeSource');
+            this.contextMenuStore!.delete('newEdgeType');
+            this.contextMenuStore!.delete('newEdgeLabel');
+            this.isAddingEdge = false;
+            // Refresh
+            this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+          }
+          /* eslint-enable no-param-reassign */
         }
       });
   }
@@ -3677,7 +3805,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'svg',
         label: 'Add Edge',
         execute: () => {
-          console.log('TODO: Implement');
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
         },
       },
       {
@@ -3708,17 +3838,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
         label: 'Change Node Type',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          // @ts-ignore
+          ctx.target.__data__.type = ctx.item.id;
+          this._refreshGraph(true);
         },
         children: BiowcPathwaygraph.nodeTypes.map(nodeType => ({
           type: 'radio',
           id: nodeType.id,
           label: nodeType.label,
-          checked: ctx => {
-            console.log(ctx.target);
-            return false;
-          },
+          checked: ctx => ctx.target.classList.contains(nodeType.id),
         })),
       },
       {

@@ -101,6 +101,10 @@ export default css`
     fill: var(--compound-color);
   }
 
+  .node-rect.highlight {
+    stroke-width: 3;
+  }
+
   strong {
     display: inline-block;
     text-align: left;
