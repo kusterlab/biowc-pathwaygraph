@@ -106,6 +106,31 @@ export default css`
     text-align: left;
   }
 
+  .form-wrapper {
+    display: block;
+    text-align: right;
+    line-height: 2;
+    font-family: var(--font-stack);
+
+    select {
+      width: 209px;
+    }
+
+    input {
+      width: 200px;
+    }
+
+    textarea {
+      width: 200px;
+      vertical-align: top;
+      resize: none;
+    }
+  }
+
+  .form-element {
+    margin-left: 10px;
+  }
+
   .legend {
     pointer-events: none;
     dominant-baseline: central;
@@ -232,5 +257,16 @@ export default css`
     position: relative;
     top: 15px;
     z-index: 1;
+  }
+
+  dialog {
+    border-radius: var(--context-menu-border-radius);
+    border-color: var(--context-menu-background-color);
+    box-shadow: var(--context-menu-shadow);
+  }
+
+  ::backdrop {
+    background: #d2d2d2;
+    opacity: 0.5;
   }
 `;

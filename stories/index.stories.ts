@@ -12,6 +12,7 @@ export default {
     ptmInputList: { control: 'array' },
     fullProteomeInputList: { control: 'object' },
     hue: { control: 'text' },
+    applicationMode: { control: 'text' },
   },
 };
 
@@ -29,6 +30,7 @@ interface ArgTypes {
   ptmInputList?: object;
   fullProteomeInputList?: object;
   hue: string;
+  applicationMode: string;
 }
 
 const Template: Story<ArgTypes> = (args: ArgTypes) => html`
@@ -300,6 +302,45 @@ DownloadGraphAsSVG.args = {
     'Finally, there is the `downloadSvg`, which downloads the current canvas ' +
     'in Scalable Vector Graphics format, including PTM nodes, selections, and rearrangements made ' +
     'by the user.',
+};
+
+const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div>${args.storyTitle}</div>
+  <div>${args.storyDescription}</div>
+  <input
+    type="radio"
+    name="modeswitch"
+    id="viewing"
+    onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
+    checked
+  /><label for="viewing">Viewing Mode</label>
+  <input
+    type="radio"
+    name="modeswitch"
+    id="editing"
+    onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
+  /><label for="editing">Editing Mode</label>
+  <button onclick="console.log('Should Export')">Export</button>
+  <button onclick="console.log('Should Import')">Import</button>
+  <biowc-pathwaygraph
+    id="pathwaygraph"
+    .pathwayMetaData=${args.pathwayMetaData}
+    .graphdataSkeleton=${args.graphdataSkeleton}
+    .ptmInputList=${args.ptmInputList}
+    .fullProteomeInputList=${args.fullProteomeInputList}
+    .hue=${args.hue}
+    .applicationMode=${args.applicationMode}
+  >
+  </biowc-pathwaygraph>
+`;
+
+export const EditingMode = EditingModeTemplate.bind({});
+EditingMode.args = {
+  ...ColoringNodesByPotency.args,
+  hue: 'potency',
+  storyTitle: 'Editing Mode',
+  storyDescription: 'TODO',
+  applicationMode: 'viewing',
 };
 
 // TODO: Events: selectedNodeTooltip and selectionDetails are dispatched when?

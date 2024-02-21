@@ -14,12 +14,14 @@ import {
   ContextMenu,
   ExecuteOptions,
 } from '@api-client/context-menu';
-import { ContextMenuCommand } from '@api-client/context-menu/src/types';
+import { ContextMenuCommand, Point } from '@api-client/context-menu/src/types';
 import styles from './biowc-pathwaygraph.css';
 
 type PossibleRegulationCategoriesType = 'up' | 'down' | 'not';
 
 type PossibleHueType = 'direction' | 'foldchange' | 'potency';
+
+type PossibleApplicationMode = 'viewing' | 'editing';
 
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
@@ -233,6 +235,9 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: false })
   hue!: PossibleHueType;
 
+  @property({ attribute: false })
+  applicationMode!: PossibleApplicationMode;
+
   graphdataPTM?: {
     nodes: (PTMNode | PTMSummaryNode)[];
     links: PathwayGraphLinkInput[];
@@ -282,6 +287,31 @@ export class BiowcPathwaygraph extends LitElement {
   contextMenuCommands?: (ContextMenuCommand | CommandBase)[];
 
   contextMenuStore?: Map<string, any>;
+
+  // TODO: Is there no way I can generalize this to rect.node-rect?
+  static geneProteinPathwayCompoundsNodes: string[] = [
+    'rect.node-rect.gene_protein',
+    'rect.node-rect.gene_protein.down',
+    'rect.node-rect.gene_protein.up',
+    'rect.node-rect.gene_protein.both',
+    'rect.node-rect.gene_protein.not',
+    'rect.node-rect.pathway',
+    'rect.node-rect.compound',
+  ];
+
+  static nodeTypes: { id: string; label: string }[] = [
+    { id: 'gene_protein', label: 'Gene/Protein' },
+    { id: 'compound', label: 'Metabolite/Compound' },
+    { id: 'pathway', label: 'Pathway' },
+  ];
+
+  static edgeTypes: { id: string; label: string }[] = [
+    { id: 'activation', label: 'Activation' },
+    { id: 'inhibition', label: 'Inhibition' },
+    { id: 'binding/association', label: 'Binding/Association' },
+    { id: 'indirect effect', label: 'Indirect Effect' },
+    { id: 'other', label: 'Other' },
+  ];
 
   render() {
     return html`
@@ -400,6 +430,43 @@ export class BiowcPathwaygraph extends LitElement {
             <output for="toSlider" id="toSliderOutput"></output>
           </div>
         </div>
+        <dialog id='add-node-dialog'>
+          <form id='add-node-form'>
+            <div class='form-wrapper'>
+            <label>Node Type:</label>
+              <select class='form-element' id='add-node-type-select' name='nodeType'>
+                <option value="default" selected disabled >Choose…</option>
+              </select>
+            </div>
+            <div class='form-wrapper'>
+              <label id='add-node-primary-name-label'>
+                Name:
+              </label>
+                <input class='form-element' type='text' name='nodePrimaryName' required>
+            </div>
+            <div class='form-wrapper' id='add-node-alternative-gene-names' style='display: none'>
+            <label>Alternative Gene Names:</label>
+              <textarea class='form-element'
+                name='nodeAlternativeGeneNames'
+                        placeholder="Enter Alternative Gene Names, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper' id='add-node-uniprot-accession' style='display: none'>
+              <label >Uniprot Accession Numbers:</label>
+              <textarea class='form-element'
+                        name='nodeUniprotAccs'
+                        placeholder="Enter Uniprot Accession Numbers, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+              <div class='form-wrapper'>
+            <div>
+              <button id="add-node-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="add-node-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
       </div>
       <canvas id="canvasId" style="display: none"></canvas>
     `;
@@ -414,6 +481,12 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   protected firstUpdated(_changedProperties: PropertyValues) {
+    // Initially the mode is always viewing unless explicitly asked for
+    if (this.applicationMode !== 'editing') {
+      this.applicationMode = 'viewing';
+    }
+    this.switchApplicationMode(this.applicationMode);
+
     this.d3Nodes = [];
     this.d3Links = [];
     this._getMainDiv().append('g').attr('id', 'linkG');
@@ -427,6 +500,103 @@ export class BiowcPathwaygraph extends LitElement {
       ['show-down', true],
       ['show-not', true],
     ]);
+
+    // Initialize the "Add Node" and "Add Edge" Forms
+    // TODO: Make this its own method, it deserves it.
+    const addNodeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
+      '#add-node-type-select'
+    )!;
+    BiowcPathwaygraph.nodeTypes.forEach(nodeType => {
+      const option = document.createElement('option');
+      option.value = nodeType.id;
+      option.label = nodeType.label;
+      addNodeTypeSelect.options.add(option);
+    });
+
+    addNodeTypeSelect.onchange = () => {
+      const addNodePrimaryNameLabel: HTMLLabelElement =
+        this.shadowRoot?.querySelector('#add-node-primary-name-label')!;
+      const addNodeAlternativeGeneNames: HTMLDivElement =
+        this.shadowRoot?.querySelector('#add-node-alternative-gene-names')!;
+      const addNodeUniprots: HTMLDivElement = this.shadowRoot?.querySelector(
+        '#add-node-uniprot-accession'
+      )!;
+      if (addNodeTypeSelect.value === 'gene_protein') {
+        addNodePrimaryNameLabel.textContent = 'Primary Gene Name:';
+        addNodeAlternativeGeneNames.style.display = 'block';
+        addNodeUniprots.style.display = 'block';
+      } else {
+        addNodePrimaryNameLabel.textContent = 'Name:';
+        addNodeAlternativeGeneNames.style.display = 'none';
+        addNodeUniprots.style.display = 'none';
+      }
+    };
+
+    const addNodeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#add-node-form')!;
+    const confirmButton: HTMLButtonElement = this.shadowRoot?.querySelector(
+      '#add-node-confirm-button'
+    )!;
+    confirmButton.onclick = e => {
+      const formData: FormData = new FormData(addNodeForm);
+
+      // nodeType and nodePrimaryName are required
+      if (formData.get('nodePrimaryName') === '' || !formData.get('nodeType')) {
+        e.preventDefault();
+        return;
+      }
+
+      // Some regex like s.match(/\(\d+,\d+\)/)
+      const nodeType = String(formData.get('nodeType')!);
+      const nodeAddPoint: Point = this.contextMenuStore?.get('clickPoint')!;
+      const transformString = this._getMainDiv()
+        .select('#nodeG')
+        .attr('transform');
+      const [, translateX, translateY, scale] = transformString.match(
+        /translate\((-?[\d|.]+),(-?[\d|.]+)\) scale\((-?[\d|.]+)\)/
+      )!;
+
+      // Create a node
+      // @ts-ignore
+      const newNode: GeneProteinNodeD3 = {
+        nodeId: `customNode-${crypto.getRandomValues(new Uint32Array(1))[0]}`,
+        type: nodeType,
+        x: (nodeAddPoint.x - Number(translateX)) / Number(scale),
+        y: (nodeAddPoint.y - Number(translateY)) / Number(scale),
+      };
+
+      if (nodeType === 'gene_protein') {
+        newNode.geneNames = String(
+          formData.get('nodeAlternativeGeneNames')!
+        ).split(/[;,\n]/);
+        newNode.uniprotAccs = String(formData.get('nodeUniprotAccs')!).split(
+          /[;,\n]/
+        );
+        newNode.geneNames.unshift(String(formData.get('nodePrimaryName')!));
+        newNode.defaultName = String(formData.get('nodePrimaryName')!);
+      } else {
+        newNode.label = String(formData.get('nodePrimaryName')!);
+      }
+
+      // Add it to the graphdataSkeleton
+      this.graphdataSkeleton.nodes.push(newNode);
+      this.graphdataSkeleton.nodes = [...this.graphdataSkeleton.nodes];
+
+      // Refresh
+      this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+    };
+    const cancelButton: HTMLButtonElement = this.shadowRoot?.querySelector(
+      '#add-node-cancel-button'
+    )!;
+    cancelButton.onclick = () => {
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#add-node-dialog')!
+      )).close();
+      // Reset the state of the form
+      addNodeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addNodeTypeSelect.dispatchEvent(new Event('change'));
+    };
 
     super.firstUpdated(_changedProperties);
   }
@@ -3283,15 +3453,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     /* eslint-enable no-param-reassign */
   }
 
-  private _initContextMenu() {
-    if (this.contextMenu) this.contextMenu.disconnect();
-
-    const container = d3v6
-      // @ts-ignore
-      .select(this.shadowRoot)
-      .select('#pathwayContainer')
-      .node();
-    this.contextMenu = new ContextMenu(<HTMLElement>container);
+  private _setUpViewingModeContextMenu() {
     this.contextMenuCommands = <ContextMenuCommand[]>[
       // Context Menu for Canvas
       {
@@ -3342,7 +3504,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'svg',
         label: 'Show...',
         execute: ctx => {
-          // For hue, initialize to initial hue. Nothing is working so far...
           const storeId = `show-${ctx.item.id}`;
           ctx.store.set(storeId, !ctx.store.get(storeId));
           this._refreshGraph(true);
@@ -3415,20 +3576,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         ],
       },
     ];
-    const geneProteinPathwayCompoundsNodes = [
-      'rect.node-rect.gene_protein',
-      'rect.node-rect.gene_protein.down',
-      'rect.node-rect.gene_protein.up',
-      'rect.node-rect.gene_protein.both',
-      'rect.node-rect.gene_protein.not',
-      'rect.node-rect.pathway',
-      'rect.node-rect.compound',
-    ];
     this.contextMenuCommands.push(
       ...[
         // Context Menu for Gene/Protein Nodes
         {
-          target: geneProteinPathwayCompoundsNodes.concat(['path.group-path']),
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+            'path.group-path',
+          ]),
           label: 'Select Graph Downstream of...',
           execute: () => {},
           children: [
@@ -3457,15 +3611,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           ],
         },
         {
-          target: geneProteinPathwayCompoundsNodes,
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
           label: 'Alternative Names',
           // Children will be created dynamically!
         },
       ]
     );
-
-    // Add the store - it is saved as a separate variable, so it is persistent across incarnations of the contextmenu
-    this.contextMenu.store = this.contextMenuStore!;
 
     // Now we set up an event listener for nodes that dynamically creates the children of the 'Alternative Names' menu entry
     this._getMainDiv()
@@ -3474,28 +3625,166 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         '.gene_protein,.compound,.pathway'
       )
       .on('contextmenu', (e, node) => {
-        // Hide the tooltip when the context menu is shown
-        this._getMainDiv().select('#nodetooltip').style('opacity', '0');
-        const nameAlternatives = BiowcPathwaygraph._calcPossibleLabels(
-          <GeneProteinNodeD3>node
-        );
-        const alternativeNamesCommand =
-          this.contextMenuCommands!.pop() as ContextMenuCommand;
-        alternativeNamesCommand!.children = nameAlternatives.map(
-          alternative => ({
-            label: alternative,
-            execute: () => {
-              // eslint-disable-next-line no-param-reassign
-              node.currentDisplayedLabel = alternative;
-              this._refreshGraph(true);
-            },
-          })
-        );
-        this.contextMenuCommands!.push(alternativeNamesCommand);
-        this.contextMenu?.registerCommands(this.contextMenuCommands!);
+        // Only do this when in viewing mode
+        if (this.applicationMode === 'viewing') {
+          // Hide the tooltip when the context menu is shown
+          this._getMainDiv().select('#nodetooltip').style('opacity', '0');
+          const nameAlternatives = BiowcPathwaygraph._calcPossibleLabels(
+            <GeneProteinNodeD3>node
+          );
+          const alternativeNamesCommand =
+            this.contextMenuCommands!.pop() as ContextMenuCommand;
+          alternativeNamesCommand!.children = nameAlternatives.map(
+            alternative => ({
+              label: alternative,
+              execute: () => {
+                // eslint-disable-next-line no-param-reassign
+                node.currentDisplayedLabel = alternative;
+                this._refreshGraph(true);
+              },
+            })
+          );
+          this.contextMenuCommands!.push(alternativeNamesCommand);
+          this.contextMenu?.registerCommands(this.contextMenuCommands!);
+        }
       });
+  }
 
-    this.contextMenu.registerCommands(this.contextMenuCommands);
+  private _setUpEditingModeContextMenu() {
+    this.contextMenuCommands = <ContextMenuCommand[]>[
+      // Context Menu for Canvas
+      {
+        target: 'svg',
+        label: 'Add Node',
+        execute: ctx => {
+          this.contextMenuStore?.set('clickPoint', ctx.clickPoint);
+          const addNodeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-node-dialog')!;
+          addNodeDialog.showModal();
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Add Edge',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Create Node Group',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+          'path.group-path',
+        ]),
+        label: 'Add Edge from this Node',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+          'path.group-path',
+        ]),
+        label: 'Add Edge to this Node',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Change Node Type',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+        children: BiowcPathwaygraph.nodeTypes.map(nodeType => ({
+          type: 'radio',
+          id: nodeType.id,
+          label: nodeType.label,
+          checked: ctx => {
+            console.log(ctx.target);
+            return false;
+          },
+        })),
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Edit Node Identifiers',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Remove Node',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: 'path.group-path',
+        label: 'Remove Group',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: 'line.link',
+        label: 'Change Edge Type',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+        children: BiowcPathwaygraph.edgeTypes.map(edgeType => ({
+          type: 'radio',
+          id: edgeType.id,
+          label: edgeType.label,
+          checked: ctx => {
+            console.log(ctx.target);
+            return false;
+          },
+        })),
+      },
+      {
+        target: 'line.link',
+        label: 'Change Edge Label',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+      {
+        target: 'line.link',
+        label: 'Remove Edge',
+        execute: () => {
+          console.log('TODO: Implement');
+        },
+      },
+    ];
+  }
+
+  private _initContextMenu() {
+    if (this.contextMenu) this.contextMenu.disconnect();
+
+    const container = d3v6
+      // @ts-ignore
+      .select(this.shadowRoot)
+      .select('#pathwayContainer')
+      .node();
+    this.contextMenu = new ContextMenu(<HTMLElement>container);
+
+    // TODO: I probably need to do most of this only once, not every time the mode is switched.
+    if (this.applicationMode === 'viewing') {
+      this._setUpViewingModeContextMenu();
+    } else {
+      this._setUpEditingModeContextMenu();
+    }
+
+    // Add the store - it is saved as a separate variable, so it is persistent across incarnations of the contextmenu
+    this.contextMenu.store = this.contextMenuStore!;
+    this.contextMenu.registerCommands(this.contextMenuCommands!);
     this.contextMenu.connect();
   }
 
@@ -3653,5 +3942,22 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         /* eslint-enable no-param-reassign */
       });
     this._refreshGraph(true);
+  }
+
+  public switchApplicationMode(newMode: PossibleApplicationMode) {
+    if (newMode === 'viewing' || newMode === 'editing') {
+      this.applicationMode = newMode;
+    }
+
+    // TODO: Only run if value has changed
+    if (this.applicationMode === 'viewing') {
+      // TODO: Anything to do here?
+    }
+
+    if (this.applicationMode === 'editing') {
+      this.hue = 'direction';
+      this.ptmInputList = [];
+      this.fullProteomeInputList = [];
+    }
   }
 }
