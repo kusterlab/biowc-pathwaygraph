@@ -3911,8 +3911,19 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
         label: 'Remove Node',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          // @ts-ignore
+          const nodeIdToRemove = ctx.target.__data__.nodeId;
+          this.graphdataSkeleton.nodes = this.graphdataSkeleton.nodes.filter(
+            node => node.nodeId !== nodeIdToRemove
+          );
+          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+            link =>
+              link.sourceId !== nodeIdToRemove &&
+              link.targetId !== nodeIdToRemove
+          );
+          // Refresh
+          this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
         },
       },
       {
@@ -3948,8 +3959,15 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: 'line.link',
         label: 'Remove Edge',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          // @ts-ignore
+          const linkIdToRemove = ctx.target.__data__.linkId;
+          // TODO: Higher order links, here and in the node removal
+          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+            link => link.linkId !== linkIdToRemove
+          );
+          // Refresh
+          this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
         },
       },
     ];
