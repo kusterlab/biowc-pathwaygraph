@@ -3922,6 +3922,15 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               link.sourceId !== nodeIdToRemove &&
               link.targetId !== nodeIdToRemove
           );
+          // Remove all higher-order links that just lost their endpoint
+          const nodeAndLinkIds = this.graphdataSkeleton.links
+            .map(link => link.linkId)
+            .concat(this.graphdataSkeleton.nodes.map(node => node.nodeId));
+          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+            link =>
+              nodeAndLinkIds.includes(link.sourceId) &&
+              nodeAndLinkIds.includes(link.targetId)
+          );
           // Refresh
           this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
         },
@@ -3962,9 +3971,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         execute: ctx => {
           // @ts-ignore
           const linkIdToRemove = ctx.target.__data__.linkId;
-          // TODO: Higher order links, here and in the node removal
           this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
-            link => link.linkId !== linkIdToRemove
+            // Remove the link if it is either the very link to remove, or if it is
+            // an anchor that has the link to remove as source or target
+            link =>
+              ![link.linkId, link.sourceId, link.targetId].includes(
+                linkIdToRemove
+              )
           );
           // Refresh
           this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
