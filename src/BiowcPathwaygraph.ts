@@ -494,6 +494,20 @@ export class BiowcPathwaygraph extends LitElement {
             </div>
           </form>
         </dialog>
+        <dialog id='edit-edge-label-dialog'>
+          <form id='edit-edge-label-form' novalidate>
+            <div class='form-wrapper'>
+              <label id='edit-edge-label-label'>
+                Label:
+              </label>
+              <input class='form-element' type='text' name='edgeLabel' id='edit-edge-label-input'>
+            </div>
+            <div>
+              <button id="edit-edge-label-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="edit-edge-label-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
       </div>
       <canvas id="canvasId" style="display: none"></canvas>
     `;
@@ -720,6 +734,40 @@ export class BiowcPathwaygraph extends LitElement {
       });
       this._refreshGraph(true);
       this.isAddingEdge = false;
+    };
+
+    const editEdgeLabelForm: HTMLFormElement = this.shadowRoot?.querySelector(
+      '#edit-edge-label-form'
+    )!;
+    const editEdgeLabelConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-confirm-button')!;
+    editEdgeLabelConfirmButton.onclick = () => {
+      const formData: FormData = new FormData(editEdgeLabelForm);
+      // Get the edge
+      const edgeToUpdate = this.contextMenuStore?.get('edgeToUpdate');
+      // @ts-ignore
+      edgeToUpdate.__data__.label = String(formData.get('edgeLabel'));
+      this.contextMenuStore?.delete('edgeToUpdate');
+      // Reset the state of the form
+      editEdgeLabelForm.reset();
+
+      // Close the dialog
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#edit-edge-label-dialog')!
+      )).close();
+
+      // Reload graph
+      this._refreshGraph(true);
+    };
+
+    const editEdgeLabelCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-cancel-button')!;
+    editEdgeLabelCancelButton.onclick = () => {
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#edit-edge-label-dialog')!
+      )).close();
+      // Reset the state of the form
+      editEdgeLabelForm.reset();
     };
   }
 
@@ -1014,6 +1062,7 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _createD3GraphObject() {
+    console.log('Fn doing it.');
     // Essentially, the d3Nodes and d3Links objects consist of all nodes and links
     // from the skeleton and the ptm objects. So in principle we could recreate them
     // from the concatenation of skeleton and ptm every time.
@@ -3961,8 +4010,19 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: 'line.link',
         label: 'Change Edge Label',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          console.log('There is a bug in here...');
+          this.contextMenuStore?.set('edgeToUpdate', ctx.target);
+          const editEdgeLabelInput: HTMLInputElement =
+            this.shadowRoot?.querySelector('#edit-edge-label-input')!;
+          editEdgeLabelInput.setRangeText('');
+          // @ts-ignore
+          const currentLabel = ctx.target.__data__.label;
+          if (currentLabel) editEdgeLabelInput.setRangeText(currentLabel);
+
+          const editEdgeLabelDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#edit-edge-label-dialog')!;
+          editEdgeLabelDialog.showModal();
         },
       },
       {
