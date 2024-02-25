@@ -496,6 +496,41 @@ export class BiowcPathwaygraph extends LitElement {
             </div>
           </form>
         </dialog>
+
+        <dialog id='edit-node-dialog'>
+          <form id='edit-node-form' novalidate>
+            <div class='form-wrapper'>
+              <label id='edit-node-primary-name-label'>
+                Name:
+              </label>
+              <input id='edit-node-primary-name-input' class='form-element' type='text' name='nodePrimaryName' required>
+            </div>
+            <div class='form-wrapper' id='edit-node-alternative-gene-names' style='display: none'>
+              <label>Alternative Gene Names:</label>
+              <textarea class='form-element'
+                        id='edit-node-alternative-gene-names-textarea'
+                        name='nodeAlternativeGeneNames'
+                        placeholder="Enter Alternative Gene Names, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper' id='edit-node-uniprot-accession' style='display: none'>
+              <label>Uniprot Accession Numbers:</label>
+              <textarea class='form-element'
+                        id='edit-node-uniprot-accession-textarea'
+                        name='nodeUniprotAccs'
+                        placeholder="Enter Uniprot Accession Numbers, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper'>
+              <div>
+                <button id="edit-node-confirm-button" formmethod="dialog">Confirm</button>
+                <button id="edit-node-cancel-button" formmethod="dialog">Cancel</button>
+              </div>
+          </form>
+        </dialog>
+
         <dialog id='edit-edge-label-dialog'>
           <form id='edit-edge-label-form' novalidate>
             <div class='form-wrapper'>
@@ -736,6 +771,56 @@ export class BiowcPathwaygraph extends LitElement {
       });
       this._refreshGraph(true);
       this.isAddingEdge = false;
+    };
+
+    const editNodeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#edit-node-form')!;
+
+    const editNodeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-node-confirm-button')!;
+    editNodeConfirmButton.onclick = () => {
+      const formData: FormData = new FormData(editNodeForm);
+      // Get the node
+      const nodeIdToUpdate = this.contextMenuStore?.get('nodeIdToUpdate');
+      const nodeToUpdate = this.graphdataSkeleton.nodes.filter(
+        node => node.nodeId === nodeIdToUpdate
+      )[0] as GeneProteinNode;
+      if (nodeToUpdate.type === 'gene_protein') {
+        nodeToUpdate.geneNames = String(
+          formData.get('nodeAlternativeGeneNames')!
+        ).split(/[;,\n]/);
+        nodeToUpdate.uniprotAccs = String(
+          formData.get('nodeUniprotAccs')!
+        ).split(/[;,\n]/);
+        nodeToUpdate.geneNames.unshift(
+          String(formData.get('nodePrimaryName')!)
+        );
+        nodeToUpdate.defaultName = String(formData.get('nodePrimaryName')!);
+      } else {
+        nodeToUpdate.label = String(formData.get('nodePrimaryName')!);
+      }
+      this.contextMenuStore?.delete('nodeIdToUpdate');
+      editNodeForm.reset();
+      // Close the dialog
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#edit-node-dialog')!
+      )).close();
+
+      // Reload graph
+      this.updated(new Map());
+      this._refreshGraph(true);
+    };
+
+    // TODO: Escape should do the same, also for all other cancel buttons
+    // Right now escape does not clear the forms
+    const editNodeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-node-cancel-button')!;
+    editNodeCancelButton.onclick = () => {
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#edit-node-dialog')!
+      )).close();
+      // Reset the state of the form
+      editNodeForm.reset();
     };
 
     const editEdgeLabelForm: HTMLFormElement = this.shadowRoot?.querySelector(
@@ -1137,6 +1222,8 @@ export class BiowcPathwaygraph extends LitElement {
           existingNode.label = (<GeneProteinNode>node).label;
           existingNode.geneNames = (<GeneProteinNode>node).geneNames;
           existingNode.uniprotAccs = (<GeneProteinNode>node).uniprotAccs;
+          [existingNode.currentDisplayedLabel] =
+            BiowcPathwaygraph._calcPossibleLabels(<GeneProteinNodeD3>node);
         }
       });
 
@@ -4000,8 +4087,73 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
         label: 'Edit Node Identifiers',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          const editNodePrimaryNameLabel: HTMLLabelElement =
+            this.shadowRoot?.querySelector('#edit-node-primary-name-label')!;
+          const editNodeAlternativeGeneNames: HTMLDivElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-alternative-gene-names'
+            )!;
+          const editNodeAlternativeGeneNamesTextArea: HTMLTextAreaElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-alternative-gene-names-textarea'
+            )!;
+          const editNodeUniprots: HTMLDivElement =
+            this.shadowRoot?.querySelector('#edit-node-uniprot-accession')!;
+          const editNodeUniprotsTextArea: HTMLTextAreaElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-uniprot-accession-textarea'
+            )!;
+          // @ts-ignore
+          if (ctx.target.__data__.type === 'gene_protein') {
+            editNodePrimaryNameLabel.textContent = 'Primary Gene Name:';
+            editNodeAlternativeGeneNames.style.display = 'block';
+            editNodeUniprots.style.display = 'block';
+            // @ts-ignore
+            editNodeAlternativeGeneNamesTextArea.setRangeText(
+              // @ts-ignore
+              ctx.target.__data__.geneNames
+                ?.filter(
+                  (name: String) =>
+                    ![
+                      // @ts-ignore
+                      ctx.target.__data__.label,
+                      // @ts-ignore
+                      ctx.target.__data__.currentDisplayedLabel,
+                    ].includes(name)
+                )
+                .join('\n') || ''
+            );
+            // @ts-ignore
+            editNodeUniprotsTextArea.setRangeText(
+              // @ts-ignore
+              ctx.target.__data__.uniprotAccs?.join('\n') || ''
+            );
+          } else {
+            editNodePrimaryNameLabel.textContent = 'Name:';
+            editNodeAlternativeGeneNames.style.display = 'none';
+            editNodeUniprots.style.display = 'none';
+          }
+
+          this.contextMenuStore?.set(
+            'nodeIdToUpdate',
+            // @ts-ignore
+            ctx.target.__data__.nodeId
+          );
+
+          const editNodePrimaryNameInput: HTMLInputElement =
+            this.shadowRoot?.querySelector('#edit-node-primary-name-input')!;
+          editNodePrimaryNameInput.setRangeText(
+            // @ts-ignore
+            ctx.target.__data__.label ||
+              // @ts-ignore
+              ctx.target.__data__.currentDisplayedLabel ||
+              ''
+          );
+
+          const editNodeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#edit-node-dialog')!;
+          editNodeDialog.showModal();
         },
       },
       {
@@ -4065,10 +4217,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           );
           const editEdgeLabelInput: HTMLInputElement =
             this.shadowRoot?.querySelector('#edit-edge-label-input')!;
-          editEdgeLabelInput.setRangeText('');
           // @ts-ignore
-          const currentLabel = ctx.target.__data__.label;
-          if (currentLabel) editEdgeLabelInput.setRangeText(currentLabel);
+          editEdgeLabelInput.setRangeText(ctx.target.__data__.label || '');
 
           const editEdgeLabelDialog: HTMLDialogElement =
             this.shadowRoot?.querySelector('#edit-edge-label-dialog')!;
