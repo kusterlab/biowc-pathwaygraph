@@ -746,10 +746,17 @@ export class BiowcPathwaygraph extends LitElement {
     editEdgeLabelConfirmButton.onclick = () => {
       const formData: FormData = new FormData(editEdgeLabelForm);
       // Get the edge
-      const edgeToUpdate = this.contextMenuStore?.get('edgeToUpdate');
-      // @ts-ignore
-      edgeToUpdate.__data__.label = String(formData.get('edgeLabel'));
-      this.contextMenuStore?.delete('edgeToUpdate');
+      const edgeIdToUpdate = this.contextMenuStore?.get('edgeIdToUpdate');
+      const edgeToUpdate = this.graphdataSkeleton.links.filter(
+        l => l.linkId === edgeIdToUpdate
+      )[0];
+      edgeToUpdate.label = String(formData.get('edgeLabel'));
+      // Update visually.
+      this._getMainDiv()
+        .select(`#edgelabel-${edgeToUpdate.linkId}`)
+        .select('textPath')
+        .text(edgeToUpdate.label);
+      this.contextMenuStore?.delete('edgeIdToUpdate');
       // Reset the state of the form
       editEdgeLabelForm.reset();
 
@@ -759,6 +766,7 @@ export class BiowcPathwaygraph extends LitElement {
       )).close();
 
       // Reload graph
+      this.updated(new Map());
       this._refreshGraph(true);
     };
 
@@ -1082,6 +1090,11 @@ export class BiowcPathwaygraph extends LitElement {
       d3NodesDict[node.nodeId] = node;
     }
 
+    const d3LinksDict: { [key: string]: PathwayGraphLinkD3 } = {};
+    for (const link of this.d3Links) {
+      d3LinksDict[link.linkId] = link;
+    }
+
     const d3LinkIds = new Set(this.d3Links!.map(link => link.linkId));
     const graphdataNodeIds = new Set(
       this.graphdataSkeleton.nodes
@@ -1119,6 +1132,10 @@ export class BiowcPathwaygraph extends LitElement {
           existingNode.nNot = (<GeneProteinNode>node).nNot;
           // Also update label, groupId, ... - it might have changed when in editing mode
           existingNode.groupId = (<GeneProteinNode>node).groupId;
+          existingNode.defaultName = (<GeneProteinNode>node).defaultName;
+          existingNode.label = (<GeneProteinNode>node).label;
+          existingNode.geneNames = (<GeneProteinNode>node).geneNames;
+          existingNode.uniprotAccs = (<GeneProteinNode>node).uniprotAccs;
         }
       });
 
@@ -1131,6 +1148,11 @@ export class BiowcPathwaygraph extends LitElement {
       .forEach(link => {
         if (!d3LinkIds.has(link.linkId!)) {
           this.d3Links!.push({ ...link } as PathwayGraphLinkD3);
+        } else {
+          // Update label and type, they might have changed in editing mode
+          const existingLink: PathwayGraphLinkD3 = d3LinksDict[link.linkId];
+          existingLink.label = link.label;
+          existingLink.types = link.types;
         }
       });
 
@@ -1453,7 +1475,7 @@ export class BiowcPathwaygraph extends LitElement {
       .attr('class', 'edgepath')
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
-      .attr('id', (d, i) => `edgepath-${i}`);
+      .attr('id', d => `edgepath-${d.linkId}`);
 
     // Add the actual edgelabels
     const edgelabels = linkG
@@ -1463,29 +1485,26 @@ export class BiowcPathwaygraph extends LitElement {
           link =>
             (link.sourceIsAnchor ||
               (<PathwayGraphNodeD3>link.source)?.visible) &&
-            (link.targetIsAnchor ||
-              (<PathwayGraphNodeD3>link.target)?.visible) &&
-            link.label &&
-            link.label !== ''
+            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
       .join('text')
       .attr('class', 'edgelabel')
       .attr('fill', 'var(--edge-label-color)')
-      .attr('id', (d, i) => `edgelabel-${i}`);
+      .attr('id', d => `edgelabel-${d.linkId}`);
 
     // Put the edgelabels onto the paths
     edgelabels
       // Filter for paths that do not have a label yet
-      .filter((edgepath, i) =>
+      .filter(edgepath =>
         this._getMainDiv()
           .select('#linkG')
-          .select(`#edgelabel-${i}`)
+          .select(`#edgelabel-${edgepath.linkId}`)
           .select('textPath')
           .empty()
       )
       .append('textPath')
-      .attr('xlink:href', (d, i) => `#edgepath-${i}`)
+      .attr('xlink:href', d => `#edgepath-${d.linkId}`)
       .attr('startOffset', '50%')
       .text(link => link.label || '');
   }
@@ -3960,6 +3979,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
         label: 'Change Node Type',
         execute: ctx => {
+          // Get the node
+          const nodeToUpdate = this.graphdataSkeleton.nodes
+            // @ts-ignore
+            .filter(n => n.nodeId === ctx.target.__data__.nodeId)[0];
+          nodeToUpdate.type = ctx.item.id;
+          // For now, we also directly update it here, since it doesn't change visually otherwise
+          // So the change in graphdataSkeleton is just for when we export it
           // @ts-ignore
           ctx.target.__data__.type = ctx.item.id;
           this._refreshGraph(true);
@@ -4032,9 +4058,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'line.link',
         label: 'Change Edge Label',
         execute: ctx => {
-          console.log('There is a bug in here...');
-          // TODO: Maybe try d3Links instead of skeleton, update label there.
-          this.contextMenuStore?.set('edgeToUpdate', ctx.target);
+          this.contextMenuStore?.set(
+            'edgeIdToUpdate',
+            // @ts-ignore
+            ctx.target.__data__.linkId
+          );
           const editEdgeLabelInput: HTMLInputElement =
             this.shadowRoot?.querySelector('#edit-edge-label-input')!;
           editEdgeLabelInput.setRangeText('');
