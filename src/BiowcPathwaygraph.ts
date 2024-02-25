@@ -1130,7 +1130,8 @@ export class BiowcPathwaygraph extends LitElement {
           existingNode.nUp = (<GeneProteinNode>node).nUp;
           existingNode.nDown = (<GeneProteinNode>node).nDown;
           existingNode.nNot = (<GeneProteinNode>node).nNot;
-          // Also update label, groupId, ... - it might have changed when in editing mode
+          // Also update everything else except for the coordinates - it might have changed when in editing mode
+          existingNode.type = (<GeneProteinNode>node).type;
           existingNode.groupId = (<GeneProteinNode>node).groupId;
           existingNode.defaultName = (<GeneProteinNode>node).defaultName;
           existingNode.label = (<GeneProteinNode>node).label;
@@ -3986,8 +3987,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           nodeToUpdate.type = ctx.item.id;
           // For now, we also directly update it here, since it doesn't change visually otherwise
           // So the change in graphdataSkeleton is just for when we export it
-          // @ts-ignore
-          ctx.target.__data__.type = ctx.item.id;
+          this.updated(new Map());
           this._refreshGraph(true);
         },
         children: BiowcPathwaygraph.nodeTypes.map(nodeType => ({
