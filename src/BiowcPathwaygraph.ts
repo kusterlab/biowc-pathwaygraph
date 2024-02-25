@@ -291,6 +291,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   isAddingEdge: Boolean = false;
 
+  isCreatingGroup: Boolean = false;
+
   // TODO: Is there no way I can generalize this to rect.node-rect?
   static geneProteinPathwayCompoundsNodes: string[] = [
     'rect.node-rect.gene_protein',
@@ -1062,7 +1064,6 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _createD3GraphObject() {
-    console.log('Fn doing it.');
     // Essentially, the d3Nodes and d3Links objects consist of all nodes and links
     // from the skeleton and the ptm objects. So in principle we could recreate them
     // from the concatenation of skeleton and ptm every time.
@@ -1116,6 +1117,8 @@ export class BiowcPathwaygraph extends LitElement {
           existingNode.nUp = (<GeneProteinNode>node).nUp;
           existingNode.nDown = (<GeneProteinNode>node).nDown;
           existingNode.nNot = (<GeneProteinNode>node).nNot;
+          // Also update label, groupId, ... - it might have changed when in editing mode
+          existingNode.groupId = (<GeneProteinNode>node).groupId;
         }
       });
 
@@ -1823,6 +1826,7 @@ export class BiowcPathwaygraph extends LitElement {
         /* eslint-disable no-param-reassign */
         .each(group => {
           group.polygon = <[number, number][]>polygonGenerator(group.nodeId);
+          if (!group.polygon) return;
           group.centroid = d3v6.polygonCentroid(group.polygon);
           group.minX = Math.min(...group.polygon.map(point => point[0]));
           group.maxX = Math.max(...group.polygon.map(point => point[0]));
@@ -1852,7 +1856,7 @@ export class BiowcPathwaygraph extends LitElement {
         .select('#nodeG')
         .selectAll<SVGElement, GroupNodeD3>('.group-path')
         .attr('d', group =>
-          group.centroid
+          group.centroid && group.polygon
             ? valueline(
                 group.polygon!.map(point => [
                   point[0] - group.centroid![0],
@@ -3159,6 +3163,18 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             this.recentClicks = 0;
           }
         }
+        // Logic for creating a group
+        if (this.isCreatingGroup) {
+          /* eslint-disable no-param-reassign */
+          this.contextMenuStore!.set('groupMemberIds', [
+            ...this.contextMenuStore!.get('groupMemberIds'),
+            node.nodeId,
+          ]);
+          (<GeneProteinNodeD3>node).isHighlighted = true;
+          this._refreshGraph(true);
+          /* eslint-enable no-param-reassign */
+        }
+
         // Logic for adding an edge
         if (this.isAddingEdge) {
           /* eslint-disable no-param-reassign */
@@ -3886,7 +3902,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'svg',
         label: 'Create Node Group',
         execute: () => {
-          console.log('TODO: Implement');
+          // eslint-disable-next-line no-alert
+          alert(
+            'Click on all nodes that should be part of the group.\nThen, right-click to finish the group.'
+          );
+          this.isCreatingGroup = true;
+          this.contextMenuStore!.set('groupMemberIds', []);
         },
       },
       {
@@ -4012,6 +4033,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         label: 'Change Edge Label',
         execute: ctx => {
           console.log('There is a bug in here...');
+          // TODO: Maybe try d3Links instead of skeleton, update label there.
           this.contextMenuStore?.set('edgeToUpdate', ctx.target);
           const editEdgeLabelInput: HTMLInputElement =
             this.shadowRoot?.querySelector('#edit-edge-label-input')!;
@@ -4057,7 +4079,42 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this.contextMenu = new ContextMenu(<HTMLElement>container);
 
     // TODO: I probably need to do most of this only once, not every time the mode is switched.
-    if (this.applicationMode === 'viewing') {
+    if (this.isCreatingGroup) {
+      this.contextMenuCommands = <ContextMenuCommand[]>[
+        {
+          target: 'svg',
+          label: 'Finish Group',
+          execute: () => {
+            const groupId = `customGroup-${
+              crypto.getRandomValues(new Uint32Array(1))[0]
+            }`;
+            this.graphdataSkeleton.nodes
+              .filter(node =>
+                this.contextMenuStore!.get('groupMemberIds').includes(
+                  node.nodeId
+                )
+              )
+              .forEach(node => {
+                // eslint-disable-next-line no-param-reassign
+                (<GeneProteinNode>node).groupId = groupId;
+              });
+            // @ts-ignore
+            this.graphdataSkeleton.nodes.push({
+              nodeId: groupId,
+              type: 'group',
+            });
+            this.contextMenuStore!.delete('groupMemberIds');
+            this.d3Nodes?.forEach(d => {
+              /* eslint-disable-next-line no-param-reassign */
+              (<GeneProteinNodeD3>d).isHighlighted = false;
+            });
+            this.isCreatingGroup = false;
+            this.updated(new Map());
+            this._refreshGraph(true);
+          },
+        },
+      ];
+    } else if (this.applicationMode === 'viewing') {
       this._setUpViewingModeContextMenu();
     } else {
       this._setUpEditingModeContextMenu();
