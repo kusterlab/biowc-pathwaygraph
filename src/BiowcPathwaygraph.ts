@@ -3717,6 +3717,38 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
+  public exportSkeleton(name: string, title: string) {
+    const currentSkeletonJSON = JSON.stringify(
+      {
+        pathway: { name, title },
+        nodes: (<GeneProteinNodeD3[]>this.d3Nodes)
+          ?.filter(d3node => !d3node.nodeId.includes('ptm'))
+          .map(d3node => ({
+            nodeId: d3node.nodeId,
+            geneNames: d3node.geneNames,
+            type: d3node.type,
+            x: Number(d3node.x.toFixed(1)),
+            y: Number(d3node.y.toFixed(1)),
+            uniprotAccs: d3node.uniprotAccs,
+          })),
+        links: this.d3Links
+          ?.filter(d3link => !d3link.linkId.includes('ptm'))
+          .map(d3link => {
+            const { linkId, sourceId, targetId, types } = d3link;
+            return { linkId, sourceId, targetId, types };
+          }),
+      },
+      null,
+      2
+    );
+    const blob = new Blob([currentSkeletonJSON], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.download = 'pathway_diagram.json';
+    a.href = url;
+    a.click();
+  }
+
   public selectNodesDownstreamOfSelection() {
     this.d3Nodes!.filter(node => node.selected).forEach(node =>
       this._selectDownstreamNodesWorker(node)

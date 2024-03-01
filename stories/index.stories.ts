@@ -312,15 +312,19 @@ const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     name="modeswitch"
     id="viewing"
     onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
-    checked
   /><label for="viewing">Viewing Mode</label>
   <input
     type="radio"
     name="modeswitch"
     id="editing"
     onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
+    checked
   /><label for="editing">Editing Mode</label>
-  <button onclick="console.log('Should Export')">Export</button>
+  <button
+    onclick="document.getElementById('pathwaygraph').exportSkeleton('custompathway1', 'My Pathway')"
+  >
+    Export
+  </button>
   <button onclick="console.log('Should Import')">Import</button>
   <biowc-pathwaygraph
     id="pathwaygraph"
@@ -340,7 +344,7 @@ EditingMode.args = {
   hue: 'potency',
   storyTitle: 'Editing Mode',
   storyDescription: 'TODO',
-  applicationMode: 'viewing',
+  applicationMode: 'editing',
 };
 
 // TODO: Events: selectedNodeTooltip and selectionDetails are dispatched when?
