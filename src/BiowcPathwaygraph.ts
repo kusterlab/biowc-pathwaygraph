@@ -3284,53 +3284,65 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
         // Logic for adding an edge
         if (this.isAddingEdge) {
-          /* eslint-disable no-param-reassign */
-          if (!this.contextMenuStore!.has('newEdgeSource')) {
-            this.contextMenuStore!.set('newEdgeSource', node.nodeId);
-
-            (<GeneProteinNodeD3>node).isHighlighted = true;
-            this._refreshGraph(true);
-          } else {
-            this.contextMenuStore!.set('newEdgeTarget', node.nodeId);
-
-            (<GeneProteinNodeD3>node).isHighlighted = true;
-            this._refreshGraph(true);
-          }
-
-          if (
-            this.contextMenuStore!.has('newEdgeSource') &&
-            this.contextMenuStore!.has('newEdgeTarget')
-          ) {
-            const sourceId = this.contextMenuStore!.get('newEdgeSource');
-            const targetId = this.contextMenuStore!.get('newEdgeTarget');
-
-            const newEdge = {
-              linkId: `customRelation-${
-                crypto.getRandomValues(new Uint32Array(1))[0]
-              }`,
-              sourceId,
-              targetId,
-              types: [this.contextMenuStore!.get('newEdgeType')],
-              label: this.contextMenuStore!.get('newEdgeLabel'),
-            };
-            this.graphdataSkeleton.links.push(newEdge);
-
-            this.d3Nodes!.filter(nd =>
-              [sourceId, targetId].includes(nd.nodeId)
-            ).forEach(nd => {
-              (<GeneProteinNodeD3>nd).isHighlighted = false;
-            });
-            this.contextMenuStore!.delete('newEdgeSource');
-            this.contextMenuStore!.delete('newEdgeTarget');
-            this.contextMenuStore!.delete('newEdgeType');
-            this.contextMenuStore!.delete('newEdgeLabel');
-            this.isAddingEdge = false;
-            // Refresh
-            this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
-          }
-          /* eslint-enable no-param-reassign */
+          // eslint-disable-next-line no-param-reassign
+          (<GeneProteinNodeD3>node).isHighlighted = true;
+          this._addEdgeFromOrTo(node.nodeId);
         }
       });
+  }
+
+  private _enableLinkSelection() {
+    this._getMainDiv()
+      .select('#linkG')
+      .selectAll<SVGGElement, PathwayGraphLinkD3>('g')
+      .on('click', (e, link) => {
+        // Links can - for now - only be selected when in edge-adding mode
+        if (this.isAddingEdge) {
+          this._addEdgeFromOrTo(link.linkId);
+        }
+      });
+  }
+
+  private _addEdgeFromOrTo(sourceOrTargetId: string) {
+    if (!this.contextMenuStore!.has('newEdgeSource')) {
+      this.contextMenuStore!.set('newEdgeSource', sourceOrTargetId);
+      this._refreshGraph(true);
+    } else {
+      this.contextMenuStore!.set('newEdgeTarget', sourceOrTargetId);
+      this._refreshGraph(true);
+    }
+    if (
+      this.contextMenuStore!.has('newEdgeSource') &&
+      this.contextMenuStore!.has('newEdgeTarget')
+    ) {
+      const sourceId = this.contextMenuStore!.get('newEdgeSource');
+      const targetId = this.contextMenuStore!.get('newEdgeTarget');
+
+      const newEdge = {
+        linkId: `customRelation-${
+          crypto.getRandomValues(new Uint32Array(1))[0]
+        }`,
+        sourceId,
+        targetId,
+        types: [this.contextMenuStore!.get('newEdgeType')],
+        label: this.contextMenuStore!.get('newEdgeLabel'),
+      };
+      this.graphdataSkeleton.links.push(newEdge);
+
+      this.d3Nodes!.filter(nd =>
+        [sourceId, targetId].includes(nd.nodeId)
+      ).forEach(nd => {
+        // eslint-disable-next-line no-param-reassign
+        (<GeneProteinNodeD3>nd).isHighlighted = false;
+      });
+      this.contextMenuStore!.delete('newEdgeSource');
+      this.contextMenuStore!.delete('newEdgeTarget');
+      this.contextMenuStore!.delete('newEdgeType');
+      this.contextMenuStore!.delete('newEdgeLabel');
+      this.isAddingEdge = false;
+      // Refresh
+      this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+    }
   }
 
   private _onSelectedNodesChanged() {
@@ -3384,6 +3396,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._addAnimation();
     this._addTooltips();
     this._enableNodeSelection();
+    this._enableLinkSelection();
     if (doEnableNodeExpandAndCollapse) {
       this._enableNodeExpandAndCollapse();
     }
