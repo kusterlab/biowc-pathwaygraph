@@ -4194,32 +4194,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         execute: ctx => {
           // @ts-ignore
           const nodeIdToRemove = ctx.target.__data__.nodeId;
-          this.graphdataSkeleton.nodes = this.graphdataSkeleton.nodes.filter(
-            node => node.nodeId !== nodeIdToRemove
-          );
-          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
-            link =>
-              link.sourceId !== nodeIdToRemove &&
-              link.targetId !== nodeIdToRemove
-          );
-          // Remove all higher-order links that just lost their endpoint
-          const nodeAndLinkIds = this.graphdataSkeleton.links
-            .map(link => link.linkId)
-            .concat(this.graphdataSkeleton.nodes.map(node => node.nodeId));
-          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
-            link =>
-              nodeAndLinkIds.includes(link.sourceId) &&
-              nodeAndLinkIds.includes(link.targetId)
-          );
-          // Refresh
-          this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+          this._removeNode(nodeIdToRemove);
         },
       },
       {
         target: 'path.group-path',
         label: 'Remove Group',
-        execute: () => {
-          console.log('TODO: Implement');
+        execute: ctx => {
+          // @ts-ignore
+          const groupIdToRemove = ctx.target.__data__.nodeId;
+          this._removeGroup(groupIdToRemove);
         },
       },
       {
@@ -4278,6 +4262,39 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     ];
   }
 
+  private _removeNode(nodeIdToRemove: string) {
+    this.graphdataSkeleton.nodes = this.graphdataSkeleton.nodes.filter(
+      node => node.nodeId !== nodeIdToRemove
+    );
+    this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+      link =>
+        link.sourceId !== nodeIdToRemove && link.targetId !== nodeIdToRemove
+    );
+    // Remove all higher-order links that just lost their endpoint
+    const nodeAndLinkIds = this.graphdataSkeleton.links
+      .map(link => link.linkId)
+      .concat(this.graphdataSkeleton.nodes.map(node => node.nodeId));
+    this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+      link =>
+        nodeAndLinkIds.includes(link.sourceId) &&
+        nodeAndLinkIds.includes(link.targetId)
+    );
+    // Refresh
+    this.updated(new Map());
+  }
+
+  private _removeGroup(groupIdToRemove: string) {
+    // Unlink every member of the group
+    this.graphdataSkeleton.nodes.forEach(node => {
+      if ((<GeneProteinNode>node).groupId === groupIdToRemove) {
+        // eslint-disable-next-line no-param-reassign
+        (<GeneProteinNode>node).groupId = undefined;
+      }
+    });
+
+    this._removeNode(groupIdToRemove);
+  }
+
   private _initContextMenu() {
     if (this.contextMenu) this.contextMenu.disconnect();
 
@@ -4314,10 +4331,31 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               type: 'group',
             });
             this.contextMenuStore!.delete('groupMemberIds');
+            // Remove highlighting of node members
             this.d3Nodes?.forEach(d => {
               /* eslint-disable-next-line no-param-reassign */
               (<GeneProteinNodeD3>d).isHighlighted = false;
             });
+            // Check if any groups have become empty by the creation of the new group
+            // It can happen if the new group "steals" all remaining members
+            // In that case remove the group, there might be dangling edges otherwise
+            const allGroupIDs = this.graphdataSkeleton.nodes
+              .filter(node => node.type === 'group')
+              .map(node => node.nodeId);
+
+            allGroupIDs
+              .filter(
+                currentGroupId =>
+                  // If no node has the group as an id...
+                  !this.graphdataSkeleton.nodes.some(
+                    node => (<GeneProteinNode>node).groupId === currentGroupId
+                  )
+              )
+              .forEach(currentGroupId => {
+                // ...get rid of the group
+                this._removeGroup(currentGroupId);
+              });
+
             this.isCreatingGroup = false;
             this.updated(new Map());
             this._refreshGraph(true);
