@@ -28,12 +28,13 @@ Done:
     - Group: Delete Group -> Merge code with Delete Node, it is similar
     - Group: When addition of group clears another group, delete orphaned edges (you can probably reuse code from delete group, since you're implicitly deleting a group here)
     - Edge: Add Anchor Edge
+    - When adding edge, highlight selected groups and edges similarly to how nodes are highlighted
 
     
 Todo:
 
     - Edge: Change Type: Snaps back when something else changes!
-    - When adding edge, highlight selected groups and edges similarly to how nodes are highlighted
+    - Indirect effect is not styled anymore
 
 - In PTMNavigator:
     - User should be able to enter editing mode when no pathway is loaded (initialize with empty skeleton)
@@ -43,7 +44,7 @@ TODO: Add Enrichment Result Types to some table (CV maybe)
 TODO: Then, implement function in lib that converts enrichment type into enrichment type id
 
 Update or overwrite a Pathway in the DB (Upsert?) Must work by ID somehow... user needs to be able to edit their Previously desogned pws
-
+Inconsistent use of Link and Edge throughout the code
 
 
 Check if works:

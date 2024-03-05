@@ -165,13 +165,13 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
   leftX?: number;
   rightX?: number;
   currentDisplayedLabel?: string;
+  isHighlighted?: boolean;
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
   // Interfaces are hoisted, so we can reference GroupNodeD3 before defining it
   // eslint-disable-next-line no-use-before-define
   groupNode?: GroupNodeD3;
-  isHighlighted: boolean;
 }
 
 interface GroupNodeD3 extends PathwayGraphNodeD3 {
@@ -205,6 +205,7 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
   targetX?: number;
   sourceY?: number;
   targetY?: number;
+  isHighlighted?: boolean;
 }
 
 export class BiowcPathwaygraph extends LitElement {
@@ -767,7 +768,7 @@ export class BiowcPathwaygraph extends LitElement {
       // Remove highlighting of node, if present
       this.d3Nodes?.forEach(d => {
         /* eslint-disable-next-line no-param-reassign */
-        (<GeneProteinNodeD3>d).isHighlighted = false;
+        d.isHighlighted = false;
       });
       this._refreshGraph(true);
       this.isAddingEdge = false;
@@ -1412,13 +1413,13 @@ export class BiowcPathwaygraph extends LitElement {
         'class',
         d =>
           `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} ${
-            (<GeneProteinNodeD3>d).isHighlighted ? 'highlight' : ''
+            d.isHighlighted ? 'highlight' : ''
           } `
       )
       .attr('id', d => `node-${d.nodeId}`);
 
     // Draw each node as a rectangle - except for groups
-    nodesSvg.selectAll('.node-rect').remove(); // TODO: Check if we actually need to do this
+    nodesSvg.selectAll('.node-rect').remove();
     nodesSvg
       .filter(d => d.type !== 'group')
       .append('rect')
@@ -1427,7 +1428,7 @@ export class BiowcPathwaygraph extends LitElement {
         d =>
           `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(
             d
-          )} ${(<GeneProteinNodeD3>d).isHighlighted ? 'highlight' : ''}`
+          )} ${d.isHighlighted ? 'highlight' : ''}`
       )
       .attr('rx', NODE_HEIGHT)
       .attr('ry', NODE_HEIGHT)
@@ -1493,6 +1494,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Initialize paths for the group nodes
     // The actual polygons are drawn in the 'tick' callback of addAnimation
+    nodesSvg.selectAll('.group-path').remove();
     nodesSvg
       .filter(
         d =>
@@ -1504,7 +1506,7 @@ export class BiowcPathwaygraph extends LitElement {
             .empty()
       )
       .append('path')
-      .attr('class', 'group-path');
+      .attr('class', d => `group-path ${d.isHighlighted ? 'highlight' : ''}`);
 
     // Draw links as lines with appropriate arrowheads
     const linksSvg = linkG
@@ -1520,10 +1522,13 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr('class', d => `linkgroup ${d.types.join(' ')}`);
 
-    linksSvg.selectAll('.link').remove(); // TODO: Check if we actually need to do this
+    linksSvg.selectAll('.link').remove();
     linksSvg
       .append('line')
-      .attr('class', d => `link ${d.types.join(' ')}`)
+      .attr(
+        'class',
+        d => `link ${d.types.join(' ')}  ${d.isHighlighted ? 'highlight' : ''}`
+      )
       .attr('marker-end', d => {
         if (d.types.includes('inhibition')) {
           return 'url(#inhibitionMarker)';
@@ -1557,7 +1562,7 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr('class', 'linklabelpathgroup');
 
-    linkLabelPaths.selectAll('.edgepath').remove(); // TODO: Check if we actually need to do this
+    linkLabelPaths.selectAll('.edgepath').remove();
     linkLabelPaths
       .append('path')
       .attr('class', 'edgepath')
@@ -3277,7 +3282,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             ...this.contextMenuStore!.get('groupMemberIds'),
             node.nodeId,
           ]);
-          (<GeneProteinNodeD3>node).isHighlighted = true;
+          node.isHighlighted = true;
           this._refreshGraph(true);
           /* eslint-enable no-param-reassign */
         }
@@ -3285,7 +3290,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         // Logic for adding an edge
         if (this.isAddingEdge) {
           // eslint-disable-next-line no-param-reassign
-          (<GeneProteinNodeD3>node).isHighlighted = true;
+          node.isHighlighted = true;
           this._addEdgeFromOrTo(node.nodeId);
         }
       });
@@ -3298,6 +3303,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       .on('click', (e, link) => {
         // Links can - for now - only be selected when in edge-adding mode
         if (this.isAddingEdge) {
+          // eslint-disable-next-line no-param-reassign
+          link.isHighlighted = true;
           this._addEdgeFromOrTo(link.linkId);
         }
       });
@@ -3333,8 +3340,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         [sourceId, targetId].includes(nd.nodeId)
       ).forEach(nd => {
         // eslint-disable-next-line no-param-reassign
-        (<GeneProteinNodeD3>nd).isHighlighted = false;
+        nd.isHighlighted = false;
       });
+
+      this.d3Links!.filter(lk =>
+        [sourceId, targetId].includes(lk.linkId)
+      ).forEach(lk => {
+        // eslint-disable-next-line no-param-reassign
+        lk.isHighlighted = false;
+      });
+
       this.contextMenuStore!.delete('newEdgeSource');
       this.contextMenuStore!.delete('newEdgeTarget');
       this.contextMenuStore!.delete('newEdgeType');
@@ -4347,7 +4362,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             // Remove highlighting of node members
             this.d3Nodes?.forEach(d => {
               /* eslint-disable-next-line no-param-reassign */
-              (<GeneProteinNodeD3>d).isHighlighted = false;
+              d.isHighlighted = false;
             });
             // Check if any groups have become empty by the creation of the new group
             // It can happen if the new group "steals" all remaining members

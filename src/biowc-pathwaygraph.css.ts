@@ -11,6 +11,7 @@ export default css`
     --group-fill-color: #6c7a74;
     --group-stroke-color: #3b423f;
     --link-color: #999999;
+    --link-color-highlight: #3d3d3d;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
     --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
@@ -29,6 +30,10 @@ export default css`
     stroke: var(--link-color);
     stroke-opacity: 0.6;
     stroke-width: 3;
+  }
+
+  .link.highlight {
+    stroke: var(--link-color-highlight);
   }
 
   .link.ptmlink {
@@ -188,6 +193,10 @@ export default css`
     fill: var(--group-fill-color);
     stroke-width: 1px;
     stroke: var(--group-stroke-color);
+  }
+
+  .group-path.highlight {
+    stroke-width: 3px;
   }
 
   #pathwayContainer {
