@@ -33,7 +33,7 @@ Done:
     
 Todo:
 
-    - Edge: Change Type: Snaps back when something else changes!
+    - Cancel Button does not reset edit node type (and maybe other menues?)
     - Indirect effect is not styled anymore
 
 - In PTMNavigator:

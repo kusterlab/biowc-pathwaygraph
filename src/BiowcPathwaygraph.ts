@@ -4132,10 +4132,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             // @ts-ignore
             .filter(n => n.nodeId === ctx.target.__data__.nodeId)[0];
           nodeToUpdate.type = ctx.item.id;
-          // For now, we also directly update it here, since it doesn't change visually otherwise
-          // So the change in graphdataSkeleton is just for when we export it
           this.updated(new Map());
-          this._refreshGraph(true);
         },
         children: BiowcPathwaygraph.nodeTypes.map(nodeType => ({
           type: 'radio',
@@ -4238,9 +4235,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'line.link',
         label: 'Change Edge Type',
         execute: ctx => {
-          // @ts-ignore
-          ctx.target.__data__.types = [ctx.item.id];
-          this._refreshGraph(true);
+          const edgeToUpdate = this.graphdataSkeleton.links
+            // @ts-ignore
+            .filter(e => e.linkId === ctx.target.__data__.linkId)[0];
+          edgeToUpdate.types = [ctx.item.id];
+          this.updated(new Map());
         },
         children: BiowcPathwaygraph.edgeTypes.map(edgeType => ({
           type: 'radio',
