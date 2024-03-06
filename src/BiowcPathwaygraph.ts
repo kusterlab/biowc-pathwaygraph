@@ -3752,7 +3752,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         nodes: (<GeneProteinNodeD3[]>this.d3Nodes)
           ?.filter(d3node => !d3node.nodeId.includes('ptm'))
           .map(d3node => ({
-            nodeId: d3node.nodeId,
+            id: d3node.nodeId,
             geneNames: d3node.geneNames,
             type: d3node.type,
             x: Number(d3node.x.toFixed(1)),
