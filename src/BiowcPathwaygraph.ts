@@ -215,12 +215,6 @@ export class BiowcPathwaygraph extends LitElement {
   graphWidth: number = document.body.clientWidth;
 
   @property({ attribute: false })
-  tooltipVerticalOffset: number = 0;
-
-  @property({ attribute: false })
-  tooltipHorizontalOffset: number = 0;
-
-  @property({ attribute: false })
   graphdataSkeleton!: {
     nodes: PathwayGraphNode[];
     links: (PathwayGraphLinkInput | PathwayGraphLink)[];
@@ -597,7 +591,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._createD3GraphObject();
     this._calculateHueRange();
-    this._renderLegend();
+    if (this.applicationMode === 'viewing') this._renderLegend();
     this._renderGraph();
     this._initContextMenu();
     this._updateRangeSliderVisibility();
@@ -661,13 +655,21 @@ export class BiowcPathwaygraph extends LitElement {
         /translate\((-?[\d|.]+),(-?[\d|.]+)\) scale\((-?[\d|.]+)\)/
       )!;
 
+      const mainDivBoundingClientRect = this.shadowRoot
+        ?.querySelector('#pathwayContainer')!
+        .getBoundingClientRect()!;
+
       // Create a node
       // @ts-ignore
       const newNode: GeneProteinNodeD3 = {
         nodeId: `customNode-${crypto.getRandomValues(new Uint32Array(1))[0]}`,
         type: nodeType,
-        x: (nodeAddPoint.x - Number(translateX)) / Number(scale),
-        y: (nodeAddPoint.y - Number(translateY)) / Number(scale),
+        x:
+          (nodeAddPoint.x - Number(translateX) - mainDivBoundingClientRect.x) /
+          Number(scale),
+        y:
+          (nodeAddPoint.y - Number(translateY) - mainDivBoundingClientRect.y) /
+          Number(scale),
       };
 
       if (nodeType === 'gene_protein') {
@@ -2090,8 +2092,8 @@ export class BiowcPathwaygraph extends LitElement {
     const mousemove = (e: MouseEvent) => {
       tooltip
         // The offset is trial and error, I could not figure this out programmatically
-        .style('top', `${e.pageY + this.tooltipVerticalOffset}px`)
-        .style('left', `${e.pageX + this.tooltipHorizontalOffset + 15}px`);
+        .style('top', `${e.offsetY}px`)
+        .style('left', `${e.offsetX + 15}px`);
     };
 
     const mouseleave = () => {

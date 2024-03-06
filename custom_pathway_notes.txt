@@ -34,23 +34,12 @@ Done:
 Todo:
 
     - Cancel Button does not reset edit node type (and maybe other menues?)
-    - Indirect effect is not styled anymore
 
 - In PTMNavigator:
     - User should be able to enter editing mode when no pathway is loaded (initialize with empty skeleton)
     - User should be able to give pathway a name
     - "Save" button, when leaving edit mode ask to save/export
-TODO: Add Enrichment Result Types to some table (CV maybe)
-TODO: Then, implement function in lib that converts enrichment type into enrichment type id
 
-Update or overwrite a Pathway in the DB (Upsert?) Must work by ID somehow... user needs to be able to edit their Previously desogned pws
+Update or overwrite a Pathway in the DB (Upsert?) Must work by ID somehow... user needs to be able to edit their Previously designed pws
+	-> If pathway already exists, it has an id. So send this alongside the JSON. If it sent, do not query for new ID, and update instead of inserting.
 Inconsistent use of Link and Edge throughout the code
-
-
-Check if works:
-ci/sql-hooks/post_import.sql 
-ci/sql-hooks/grant_privileges.sql 
-hana-packages/proteomicsdb/logic/secure/lib/libStoreCustomPathway.xsjslib
-hana-packages/proteomicsdb/logic/secure/storeCustomPathway.xsjs 
-
-
