@@ -3748,7 +3748,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   public exportSkeleton(name: string, title: string) {
-    const currentSkeletonJSON = JSON.stringify(
+    return JSON.stringify(
       {
         pathway: { name, title },
         nodes: (<GeneProteinNodeD3[]>this.d3Nodes)
@@ -3760,23 +3760,25 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             x: Number(d3node.x.toFixed(1)),
             y: Number(d3node.y.toFixed(1)),
             uniprotAccs: d3node.uniprotAccs,
+            label: d3node.label,
           })),
         links: this.d3Links
           ?.filter(d3link => !d3link.linkId.includes('ptm'))
           .map(d3link => {
-            const { linkId, sourceId, targetId, types } = d3link;
-            return { linkId, sourceId, targetId, types };
+            const { linkId, sourceId, targetId, types, label } = d3link;
+            return { id: linkId, sourceId, targetId, types, label };
           }),
       },
       null,
-      2
+      0
     );
-    const blob = new Blob([currentSkeletonJSON], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.download = 'pathway_diagram.json';
-    a.href = url;
-    a.click();
+
+    // const blob = new Blob([currentSkeletonJSON], { type: 'text/plain' });
+    // const url = URL.createObjectURL(blob);
+    // const a = document.createElement('a');
+    // a.download = 'pathway_diagram.json';
+    // a.href = url;
+    // a.click();
   }
 
   public selectNodesDownstreamOfSelection() {

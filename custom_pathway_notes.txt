@@ -32,14 +32,19 @@ Done:
 
     
 Todo:
+	BiowcPathwaygraph:
+    	- Cancel Button does not reset edit node type (and maybe other menues?)
 
-    - Cancel Button does not reset edit node type (and maybe other menues?)
 
-- In PTMNavigator:
-    - User should be able to enter editing mode when no pathway is loaded (initialize with empty skeleton)
-    - User should be able to give pathway a name
-    - "Save" button, when leaving edit mode ask to save/export
 
-Update or overwrite a Pathway in the DB (Upsert?) Must work by ID somehow... user needs to be able to edit their Previously designed pws
-	-> If pathway already exists, it has an id. So send this alongside the JSON. If it sent, do not query for new ID, and update instead of inserting.
-Inconsistent use of Link and Edge throughout the code
+	In PTMNavigator:
+		- Canvas could look different when in edit mode, e.g. light grey
+    	- User should be able to enter editing mode when no pathway is loaded (initialize with empty skeleton)
+    	- User should be able to give pathway a name
+    	- Whenever an action leads to leaving edit mode ask to save
+		- Clear Canvas should set skeleton to empty, not undefined
+		- Also switching to edit while not having loaded a pathway should set skeleton to empty
+		- When selecting existing pathway for edit (not for view!!), ask if user wants to work from this or from copy
+			- append "(COPY)" to name
+
+
