@@ -46,5 +46,9 @@ Todo:
 		- Also switching to edit while not having loaded a pathway should set skeleton to empty
 		- When selecting existing pathway for edit (not for view!!), ask if user wants to work from this or from copy
 			- append "(COPY)" to name
-
+		- Switch back to Viewing mode should clear the skeleton
+		- Switch to Edit while canonical is selected should start editing this canonical pathway.
+		- Switch to Edit while custom selected should ask if this or copy
+		- In Edit Mode, download button should also allow download JSON of skeleton
+		- In Edit Mode, add upload button next to download button
 
