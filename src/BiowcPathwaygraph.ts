@@ -4568,6 +4568,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       this.hue = 'direction';
       this.ptmInputList = [];
       this.fullProteomeInputList = [];
+      // Remove the legend if it is present
+      this._getMainDiv()
+        .select<SVGElement>('#pathwayLegend')
+        .selectAll('*')
+        .remove();
     }
   }
 }
