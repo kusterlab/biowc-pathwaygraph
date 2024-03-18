@@ -3772,13 +3772,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       null,
       0
     );
-
-    // const blob = new Blob([currentSkeletonJSON], { type: 'text/plain' });
-    // const url = URL.createObjectURL(blob);
-    // const a = document.createElement('a');
-    // a.download = 'pathway_diagram.json';
-    // a.href = url;
-    // a.click();
   }
 
   public selectNodesDownstreamOfSelection() {
