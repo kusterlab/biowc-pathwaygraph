@@ -633,6 +633,10 @@ export class BiowcPathwaygraph extends LitElement {
       this.shadowRoot?.querySelector('#add-node-form')!;
     const addNodeConfirmButton: HTMLButtonElement =
       this.shadowRoot?.querySelector('#add-node-confirm-button')!;
+
+    const addNodeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#add-node-dialog')!;
+
     addNodeConfirmButton.onclick = e => {
       const formData: FormData = new FormData(addNodeForm);
 
@@ -694,22 +698,23 @@ export class BiowcPathwaygraph extends LitElement {
       // Simulate a change on the select so it snaps back into default state
       addNodeTypeSelect.dispatchEvent(new Event('change'));
       // Close the dialog
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#add-node-dialog')!
-      )).close();
+      addNodeDialog.close();
       // Reset the state of the form
       addNodeForm.reset();
     };
-    const addNodeCancelButton: HTMLButtonElement =
-      this.shadowRoot?.querySelector('#add-node-cancel-button')!;
-    addNodeCancelButton.onclick = () => {
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#add-node-dialog')!
-      )).close();
+
+    addNodeDialog.addEventListener('cancel', () => {
+      addNodeDialog.close();
       // Reset the state of the form
       addNodeForm.reset();
       // Simulate a change on the select so it snaps back into default state
       addNodeTypeSelect.dispatchEvent(new Event('change'));
+    });
+
+    const addNodeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-node-cancel-button')!;
+    addNodeCancelButton.onclick = () => {
+      addNodeDialog.dispatchEvent(new Event('cancel'));
     };
 
     const addEdgeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
@@ -726,6 +731,10 @@ export class BiowcPathwaygraph extends LitElement {
       this.shadowRoot?.querySelector('#add-edge-form')!;
     const addEdgeConfirmButton: HTMLButtonElement =
       this.shadowRoot?.querySelector('#add-edge-confirm-button')!;
+
+    const addEdgeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#add-edge-dialog')!;
+
     addEdgeConfirmButton.onclick = e => {
       const formData: FormData = new FormData(addEdgeForm);
 
@@ -752,17 +761,11 @@ export class BiowcPathwaygraph extends LitElement {
       // Simulate a change on the select so it snaps back into default state
       addEdgeTypeSelect.dispatchEvent(new Event('change'));
       // Close the dialog
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#add-edge-dialog')!
-      )).close();
+      addEdgeDialog.close();
     };
 
-    const addEdgeCancelButton: HTMLButtonElement =
-      this.shadowRoot?.querySelector('#add-edge-cancel-button')!;
-    addEdgeCancelButton.onclick = () => {
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#add-edge-dialog')!
-      )).close();
+    addEdgeDialog.addEventListener('cancel', () => {
+      addEdgeDialog.close();
       // Reset the state of the form
       addEdgeForm.reset();
       // Simulate a change on the select so it snaps back into default state
@@ -774,6 +777,12 @@ export class BiowcPathwaygraph extends LitElement {
       });
       this._refreshGraph(true);
       this.isAddingEdge = false;
+    });
+
+    const addEdgeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-edge-cancel-button')!;
+    addEdgeCancelButton.onclick = () => {
+      addEdgeDialog.dispatchEvent(new Event('cancel'));
     };
 
     const editNodeForm: HTMLFormElement =
@@ -814,17 +823,24 @@ export class BiowcPathwaygraph extends LitElement {
       this._refreshGraph(true);
     };
 
-    // TODO: Escape should do the same, also for all other cancel buttons
+    const editNodeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#edit-node-dialog')!;
+
+    editNodeDialog.addEventListener('cancel', () => {
+      editNodeDialog.close();
+      // Reset the state of the form
+      editNodeForm.reset();
+    });
+
     // Right now escape does not clear the forms
     const editNodeCancelButton: HTMLButtonElement =
       this.shadowRoot?.querySelector('#edit-node-cancel-button')!;
     editNodeCancelButton.onclick = () => {
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#edit-node-dialog')!
-      )).close();
-      // Reset the state of the form
-      editNodeForm.reset();
+      editNodeDialog.dispatchEvent(new Event('cancel'));
     };
+
+    const editEdgeLabelDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-dialog')!;
 
     const editEdgeLabelForm: HTMLFormElement = this.shadowRoot?.querySelector(
       '#edit-edge-label-form'
@@ -849,23 +865,23 @@ export class BiowcPathwaygraph extends LitElement {
       editEdgeLabelForm.reset();
 
       // Close the dialog
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#edit-edge-label-dialog')!
-      )).close();
+      editEdgeLabelDialog.close();
 
       // Reload graph
       this.updated(new Map());
       this._refreshGraph(true);
     };
 
+    editEdgeLabelDialog.addEventListener('cancel', () => {
+      editEdgeLabelDialog.close();
+      // Reset the state of the form
+      editEdgeLabelForm.reset();
+    });
+
     const editEdgeLabelCancelButton: HTMLButtonElement =
       this.shadowRoot?.querySelector('#edit-edge-label-cancel-button')!;
     editEdgeLabelCancelButton.onclick = () => {
-      (<HTMLDialogElement>(
-        this.shadowRoot?.querySelector('#edit-edge-label-dialog')!
-      )).close();
-      // Reset the state of the form
-      editEdgeLabelForm.reset();
+      editEdgeLabelDialog.dispatchEvent(new Event('cancel'));
     };
   }
 
