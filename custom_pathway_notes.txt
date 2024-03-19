@@ -35,13 +35,11 @@ Todo:
 	BiowcPathwaygraph:
 
 	In PTMNavigator:
-		- In Edit Mode, add upload button next to download button
 		- Canvas could look different when in edit mode, e.g. light grey
 		- Switch to Edit while canonical is selected should start editing this canonical pathway.
         - Switching to view mode should unselect both custom and canonical, switching to edit mode should unselect the one not in use
-        - In Backend, sanitize json before inserting it into SQL query!
 
 
-        - Line 1195 (and once more)
-         // TODO: Deduplicate, code is repeated in editing part
-+        // ...and showEdit... should only be toggled by editSaveOrDiscard
+- perform enrichment during upload, store in prdb (also sanitize the json, someone could call the endpoint directly!)
+
+HANA: Which files to push? Check commit from yesterday
