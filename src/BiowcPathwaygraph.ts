@@ -322,7 +322,6 @@ export class BiowcPathwaygraph extends LitElement {
           min-height: 1500px;
            display: block;
             margin: auto;
-             background-color: white;
              border-radius: 5px"
         >
           <defs>
@@ -4571,16 +4570,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   public switchApplicationMode(newMode: PossibleApplicationMode) {
-    if (newMode === 'viewing' || newMode === 'editing') {
-      this.applicationMode = newMode;
-    }
+    this.applicationMode = newMode;
 
-    // TODO: Only run if value has changed
     if (this.applicationMode === 'viewing') {
-      // TODO: Anything to do here?
+      // The 'viewing' class has no effect right now, but I'm using it in analogy to the 'editing' class below,
+      // which has a CSS style
+      this._getMainDiv().attr('class', 'viewing');
     }
 
     if (this.applicationMode === 'editing') {
+      this._getMainDiv().attr('class', 'editing');
       this.hue = 'direction';
       this.ptmInputList = [];
       this.fullProteomeInputList = [];

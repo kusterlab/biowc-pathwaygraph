@@ -203,6 +203,16 @@ export default css`
     position: relative;
   }
 
+  #pathwaygraph {
+    background-color: #ffffff;
+  }
+
+  #pathwaygraph.editing {
+    background-color: #ffffff;
+    border-color: #3e4349;
+    border-style: dashed;
+  }
+
   #potencyRangeSlider {
     position: absolute;
     top: 210px;
