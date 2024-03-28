@@ -20,8 +20,8 @@
     render(
       html`
         <biowc-pathwaygraph
-          .graphdataSkeleton = ${ {nodes: StoryFixtures.simplePTMGraphFixture.nodes,
-            links: StoryFixtures.simplePTMGraphFixture.links} }
+          .graphdataSkeleton = ${ {nodes: StoryFixtures.linkTypesFixture.nodes,
+            links: StoryFixtures.linkTypesFixture.links} }
           .ptmInputList = ${StoryFixtures.ptmGraphWithDetailsFixture.ptmInputList}
           .fullProteomeInputList = ${StoryFixtures.proteinExpressionFixture.fullProteomeInputList}
           .hue= ${'foldchange'}

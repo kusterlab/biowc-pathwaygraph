@@ -1560,7 +1560,7 @@ export class BiowcPathwaygraph extends LitElement {
       })
       .attr('stroke-dasharray', d => {
         if (d.types.includes('binding/association')) return '3 3';
-        if (d.types.includes('indirect')) return '7 2';
+        if (d.types.includes('indirect effect')) return '7 2';
         return null;
       });
 
