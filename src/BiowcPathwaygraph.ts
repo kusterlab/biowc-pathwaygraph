@@ -3762,6 +3762,51 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
+  public downloadPeptidesCSV() {
+    //Provides a CSV file that contains all
+    const peptidesJSON = this.graphdataPTM!.nodes
+      .filter(node => node.type === 'ptm')
+      .map(node => {
+
+        //Filter details for those that are plain strings, the others we don't want in the csv
+        let detailsFiltered = {}
+        if(!!(<PTMNode>node).details) {
+          detailsFiltered = Object.keys((<PTMNode>node).details!)
+            .filter(key => typeof (<PTMNode>node).details![key] !== 'object')
+            .reduce((obj, key) => {
+              // @ts-ignore
+              obj[key] = (<PTMNode>node).details![key];
+              return obj;
+            }, {});
+        }
+
+        return {
+          'Genes':(<PTMNode>node).geneNames?.join(','),
+        'Uniprot':(<PTMNode>node).uniprotAccs?.join(','),
+          'Regulation':(<PTMNode>node).regulation,
+        ...detailsFiltered
+        }})
+
+    const replacer = (key:string, value:string|null) => value === null ? '' : value // specify how you want to handle null values here
+    const header = Object.keys(peptidesJSON[0])
+    const peptidesCSV = [
+      header.join('\t'), // header row first
+      // @ts-ignore
+      ...peptidesJSON.map(row => header.map(fieldName => JSON.stringify(row[fieldName], replacer)).join('\t'))
+    ].join('\r\n')
+
+    const blob = new Blob([peptidesCSV], {type: 'text/plain'});
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a');
+    a.download = 'mappedPeptides.csv';
+    a.href = url;
+    a.click();
+
+
+
+  }
+
   public exportSkeleton(name: string, title: string) {
     return JSON.stringify(
       {

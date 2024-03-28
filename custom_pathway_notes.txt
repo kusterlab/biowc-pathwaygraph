@@ -35,11 +35,3 @@ Todo:
 	BiowcPathwaygraph:
 
 	In PTMNavigator:
-		- Canvas could look different when in edit mode, e.g. light grey
-		- Switch to Edit while canonical is selected should start editing this canonical pathway.
-        - Switching to view mode should unselect both custom and canonical, switching to edit mode should unselect the one not in use
-
-
-- perform enrichment during upload, store in prdb (also sanitize the json, someone could call the endpoint directly!)
-
-HANA: Which files to push? Check commit from yesterday

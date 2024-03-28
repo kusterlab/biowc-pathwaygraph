@@ -304,6 +304,32 @@ DownloadGraphAsSVG.args = {
     'by the user.',
 };
 
+const DownloadCSVTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div>${args.storyTitle}</div>
+  <div>${args.storyDescription}</div>
+  <button onclick="document.getElementById('pathwaygraph').downloadPeptidesCSV()">
+    Download
+  </button>
+  <biowc-pathwaygraph
+    id="pathwaygraph"
+    .pathwayMetaData=${args.pathwayMetaData}
+    .graphdataSkeleton=${args.graphdataSkeleton}
+    .ptmInputList=${args.ptmInputList}
+    .fullProteomeInputList=${args.fullProteomeInputList}
+    .hue=${args.hue}
+  >
+  </biowc-pathwaygraph>
+`;
+
+export const DownloadMappedPeptidesCSV = DownloadCSVTemplate.bind({});
+DownloadMappedPeptidesCSV.args = {
+  ...ColoringNodesByPotency.args,
+  hue: 'direction',
+  storyTitle: 'Download Mapped Peptides as CSV',
+  storyDescription:
+    'TODO: Change the finally in the previous story ;-)',
+};
+
 const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
   <div>${args.storyTitle}</div>
   <div>${args.storyDescription}</div>
