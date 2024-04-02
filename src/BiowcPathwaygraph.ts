@@ -1467,6 +1467,9 @@ export class BiowcPathwaygraph extends LitElement {
     nodesSvg
       .selectAll<SVGTextContentElement, PathwayGraphNodeD3>('.node-label')
       .text(d => d.currentDisplayedLabel || '')
+      // Position the PTM node labels above the nodes and make them italic
+      .attr('y', d => (d.type === 'ptm' ? -10 : 0))
+      .style('font-style', d => (d.type === 'ptm' ? 'italic' : ''))
       .each((d, i, nodes) => {
         // Adjust width of the node based on the length of the text
         const circleWidth = NODE_HEIGHT * 2;
@@ -3817,7 +3820,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this.d3Nodes!.forEach(node => {
       if (node.type === 'ptm') {
         // TODO: If available, use Site identifier before sequence
-        const ptmNodeLabel = (<PTMNodeD3>node).details!.Sequence || 'test';
+        const ptmNodeLabel =
+          // @ts-ignore
+          (<PTMNodeD3>node).details?.Site?.text ||
+          (<PTMNodeD3>node).details!['Modified Sequence'] ||
+          (<PTMNodeD3>node).details!.Sequence ||
+          'test';
         // eslint-disable-next-line no-param-reassign
         node.currentDisplayedLabel = this.ptmNodeLabelsVisible
           ? String(ptmNodeLabel)
