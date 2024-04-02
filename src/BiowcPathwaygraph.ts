@@ -3771,27 +3771,14 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     // Provides a CSV file that contains all peptides that are mapped in the currently displayed diagram
     const peptidesJSON = this.graphdataPTM!.nodes.filter(
       node => node.type === 'ptm'
-    ).map(node => {
-      // Filter details for those that are plain strings, the others we don't want in the csv
-      let detailsFiltered = {};
-      if ((<PTMNode>node).details) {
-        detailsFiltered = Object.keys((<PTMNode>node).details!)
-          .filter(key => typeof (<PTMNode>node).details![key] !== 'object')
-          .reduce((obj, key) => {
-            // @ts-ignore
-            // eslint-disable-next-line no-param-reassign
-            obj[key] = (<PTMNode>node).details![key];
-            return obj;
-          }, {});
-      }
-
-      return {
-        Genes: (<PTMNode>node).geneNames?.join(','),
-        Uniprot: (<PTMNode>node).uniprotAccs?.join(','),
-        Regulation: (<PTMNode>node).regulation,
-        ...detailsFiltered,
-      };
-    });
+    ).map(node => ({
+      'Modified Sequence': (<PTMNodeD3>node).details?.['Modified Sequence'],
+      'Gene Name(s)': (<PTMNodeD3>node).details?.['Gene Name(s)'],
+      // @ts-ignore
+      Uniprot: (<PTMNodeD3>node).details?.Uniprot_Accession_Number?.text,
+      Experiment: (<PTMNodeD3>node).details?.['Experiment Name'],
+      Regulation: (<PTMNodeD3>node).regulation,
+    }));
 
     const replacer = (key: string, value: string | null) =>
       value === null ? '' : value; // specify how you want to handle null values here
