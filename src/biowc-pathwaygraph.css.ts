@@ -12,6 +12,7 @@ export default css`
     --group-stroke-color: #3b423f;
     --link-color: #999999;
     --link-color-highlight: #3d3d3d;
+    --kinase-substrate-link-color: #00a61a;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
     --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
@@ -38,6 +39,11 @@ export default css`
 
   .link.ptmlink {
     visibility: hidden;
+  }
+
+  .link.kinaseSubstrateLink {
+    stroke: var(--kinase-substrate-link-color);
+    stroke-width: 2;
   }
 
   .link.maplink {

@@ -290,6 +290,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   ptmNodeLabelsVisible: Boolean = false;
 
+  kinaseSubstrateLinksVisible: Boolean = false;
+
   // TODO: Is there no way I can generalize this to rect.node-rect?
   static geneProteinPathwayCompoundsNodes: string[] = [
     'rect.node-rect.gene_protein',
@@ -379,6 +381,24 @@ export class BiowcPathwaygraph extends LitElement {
               <path
                 d="M 0,-2.5 L 1.5,-2.5 L 1.5,2.5 L 0,2.5"
                 fill="var(--link-color)"
+                stroke="none"
+              />
+            </marker>
+            <marker
+              id="kinaseSubstrateLinkMarker"
+              viewBox="-0 -5 7 7"
+              refX="0.55"
+              refY="0"
+              orient="auto"
+              markerWidth="7"
+              markerHeight="8"
+              overflow="visible"
+              preserveAspectRatio="none"
+              pointer-events="none"
+            >
+              <path
+                d="M 0,-1.5 L 3.5 ,0 L 0,1.5 Z"
+                fill="var(--kinase-substrate-link-color)"
                 stroke="none"
               />
             </marker>
@@ -1046,6 +1066,34 @@ export class BiowcPathwaygraph extends LitElement {
                   default:
                     break;
                 }
+                // Check if the PTM node has Upstream kinase annotations
+                if (
+                  ptmPeptide.details &&
+                  ptmPeptide.details!['Upstream Kinase(s)']
+                ) {
+                  const currentUpstreamKinases =
+                    // @ts-ignore
+                    ptmPeptide.details!['Upstream Kinase(s)'].text.split(', ');
+                  for (const kinase of currentUpstreamKinases) {
+                    if (
+                      Object.hasOwn(
+                        this.graphdataSkeleton.geneToNodeMap!,
+                        kinase
+                      )
+                    ) {
+                      for (const upstreamKinaseNode of this.graphdataSkeleton
+                        .geneToNodeMap[kinase]) {
+                        graphdataPTM.links.push({
+                          linkId: `kinaseSubstrateLink-${upstreamKinaseNode.nodeId}-${ptmNodeId}`,
+                          sourceId: upstreamKinaseNode.nodeId,
+                          targetId: ptmNodeId,
+                          types: ['kinaseSubstrateLink'],
+                          // label: `${kinase} +(ph)` //Looks a bit messy maybe
+                        });
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -1360,9 +1408,10 @@ export class BiowcPathwaygraph extends LitElement {
     allPTMNodes.attr('display', 'none');
 
     // PTMLinks should never be visible
-    this._getMainDiv()
-      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
-      .attr('display', 'none');
+    // TODO: It looks like this never did anything, commenting out to see if that is true
+    // this._getMainDiv()
+    //   .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
+    // .attr('display', 'none');
 
     // If a timeout is already running, cancel it (can happen if user clicks too fast)
     if (this.currentTimeoutId) clearTimeout(this.currentTimeoutId);
@@ -1559,12 +1608,24 @@ export class BiowcPathwaygraph extends LitElement {
         if (d.types.includes('activation')) {
           return 'url(#activationMarker)';
         }
+        if (d.types.includes('kinaseSubstrateLink')) {
+          return 'url(#kinaseSubstrateLinkMarker)';
+        }
         return 'url(#otherInteractionMarker)';
       })
       .attr('stroke-dasharray', d => {
         if (d.types.includes('binding/association')) return '3 3';
         if (d.types.includes('indirect effect')) return '7 2';
         return null;
+      })
+      .style('visibility', d => {
+        if (d.types.includes('kinaseSubstrateLink')) {
+          return this.kinaseSubstrateLinksVisible ? 'visible' : 'hidden';
+        }
+        if (d.types.includes('ptmlink')) {
+          return 'hidden';
+        }
+        return 'visible';
       });
 
     // Add paths for the edgelabels
@@ -3822,6 +3883,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._refreshGraph(true);
   }
 
+  public toggleKinaseSubstrateLinks() {
+    this.kinaseSubstrateLinksVisible = !this.kinaseSubstrateLinksVisible;
+    this._refreshGraph(true);
+  }
+
   public exportSkeleton(name: string, title: string) {
     return JSON.stringify(
       {
@@ -3967,6 +4033,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         execute: () => this.toggleLabelPeptideNodes(),
         type: 'radio',
         checked: () => this.ptmNodeLabelsVisible,
+      },
+      {
+        target: 'svg',
+        label: 'Show Kinase-Substrate Relationships',
+        execute: () => this.toggleKinaseSubstrateLinks(),
+        type: 'radio',
+        checked: () => this.kinaseSubstrateLinksVisible,
       },
       {
         target: 'svg',

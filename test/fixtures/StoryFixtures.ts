@@ -266,6 +266,11 @@ export default {
           'Fold Change': 0.1,
           'p Value': 0.0002,
           '-log(EC50)': 9,
+          'Upstream Kinase(s)': {
+            display: true,
+            indentKey: true,
+            text: 'GeneA, Protein D',
+          },
         },
       },
       {
@@ -285,6 +290,11 @@ export default {
             indentKey: true,
           },
           'Something else': 'Hello!',
+          'Upstream Kinase(s)': {
+            display: true,
+            indentKey: true,
+            text: 'Protein B, Protein C',
+          },
         },
       },
       {
