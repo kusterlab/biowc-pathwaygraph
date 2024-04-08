@@ -1069,7 +1069,9 @@ export class BiowcPathwaygraph extends LitElement {
                 // Check if the PTM node has Upstream kinase annotations
                 if (
                   ptmPeptide.details &&
-                  ptmPeptide.details!['Upstream Kinase(s)']
+                  ptmPeptide.details!['Upstream Kinase(s)'] &&
+                  // @ts-ignore
+                  !!ptmPeptide.details!['Upstream Kinase(s)'].text
                 ) {
                   const currentUpstreamKinases =
                     // @ts-ignore
