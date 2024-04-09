@@ -2477,8 +2477,8 @@ export class BiowcPathwaygraph extends LitElement {
           }, this.maxPotency!);
 
         // Set min and max values to min and max potency (the user may change this later):
-        this.colorRangeMin = this.minPotency;
-        this.colorRangeMax = this.maxPotency;
+        this.colorRangeMin = 5;
+        this.colorRangeMax = 9;
         break;
       default:
         break;
@@ -4608,8 +4608,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     toSlider.max = String(Math.max(Math.ceil(this.colorRangeMax!), 9));
 
     // We use 5-9 as the default range for the sliders. So if it is within the range, set the sliders to those values
-    fromSlider.value = String(Math.max(Number(fromSlider.min), 5));
-    toSlider.value = String(Math.min(Number(toSlider.max), 9));
+    fromSlider.value = String(5);
+    toSlider.value = String(9);
 
     const fromSliderOutput: HTMLOutputElement =
       this.shadowRoot?.querySelector('#fromSliderOutput')!;
