@@ -14,12 +14,14 @@ import {
   ContextMenu,
   ExecuteOptions,
 } from '@api-client/context-menu';
-import { ContextMenuCommand } from '@api-client/context-menu/src/types';
+import { ContextMenuCommand, Point } from '@api-client/context-menu/src/types';
 import styles from './biowc-pathwaygraph.css';
 
 type PossibleRegulationCategoriesType = 'up' | 'down' | 'not';
 
 type PossibleHueType = 'direction' | 'foldchange' | 'potency';
+
+type PossibleApplicationMode = 'viewing' | 'editing';
 
 const NODE_HEIGHT = 10;
 const PTM_NODE_WIDTH = 15;
@@ -163,6 +165,7 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
   leftX?: number;
   rightX?: number;
   currentDisplayedLabel?: string;
+  isHighlighted?: boolean;
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
@@ -202,6 +205,7 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
   targetX?: number;
   sourceY?: number;
   targetY?: number;
+  isHighlighted?: boolean;
 }
 
 export class BiowcPathwaygraph extends LitElement {
@@ -209,12 +213,6 @@ export class BiowcPathwaygraph extends LitElement {
 
   @property({ attribute: false })
   graphWidth: number = document.body.clientWidth;
-
-  @property({ attribute: false })
-  tooltipVerticalOffset: number = 0;
-
-  @property({ attribute: false })
-  tooltipHorizontalOffset: number = 0;
 
   @property({ attribute: false })
   graphdataSkeleton!: {
@@ -232,6 +230,12 @@ export class BiowcPathwaygraph extends LitElement {
 
   @property({ attribute: false })
   hue!: PossibleHueType;
+
+  @property({ attribute: false })
+  applicationMode!: PossibleApplicationMode;
+
+  @property({ attribute: false })
+  perturbedNodes?: { up: String[]; down: String[] };
 
   graphdataPTM?: {
     nodes: (PTMNode | PTMSummaryNode)[];
@@ -283,6 +287,39 @@ export class BiowcPathwaygraph extends LitElement {
 
   contextMenuStore?: Map<string, any>;
 
+  isAddingEdge: Boolean = false;
+
+  isCreatingGroup: Boolean = false;
+
+  ptmNodeLabelsVisible: Boolean = false;
+
+  kinaseSubstrateLinksVisible: Boolean = false;
+
+  // TODO: Is there no way I can generalize this to rect.node-rect?
+  static geneProteinPathwayCompoundsNodes: string[] = [
+    'rect.node-rect.gene_protein',
+    'rect.node-rect.gene_protein.down',
+    'rect.node-rect.gene_protein.up',
+    'rect.node-rect.gene_protein.both',
+    'rect.node-rect.gene_protein.not',
+    'rect.node-rect.pathway',
+    'rect.node-rect.compound',
+  ];
+
+  static nodeTypes: { id: string; label: string }[] = [
+    { id: 'gene_protein', label: 'Gene/Protein' },
+    { id: 'compound', label: 'Metabolite/Compound' },
+    { id: 'pathway', label: 'Pathway' },
+  ];
+
+  static edgeTypes: { id: string; label: string }[] = [
+    { id: 'activation', label: 'Activation' },
+    { id: 'inhibition', label: 'Inhibition' },
+    { id: 'binding/association', label: 'Binding/Association' },
+    { id: 'indirect effect', label: 'Indirect Effect' },
+    { id: 'other', label: 'Other' },
+  ];
+
   render() {
     return html`
       <div id="pathwayContainer">
@@ -292,7 +329,6 @@ export class BiowcPathwaygraph extends LitElement {
           min-height: 1500px;
            display: block;
             margin: auto;
-             background-color: white;
              border-radius: 5px"
         >
           <defs>
@@ -351,6 +387,24 @@ export class BiowcPathwaygraph extends LitElement {
                 stroke="none"
               />
             </marker>
+            <marker
+              id="kinaseSubstrateLinkMarker"
+              viewBox="-0 -5 7 7"
+              refX="0.55"
+              refY="0"
+              orient="auto"
+              markerWidth="7"
+              markerHeight="8"
+              overflow="visible"
+              preserveAspectRatio="none"
+              pointer-events="none"
+            >
+              <path
+                d="M 0,-1.5 L 3.5 ,0 L 0,1.5 Z"
+                fill="var(--kinase-substrate-link-color)"
+                stroke="none"
+              />
+            </marker>
             <pattern
               id="bidirectional_regulation_pattern"
               width="10"
@@ -400,6 +454,116 @@ export class BiowcPathwaygraph extends LitElement {
             <output for="toSlider" id="toSliderOutput"></output>
           </div>
         </div>
+        <dialog id='add-node-dialog'>
+          <form id='add-node-form' novalidate>
+            <div class='form-wrapper'>
+            <label>Node Type:</label>
+              <select class='form-element' id='add-node-type-select' name='nodeType'>
+                <option value="default" selected disabled >Choose…</option>
+              </select>
+            </div>
+            <div class='form-wrapper'>
+              <label id='add-node-primary-name-label'>
+                Name:
+              </label>
+                <input class='form-element' type='text' name='nodePrimaryName' required>
+            </div>
+            <div class='form-wrapper' id='add-node-alternative-gene-names' style='display: none'>
+            <label>Alternative Gene Names:</label>
+              <textarea class='form-element'
+                name='nodeAlternativeGeneNames'
+                        placeholder="Enter Alternative Gene Names, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper' id='add-node-uniprot-accession' style='display: none'>
+              <label >Uniprot Accession Numbers:</label>
+              <textarea class='form-element'
+                        name='nodeUniprotAccs'
+                        placeholder="Enter Uniprot Accession Numbers, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+              <div class='form-wrapper'>
+            <div>
+              <button id="add-node-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="add-node-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
+        <dialog id='add-edge-dialog'>
+          <form id='add-edge-form' novalidate>
+          <div class='form-wrapper'>
+            <label>Edge Type:</label>
+            <select class='form-element' id='add-edge-type-select' name='edgeType'>
+              <option value="default" selected disabled >Choose…</option>
+            </select>
+            <div class='form-wrapper'>
+              <label id='add-edge-label-label'>
+                Label (optional):
+              </label>
+              <input class='form-element' type='text' name='edgeLabel'>
+            </div>
+          </div>
+            <div class='form-wrapper'>
+              <p id='add-edge-info-text'>
+              </p>
+            </div>
+            <div>
+              <button id="add-edge-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="add-edge-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
+
+        <dialog id='edit-node-dialog'>
+          <form id='edit-node-form' novalidate>
+            <div class='form-wrapper'>
+              <label id='edit-node-primary-name-label'>
+                Name:
+              </label>
+              <input id='edit-node-primary-name-input' class='form-element' type='text' name='nodePrimaryName' required>
+            </div>
+            <div class='form-wrapper' id='edit-node-alternative-gene-names' style='display: none'>
+              <label>Alternative Gene Names:</label>
+              <textarea class='form-element'
+                        id='edit-node-alternative-gene-names-textarea'
+                        name='nodeAlternativeGeneNames'
+                        placeholder="Enter Alternative Gene Names, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper' id='edit-node-uniprot-accession' style='display: none'>
+              <label>Uniprot Accession Numbers:</label>
+              <textarea class='form-element'
+                        id='edit-node-uniprot-accession-textarea'
+                        name='nodeUniprotAccs'
+                        placeholder="Enter Uniprot Accession Numbers, separated by ','/';'/Line Breaks"
+                        rows='3'
+              ></textarea>
+            </div>
+            <div class='form-wrapper'>
+              <div>
+                <button id="edit-node-confirm-button" formmethod="dialog">Confirm</button>
+                <button id="edit-node-cancel-button" formmethod="dialog">Cancel</button>
+              </div>
+          </form>
+        </dialog>
+
+        <dialog id='edit-edge-label-dialog'>
+          <form id='edit-edge-label-form' novalidate>
+            <div class='form-wrapper'>
+              <label id='edit-edge-label-label'>
+                Label:
+              </label>
+              <input class='form-element' type='text' name='edgeLabel' id='edit-edge-label-input'>
+            </div>
+            <div>
+              <button id="edit-edge-label-confirm-button" formmethod="dialog">Confirm</button>
+              <button id="edit-edge-label-cancel-button" formmethod="dialog">Cancel</button>
+            </div>
+          </form>
+        </dialog>
       </div>
       <canvas id="canvasId" style="display: none"></canvas>
     `;
@@ -414,6 +578,12 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   protected firstUpdated(_changedProperties: PropertyValues) {
+    // Initially the mode is always viewing unless explicitly asked for
+    if (this.applicationMode !== 'editing') {
+      this.applicationMode = 'viewing';
+    }
+    this.switchApplicationMode(this.applicationMode);
+
     this.d3Nodes = [];
     this.d3Links = [];
     this._getMainDiv().append('g').attr('id', 'linkG');
@@ -428,6 +598,7 @@ export class BiowcPathwaygraph extends LitElement {
       ['show-not', true],
     ]);
 
+    this._initEditModeForms();
     super.firstUpdated(_changedProperties);
   }
 
@@ -444,12 +615,298 @@ export class BiowcPathwaygraph extends LitElement {
 
     this._createD3GraphObject();
     this._calculateHueRange();
-    this._renderLegend();
+    if (this.applicationMode === 'viewing') this._renderLegend();
     this._renderGraph();
     this._initContextMenu();
     this._updateRangeSliderVisibility();
 
     super.updated(_changedProperties);
+  }
+
+  private _initEditModeForms() {
+    const addNodeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
+      '#add-node-type-select'
+    )!;
+    BiowcPathwaygraph.nodeTypes.forEach(nodeType => {
+      const option = document.createElement('option');
+      option.value = nodeType.id;
+      option.label = nodeType.label;
+      addNodeTypeSelect.options.add(option);
+    });
+
+    addNodeTypeSelect.onchange = () => {
+      const addNodePrimaryNameLabel: HTMLLabelElement =
+        this.shadowRoot?.querySelector('#add-node-primary-name-label')!;
+      const addNodeAlternativeGeneNames: HTMLDivElement =
+        this.shadowRoot?.querySelector('#add-node-alternative-gene-names')!;
+      const addNodeUniprots: HTMLDivElement = this.shadowRoot?.querySelector(
+        '#add-node-uniprot-accession'
+      )!;
+      if (addNodeTypeSelect.value === 'gene_protein') {
+        addNodePrimaryNameLabel.textContent = 'Primary Gene Name:';
+        addNodeAlternativeGeneNames.style.display = 'block';
+        addNodeUniprots.style.display = 'block';
+      } else {
+        addNodePrimaryNameLabel.textContent = 'Name:';
+        addNodeAlternativeGeneNames.style.display = 'none';
+        addNodeUniprots.style.display = 'none';
+      }
+    };
+
+    const addNodeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#add-node-form')!;
+    const addNodeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-node-confirm-button')!;
+
+    const addNodeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#add-node-dialog')!;
+
+    addNodeConfirmButton.onclick = e => {
+      const formData: FormData = new FormData(addNodeForm);
+
+      // nodeType and nodePrimaryName are required
+      if (formData.get('nodePrimaryName') === '' || !formData.get('nodeType')) {
+        e.preventDefault();
+        return;
+      }
+
+      // Some regex like s.match(/\(\d+,\d+\)/)
+      const nodeType = String(formData.get('nodeType')!);
+      const nodeAddPoint: Point = this.contextMenuStore?.get('clickPoint')!;
+      // Clear the clickPoint, it has served its purpose
+      this.contextMenuStore?.delete('clickPoint');
+
+      const transformString = this._getMainDiv()
+        .select('#nodeG')
+        .attr('transform');
+      const [, translateX, translateY, scale] = transformString.match(
+        /translate\((-?[\d|.]+),(-?[\d|.]+)\) scale\((-?[\d|.]+)\)/
+      )!;
+
+      const mainDivBoundingClientRect = this.shadowRoot
+        ?.querySelector('#pathwayContainer')!
+        .getBoundingClientRect()!;
+
+      // Create a node
+      // @ts-ignore
+      const newNode: GeneProteinNodeD3 = {
+        nodeId: `customNode-${crypto.getRandomValues(new Uint32Array(1))[0]}`,
+        type: nodeType,
+        x:
+          (nodeAddPoint.x - Number(translateX) - mainDivBoundingClientRect.x) /
+          Number(scale),
+        y:
+          (nodeAddPoint.y - Number(translateY) - mainDivBoundingClientRect.y) /
+          Number(scale),
+      };
+
+      if (nodeType === 'gene_protein') {
+        newNode.geneNames = String(
+          formData.get('nodeAlternativeGeneNames')!
+        ).split(/[;,\n]/);
+        newNode.uniprotAccs = String(formData.get('nodeUniprotAccs')!).split(
+          /[;,\n]/
+        );
+        newNode.geneNames.unshift(String(formData.get('nodePrimaryName')!));
+        newNode.defaultName = String(formData.get('nodePrimaryName')!);
+      } else {
+        newNode.label = String(formData.get('nodePrimaryName')!);
+      }
+
+      // Add it to the graphdataSkeleton
+      this.graphdataSkeleton.nodes.push(newNode);
+
+      // Refresh
+      this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+
+      // Simulate a change on the select so it snaps back into default state
+      addNodeTypeSelect.dispatchEvent(new Event('change'));
+      // Close the dialog
+      addNodeDialog.close();
+      // Reset the state of the form
+      addNodeForm.reset();
+    };
+
+    addNodeDialog.addEventListener('cancel', () => {
+      addNodeDialog.close();
+      // Reset the state of the form
+      addNodeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addNodeTypeSelect.dispatchEvent(new Event('change'));
+    });
+
+    const addNodeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-node-cancel-button')!;
+    addNodeCancelButton.onclick = () => {
+      addNodeDialog.dispatchEvent(new Event('cancel'));
+    };
+
+    const addEdgeTypeSelect: HTMLSelectElement = this.shadowRoot?.querySelector(
+      '#add-edge-type-select'
+    )!;
+    BiowcPathwaygraph.edgeTypes.forEach(edgeType => {
+      const option = document.createElement('option');
+      option.value = edgeType.id;
+      option.label = edgeType.label;
+      addEdgeTypeSelect.options.add(option);
+    });
+
+    const addEdgeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#add-edge-form')!;
+    const addEdgeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-edge-confirm-button')!;
+
+    const addEdgeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#add-edge-dialog')!;
+
+    addEdgeConfirmButton.onclick = e => {
+      const formData: FormData = new FormData(addEdgeForm);
+
+      // edgeType is required
+      if (!formData.get('edgeType')) {
+        e.preventDefault();
+        return;
+      }
+
+      this.isAddingEdge = true;
+
+      // Save the type and label in the store, so they can be retrieved when the edge is ready
+      this.contextMenuStore!.set(
+        'newEdgeType',
+        String(formData.get('edgeType'))
+      );
+      this.contextMenuStore!.set(
+        'newEdgeLabel',
+        String(formData.get('edgeLabel'))
+      );
+
+      // Reset the state of the form
+      addEdgeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addEdgeTypeSelect.dispatchEvent(new Event('change'));
+      // Close the dialog
+      addEdgeDialog.close();
+    };
+
+    addEdgeDialog.addEventListener('cancel', () => {
+      addEdgeDialog.close();
+      // Reset the state of the form
+      addEdgeForm.reset();
+      // Simulate a change on the select so it snaps back into default state
+      addEdgeTypeSelect.dispatchEvent(new Event('change'));
+      // Remove highlighting of node, if present
+      this.d3Nodes?.forEach(d => {
+        /* eslint-disable-next-line no-param-reassign */
+        d.isHighlighted = false;
+      });
+      this._refreshGraph(true);
+      this.isAddingEdge = false;
+    });
+
+    const addEdgeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#add-edge-cancel-button')!;
+    addEdgeCancelButton.onclick = () => {
+      addEdgeDialog.dispatchEvent(new Event('cancel'));
+    };
+
+    const editNodeForm: HTMLFormElement =
+      this.shadowRoot?.querySelector('#edit-node-form')!;
+
+    const editNodeConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-node-confirm-button')!;
+    editNodeConfirmButton.onclick = () => {
+      const formData: FormData = new FormData(editNodeForm);
+      // Get the node
+      const nodeIdToUpdate = this.contextMenuStore?.get('nodeIdToUpdate');
+      const nodeToUpdate = this.graphdataSkeleton.nodes.filter(
+        node => node.nodeId === nodeIdToUpdate
+      )[0] as GeneProteinNode;
+      if (nodeToUpdate.type === 'gene_protein') {
+        nodeToUpdate.geneNames = String(
+          formData.get('nodeAlternativeGeneNames')!
+        ).split(/[;,\n]/);
+        nodeToUpdate.uniprotAccs = String(
+          formData.get('nodeUniprotAccs')!
+        ).split(/[;,\n]/);
+        nodeToUpdate.geneNames.unshift(
+          String(formData.get('nodePrimaryName')!)
+        );
+        nodeToUpdate.defaultName = String(formData.get('nodePrimaryName')!);
+      } else {
+        nodeToUpdate.label = String(formData.get('nodePrimaryName')!);
+      }
+      this.contextMenuStore?.delete('nodeIdToUpdate');
+      editNodeForm.reset();
+      // Close the dialog
+      (<HTMLDialogElement>(
+        this.shadowRoot?.querySelector('#edit-node-dialog')!
+      )).close();
+
+      // Reload graph
+      this.updated(new Map());
+      this._refreshGraph(true);
+    };
+
+    const editNodeDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#edit-node-dialog')!;
+
+    editNodeDialog.addEventListener('cancel', () => {
+      editNodeDialog.close();
+      // Reset the state of the form
+      editNodeForm.reset();
+    });
+
+    // Right now escape does not clear the forms
+    const editNodeCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-node-cancel-button')!;
+    editNodeCancelButton.onclick = () => {
+      editNodeDialog.dispatchEvent(new Event('cancel'));
+    };
+
+    const editEdgeLabelDialog: HTMLDialogElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-dialog')!;
+
+    const editEdgeLabelForm: HTMLFormElement = this.shadowRoot?.querySelector(
+      '#edit-edge-label-form'
+    )!;
+    const editEdgeLabelConfirmButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-confirm-button')!;
+    editEdgeLabelConfirmButton.onclick = () => {
+      const formData: FormData = new FormData(editEdgeLabelForm);
+      // Get the edge
+      const edgeIdToUpdate = this.contextMenuStore?.get('edgeIdToUpdate');
+      const edgeToUpdate = this.graphdataSkeleton.links.filter(
+        l => l.linkId === edgeIdToUpdate
+      )[0];
+      edgeToUpdate.label = String(formData.get('edgeLabel'));
+      // Update visually.
+      this._getMainDiv()
+        .select(`#edgelabel-${edgeToUpdate.linkId}`)
+        .select('textPath')
+        .text(edgeToUpdate.label);
+      this.contextMenuStore?.delete('edgeIdToUpdate');
+      // Reset the state of the form
+      editEdgeLabelForm.reset();
+
+      // Close the dialog
+      editEdgeLabelDialog.close();
+
+      // Reload graph
+      this.updated(new Map());
+      this._refreshGraph(true);
+    };
+
+    editEdgeLabelDialog.addEventListener('cancel', () => {
+      editEdgeLabelDialog.close();
+      // Reset the state of the form
+      editEdgeLabelForm.reset();
+    });
+
+    const editEdgeLabelCancelButton: HTMLButtonElement =
+      this.shadowRoot?.querySelector('#edit-edge-label-cancel-button')!;
+    editEdgeLabelCancelButton.onclick = () => {
+      editEdgeLabelDialog.dispatchEvent(new Event('cancel'));
+    };
   }
 
   private _createPathwayGeneToNodeMap(): { [key: string]: GeneProteinNode[] } {
@@ -612,6 +1069,36 @@ export class BiowcPathwaygraph extends LitElement {
                   default:
                     break;
                 }
+                // Check if the PTM node has Upstream kinase annotations
+                if (
+                  ptmPeptide.details &&
+                  ptmPeptide.details!['Upstream Kinase(s)'] &&
+                  // @ts-ignore
+                  !!ptmPeptide.details!['Upstream Kinase(s)'].text
+                ) {
+                  const currentUpstreamKinases =
+                    // @ts-ignore
+                    ptmPeptide.details!['Upstream Kinase(s)'].text.split(', ');
+                  for (const kinase of currentUpstreamKinases) {
+                    if (
+                      Object.hasOwn(
+                        this.graphdataSkeleton.geneToNodeMap!,
+                        kinase
+                      )
+                    ) {
+                      for (const upstreamKinaseNode of this.graphdataSkeleton
+                        .geneToNodeMap[kinase]) {
+                        graphdataPTM.links.push({
+                          linkId: `kinaseSubstrateLink-${upstreamKinaseNode.nodeId}-${ptmNodeId}`,
+                          sourceId: upstreamKinaseNode.nodeId,
+                          targetId: ptmNodeId,
+                          types: ['kinaseSubstrateLink'],
+                          // label: `${kinase} +(ph)` //Looks a bit messy maybe
+                        });
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -761,6 +1248,11 @@ export class BiowcPathwaygraph extends LitElement {
       d3NodesDict[node.nodeId] = node;
     }
 
+    const d3LinksDict: { [key: string]: PathwayGraphLinkD3 } = {};
+    for (const link of this.d3Links) {
+      d3LinksDict[link.linkId] = link;
+    }
+
     const d3LinkIds = new Set(this.d3Links!.map(link => link.linkId));
     const graphdataNodeIds = new Set(
       this.graphdataSkeleton.nodes
@@ -796,6 +1288,15 @@ export class BiowcPathwaygraph extends LitElement {
           existingNode.nUp = (<GeneProteinNode>node).nUp;
           existingNode.nDown = (<GeneProteinNode>node).nDown;
           existingNode.nNot = (<GeneProteinNode>node).nNot;
+          // Also update everything else except for the coordinates - it might have changed when in editing mode
+          existingNode.type = (<GeneProteinNode>node).type;
+          existingNode.groupId = (<GeneProteinNode>node).groupId;
+          existingNode.defaultName = (<GeneProteinNode>node).defaultName;
+          existingNode.label = (<GeneProteinNode>node).label;
+          existingNode.geneNames = (<GeneProteinNode>node).geneNames;
+          existingNode.uniprotAccs = (<GeneProteinNode>node).uniprotAccs;
+          [existingNode.currentDisplayedLabel] =
+            BiowcPathwaygraph._calcPossibleLabels(<GeneProteinNodeD3>node);
         }
       });
 
@@ -808,6 +1309,11 @@ export class BiowcPathwaygraph extends LitElement {
       .forEach(link => {
         if (!d3LinkIds.has(link.linkId!)) {
           this.d3Links!.push({ ...link } as PathwayGraphLinkD3);
+        } else {
+          // Update label and type, they might have changed in editing mode
+          const existingLink: PathwayGraphLinkD3 = d3LinksDict[link.linkId];
+          existingLink.label = link.label;
+          existingLink.types = link.types;
         }
       });
 
@@ -907,9 +1413,10 @@ export class BiowcPathwaygraph extends LitElement {
     allPTMNodes.attr('display', 'none');
 
     // PTMLinks should never be visible
-    this._getMainDiv()
-      .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
-      .attr('display', 'none');
+    // TODO: It looks like this never did anything, commenting out to see if that is true
+    // this._getMainDiv()
+    //   .selectAll<SVGLineElement, PathwayGraphLinkD3>('.linkgroup.ptmlink')
+    // .attr('display', 'none');
 
     // If a timeout is already running, cancel it (can happen if user clicks too fast)
     if (this.currentTimeoutId) clearTimeout(this.currentTimeoutId);
@@ -977,19 +1484,26 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr(
         'class',
-        d => `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} `
+        d =>
+          `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} ${
+            d.isHighlighted ? 'highlight' : ''
+          } `
       )
       .attr('id', d => `node-${d.nodeId}`);
 
     // Draw each node as a rectangle - except for groups
-    nodesSvg.selectAll('.node-rect').remove(); // TODO: Check if we actually need to do this
+    nodesSvg.selectAll('.node-rect').remove();
     nodesSvg
       .filter(d => d.type !== 'group')
       .append('rect')
       .attr(
         'class',
         d =>
-          `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)}`
+          `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(
+            d
+          )} ${d.isHighlighted ? 'highlight' : ''}
+          ${this._computeIsPerturbed(d)}
+          `
       )
       .attr('rx', NODE_HEIGHT)
       .attr('ry', NODE_HEIGHT)
@@ -1009,6 +1523,9 @@ export class BiowcPathwaygraph extends LitElement {
     nodesSvg
       .selectAll<SVGTextContentElement, PathwayGraphNodeD3>('.node-label')
       .text(d => d.currentDisplayedLabel || '')
+      // Position the PTM node labels above the nodes and make them italic
+      .attr('y', d => (d.type === 'ptm' ? -10 : 0))
+      .style('font-style', d => (d.type === 'ptm' ? 'italic' : ''))
       .each((d, i, nodes) => {
         // Adjust width of the node based on the length of the text
         const circleWidth = NODE_HEIGHT * 2;
@@ -1055,6 +1572,7 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Initialize paths for the group nodes
     // The actual polygons are drawn in the 'tick' callback of addAnimation
+    nodesSvg.selectAll('.group-path').remove();
     nodesSvg
       .filter(
         d =>
@@ -1066,7 +1584,7 @@ export class BiowcPathwaygraph extends LitElement {
             .empty()
       )
       .append('path')
-      .attr('class', 'group-path');
+      .attr('class', d => `group-path ${d.isHighlighted ? 'highlight' : ''}`);
 
     // Draw links as lines with appropriate arrowheads
     const linksSvg = linkG
@@ -1082,10 +1600,13 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr('class', d => `linkgroup ${d.types.join(' ')}`);
 
-    linksSvg.selectAll('.link').remove(); // TODO: Check if we actually need to do this
+    linksSvg.selectAll('.link').remove();
     linksSvg
       .append('line')
-      .attr('class', d => `link ${d.types.join(' ')}`)
+      .attr(
+        'class',
+        d => `link ${d.types.join(' ')}  ${d.isHighlighted ? 'highlight' : ''}`
+      )
       .attr('marker-end', d => {
         if (d.types.includes('inhibition')) {
           return 'url(#inhibitionMarker)';
@@ -1094,12 +1615,24 @@ export class BiowcPathwaygraph extends LitElement {
         if (d.types.includes('activation')) {
           return 'url(#activationMarker)';
         }
+        if (d.types.includes('kinaseSubstrateLink')) {
+          return 'url(#kinaseSubstrateLinkMarker)';
+        }
         return 'url(#otherInteractionMarker)';
       })
       .attr('stroke-dasharray', d => {
         if (d.types.includes('binding/association')) return '3 3';
-        if (d.types.includes('indirect')) return '7 2';
+        if (d.types.includes('indirect effect')) return '7 2';
         return null;
+      })
+      .style('visibility', d => {
+        if (d.types.includes('kinaseSubstrateLink')) {
+          return this.kinaseSubstrateLinksVisible ? 'visible' : 'hidden';
+        }
+        if (d.types.includes('ptmlink')) {
+          return 'hidden';
+        }
+        return 'visible';
       });
 
     // Add paths for the edgelabels
@@ -1119,13 +1652,13 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr('class', 'linklabelpathgroup');
 
-    linkLabelPaths.selectAll('.edgepath').remove(); // TODO: Check if we actually need to do this
+    linkLabelPaths.selectAll('.edgepath').remove();
     linkLabelPaths
       .append('path')
       .attr('class', 'edgepath')
       .attr('fill-opacity', 0)
       .attr('stroke-opacity', 0)
-      .attr('id', (d, i) => `edgepath-${i}`);
+      .attr('id', d => `edgepath-${d.linkId}`);
 
     // Add the actual edgelabels
     const edgelabels = linkG
@@ -1135,29 +1668,26 @@ export class BiowcPathwaygraph extends LitElement {
           link =>
             (link.sourceIsAnchor ||
               (<PathwayGraphNodeD3>link.source)?.visible) &&
-            (link.targetIsAnchor ||
-              (<PathwayGraphNodeD3>link.target)?.visible) &&
-            link.label &&
-            link.label !== ''
+            (link.targetIsAnchor || (<PathwayGraphNodeD3>link.target)?.visible)
         )
       )
       .join('text')
       .attr('class', 'edgelabel')
       .attr('fill', 'var(--edge-label-color)')
-      .attr('id', (d, i) => `edgelabel-${i}`);
+      .attr('id', d => `edgelabel-${d.linkId}`);
 
     // Put the edgelabels onto the paths
     edgelabels
       // Filter for paths that do not have a label yet
-      .filter((edgepath, i) =>
+      .filter(edgepath =>
         this._getMainDiv()
           .select('#linkG')
-          .select(`#edgelabel-${i}`)
+          .select(`#edgelabel-${edgepath.linkId}`)
           .select('textPath')
           .empty()
       )
       .append('textPath')
-      .attr('xlink:href', (d, i) => `#edgepath-${i}`)
+      .attr('xlink:href', d => `#edgepath-${d.linkId}`)
       .attr('startOffset', '50%')
       .text(link => link.label || '');
   }
@@ -1498,6 +2028,7 @@ export class BiowcPathwaygraph extends LitElement {
         /* eslint-disable no-param-reassign */
         .each(group => {
           group.polygon = <[number, number][]>polygonGenerator(group.nodeId);
+          if (!group.polygon) return;
           group.centroid = d3v6.polygonCentroid(group.polygon);
           group.minX = Math.min(...group.polygon.map(point => point[0]));
           group.maxX = Math.max(...group.polygon.map(point => point[0]));
@@ -1527,7 +2058,7 @@ export class BiowcPathwaygraph extends LitElement {
         .select('#nodeG')
         .selectAll<SVGElement, GroupNodeD3>('.group-path')
         .attr('d', group =>
-          group.centroid
+          group.centroid && group.polygon
             ? valueline(
                 group.polygon!.map(point => [
                   point[0] - group.centroid![0],
@@ -1649,8 +2180,8 @@ export class BiowcPathwaygraph extends LitElement {
     const mousemove = (e: MouseEvent) => {
       tooltip
         // The offset is trial and error, I could not figure this out programmatically
-        .style('top', `${e.pageY + this.tooltipVerticalOffset}px`)
-        .style('left', `${e.pageX + this.tooltipHorizontalOffset + 15}px`);
+        .style('top', `${e.offsetY}px`)
+        .style('left', `${e.offsetX + 15}px`);
     };
 
     const mouseleave = () => {
@@ -1724,6 +2255,28 @@ export class BiowcPathwaygraph extends LitElement {
       Number((<PTMNodeD3>node).details!['Fold Change']) ||
       Number((<PTMNodeD3>node).details!['Log Fold Change'])
     );
+  }
+
+  private _computeIsPerturbed(node: PathwayGraphNodeD3) {
+    // @ts-ignore
+    if (node.geneNames) {
+      const geneProteinNode = node as GeneProteinNodeD3;
+      if (
+        geneProteinNode.geneNames.filter(geneName =>
+          this.perturbedNodes?.down.includes(geneName)
+        ).length > 0
+      ) {
+        return 'highlight-down';
+      }
+      if (
+        geneProteinNode.geneNames.filter(geneName =>
+          this.perturbedNodes?.up.includes(geneName)
+        ).length > 0
+      ) {
+        return 'highlight-up';
+      }
+    }
+    return '';
   }
 
   private _computeNodeColor(node: PathwayGraphNodeD3) {
@@ -1924,8 +2477,8 @@ export class BiowcPathwaygraph extends LitElement {
           }, this.maxPotency!);
 
         // Set min and max values to min and max potency (the user may change this later):
-        this.colorRangeMin = this.minPotency;
-        this.colorRangeMax = this.maxPotency;
+        this.colorRangeMin = 5;
+        this.colorRangeMax = 9;
         break;
       default:
         break;
@@ -2726,112 +3279,197 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       .select('#nodeG')
       .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
       .on('click', (e, node) => {
-        // Do not propagate event to canvas, because that would remove the highlighting
-        e.stopPropagation();
-        // Check if it is a double click
-        this.recentClicks += 1;
-        if (this.recentClicks === 1) {
-          // Wait for a possible doubleclick using a timeout
-          // If a double click happens within DBL_CLICK_TIMEOUT milliseconds,
-          // the event is canceled using clearTimeout below
-          dblClickTimer = setTimeout(() => {
-            this.recentClicks = 0;
-            // Unless the CTRL key is pressed, unselect everything first
-            if (!e.ctrlKey) {
+        // Selection is only active in viewing mode, not in editing mode
+        if (this.applicationMode === 'viewing') {
+          // Do not propagate event to canvas, because that would remove the highlighting
+          e.stopPropagation();
+          // Check if it is a double click
+          this.recentClicks += 1;
+          if (this.recentClicks === 1) {
+            // Wait for a possible doubleclick using a timeout
+            // If a double click happens within DBL_CLICK_TIMEOUT milliseconds,
+            // the event is canceled using clearTimeout below
+            dblClickTimer = setTimeout(() => {
+              this.recentClicks = 0;
+              // Unless the CTRL key is pressed, unselect everything first
+              if (!e.ctrlKey) {
+                this._getMainDiv()
+                  .select('#nodeG')
+                  .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+                  .each(d => {
+                    /* eslint-disable no-param-reassign */
+                    d.selected = false;
+                    /* eslint-enable no-param-reassign */
+                  });
+              }
+              // CTRL + Click on a selected node deselects the node, otherwise the node becomes selected
+              const isSelected = !(e.ctrlKey && node.selected);
+              // Apply this new value to the node itself and all attached ptm nodes
+              /* eslint-disable no-param-reassign */
+              node.selected = isSelected;
+              /* eslint-enable no-param-reassign */
               this._getMainDiv()
-                .select('#nodeG')
-                .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-                .each(d => {
+                .selectAll<SVGLineElement, PathwayGraphLinkD3>(
+                  '.ptmlink:not(.legend)'
+                )
+                .each(l => {
                   /* eslint-disable no-param-reassign */
-                  d.selected = false;
+                  // If clicked node is a protein, select all its PTM nodes
+                  if (l.target === node)
+                    (<PTMNodeD3>l.source).selected = isSelected;
+                  // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
+                  // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
+                  if (l.source === node && isSelected) {
+                    (<GeneProteinNodeD3>l.target).selected = true;
+                  }
                   /* eslint-enable no-param-reassign */
                 });
-            }
-            // CTRL + Click on a selected node deselects the node, otherwise the node becomes selected
-            const isSelected = !(e.ctrlKey && node.selected);
-            // Apply this new value to the node itself and all attached ptm nodes
-            /* eslint-disable no-param-reassign */
-            node.selected = isSelected;
-            /* eslint-enable no-param-reassign */
-            this._getMainDiv()
-              .selectAll<SVGLineElement, PathwayGraphLinkD3>(
-                '.ptmlink:not(.legend)'
-              )
-              .each(l => {
-                /* eslint-disable no-param-reassign */
-                // If clicked node is a protein, select all its PTM nodes
-                if (l.target === node)
-                  (<PTMNodeD3>l.source).selected = isSelected;
-                // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
-                // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
-                if (l.source === node && isSelected) {
-                  (<GeneProteinNodeD3>l.target).selected = true;
-                }
-                /* eslint-enable no-param-reassign */
-              });
-            // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
-            if (node.type.includes('summary')) {
-              (<PTMSummaryNodeD3>node).ptmNodes!.forEach(d => {
-                /* eslint-disable no-param-reassign */
-                d.selected = isSelected;
-                /* eslint-enable no-param-reassign */
-              });
-            }
+              // If the node is a PTM summary node, apply its selection status to its individual PTM nodes
+              if (node.type.includes('summary')) {
+                (<PTMSummaryNodeD3>node).ptmNodes!.forEach(d => {
+                  /* eslint-disable no-param-reassign */
+                  d.selected = isSelected;
+                  /* eslint-enable no-param-reassign */
+                });
+              }
 
-            // If the node is either a Gene/Protein node or a  (non-summary) PTM node
-            // and it's a non-CTRL selection event,
-            // throw an event to display the tooltip information permanently in the parent
-            if (
-              node.type.includes('ptm') &&
-              !node.type.includes('summary') &&
-              !e.ctrlKey
-            ) {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: BiowcPathwaygraph._getPTMTooltipText(
-                    node as PTMNodeD3
-                  ),
-                })
-              );
-            } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: BiowcPathwaygraph._getGeneProteinTooltipText(
-                    node as GeneProteinNodeD3
-                  ),
-                })
-              );
-            } else {
-              this.dispatchEvent(
-                new CustomEvent('selectedNodeTooltip', {
-                  bubbles: true,
-                  cancelable: true,
-                  detail: undefined,
-                })
-              );
-            }
+              // If the node is either a Gene/Protein node or a  (non-summary) PTM node
+              // and it's a non-CTRL selection event,
+              // throw an event to display the tooltip information permanently in the parent
+              if (
+                node.type.includes('ptm') &&
+                !node.type.includes('summary') &&
+                !e.ctrlKey
+              ) {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: BiowcPathwaygraph._getPTMTooltipText(
+                      node as PTMNodeD3
+                    ),
+                  })
+                );
+              } else if (node.type.includes('gene_protein') && !e.ctrlKey) {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: BiowcPathwaygraph._getGeneProteinTooltipText(
+                      node as GeneProteinNodeD3
+                    ),
+                  })
+                );
+              } else {
+                this.dispatchEvent(
+                  new CustomEvent('selectedNodeTooltip', {
+                    bubbles: true,
+                    cancelable: true,
+                    detail: undefined,
+                  })
+                );
+              }
 
-            // If the node is a group, select all its members
-            if (node.type === 'group') {
-              (<GroupNodeD3>node).componentNodes.forEach(comp => {
-                /* eslint-disable no-param-reassign */
-                comp.selected = isSelected;
-                /* eslint-enable no-param-reassign */
-              });
-            }
+              // If the node is a group, select all its members
+              if (node.type === 'group') {
+                (<GroupNodeD3>node).componentNodes.forEach(comp => {
+                  /* eslint-disable no-param-reassign */
+                  comp.selected = isSelected;
+                  /* eslint-enable no-param-reassign */
+                });
+              }
 
-            this._onSelectedNodesChanged();
-          }, DBL_CLICK_TIMEOUT);
-        } else {
-          // If it is a doubleclick, the above code wrapped in the timeout should not be executed
-          clearTimeout(dblClickTimer);
-          this.recentClicks = 0;
+              this._onSelectedNodesChanged();
+            }, DBL_CLICK_TIMEOUT);
+          } else {
+            // If it is a doubleclick, the above code wrapped in the timeout should not be executed
+            clearTimeout(dblClickTimer);
+            this.recentClicks = 0;
+          }
+        }
+        // Logic for creating a group
+        if (this.isCreatingGroup) {
+          /* eslint-disable no-param-reassign */
+          this.contextMenuStore!.set('groupMemberIds', [
+            ...this.contextMenuStore!.get('groupMemberIds'),
+            node.nodeId,
+          ]);
+          node.isHighlighted = true;
+          this._refreshGraph(true);
+          /* eslint-enable no-param-reassign */
+        }
+
+        // Logic for adding an edge
+        if (this.isAddingEdge) {
+          // eslint-disable-next-line no-param-reassign
+          node.isHighlighted = true;
+          this._addEdgeFromOrTo(node.nodeId);
         }
       });
+  }
+
+  private _enableLinkSelection() {
+    this._getMainDiv()
+      .select('#linkG')
+      .selectAll<SVGGElement, PathwayGraphLinkD3>('g')
+      .on('click', (e, link) => {
+        // Links can - for now - only be selected when in edge-adding mode
+        if (this.isAddingEdge) {
+          // eslint-disable-next-line no-param-reassign
+          link.isHighlighted = true;
+          this._addEdgeFromOrTo(link.linkId);
+        }
+      });
+  }
+
+  private _addEdgeFromOrTo(sourceOrTargetId: string) {
+    if (!this.contextMenuStore!.has('newEdgeSource')) {
+      this.contextMenuStore!.set('newEdgeSource', sourceOrTargetId);
+      this._refreshGraph(true);
+    } else {
+      this.contextMenuStore!.set('newEdgeTarget', sourceOrTargetId);
+      this._refreshGraph(true);
+    }
+    if (
+      this.contextMenuStore!.has('newEdgeSource') &&
+      this.contextMenuStore!.has('newEdgeTarget')
+    ) {
+      const sourceId = this.contextMenuStore!.get('newEdgeSource');
+      const targetId = this.contextMenuStore!.get('newEdgeTarget');
+
+      const newEdge = {
+        linkId: `customRelation-${
+          crypto.getRandomValues(new Uint32Array(1))[0]
+        }`,
+        sourceId,
+        targetId,
+        types: [this.contextMenuStore!.get('newEdgeType')],
+        label: this.contextMenuStore!.get('newEdgeLabel'),
+      };
+      this.graphdataSkeleton.links.push(newEdge);
+
+      this.d3Nodes!.filter(nd =>
+        [sourceId, targetId].includes(nd.nodeId)
+      ).forEach(nd => {
+        // eslint-disable-next-line no-param-reassign
+        nd.isHighlighted = false;
+      });
+
+      this.d3Links!.filter(lk =>
+        [sourceId, targetId].includes(lk.linkId)
+      ).forEach(lk => {
+        // eslint-disable-next-line no-param-reassign
+        lk.isHighlighted = false;
+      });
+
+      this.contextMenuStore!.delete('newEdgeSource');
+      this.contextMenuStore!.delete('newEdgeTarget');
+      this.contextMenuStore!.delete('newEdgeType');
+      this.contextMenuStore!.delete('newEdgeLabel');
+      this.isAddingEdge = false;
+      // Refresh
+      this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+    }
   }
 
   private _onSelectedNodesChanged() {
@@ -2885,6 +3523,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._addAnimation();
     this._addTooltips();
     this._enableNodeSelection();
+    this._enableLinkSelection();
     if (doEnableNodeExpandAndCollapse) {
       this._enableNodeExpandAndCollapse();
     }
@@ -3218,6 +3857,93 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
+  public downloadPeptidesCSV() {
+    // Provides a CSV file that contains all peptides that are mapped in the currently displayed diagram
+    const peptidesJSON = this.graphdataPTM!.nodes.filter(
+      node => node.type === 'ptm'
+    ).map(node => ({
+      'Modified Sequence': (<PTMNodeD3>node).details?.['Modified Sequence'],
+      'Gene Name(s)': (<PTMNodeD3>node).details?.['Gene Name(s)'],
+      // @ts-ignore
+      Uniprot: (<PTMNodeD3>node).details?.Uniprot_Accession_Number?.text,
+      Experiment: (<PTMNodeD3>node).details?.['Experiment Name'],
+      Regulation: (<PTMNodeD3>node).regulation,
+    }));
+
+    const replacer = (key: string, value: string | null) =>
+      value === null ? '' : value; // specify how you want to handle null values here
+    const header = Object.keys(peptidesJSON[0]);
+    const peptidesCSV = [
+      header.join('\t'), // header row first
+      ...peptidesJSON.map(row =>
+        header
+          // @ts-ignore
+          .map(fieldName => JSON.stringify(row[fieldName], replacer))
+          .join('\t')
+      ),
+    ].join('\r\n');
+
+    const blob = new Blob([peptidesCSV], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.download = 'mappedPeptides.csv';
+    a.href = url;
+    a.click();
+  }
+
+  public toggleLabelPeptideNodes() {
+    this.ptmNodeLabelsVisible = !this.ptmNodeLabelsVisible;
+    this.d3Nodes!.forEach(node => {
+      if (node.type === 'ptm') {
+        // TODO: If available, use Site identifier before sequence
+        const ptmNodeLabel =
+          // @ts-ignore
+          (<PTMNodeD3>node).details?.Site?.text ||
+          (<PTMNodeD3>node).details!['Modified Sequence'] ||
+          (<PTMNodeD3>node).details!.Sequence ||
+          'test';
+        // eslint-disable-next-line no-param-reassign
+        node.currentDisplayedLabel = this.ptmNodeLabelsVisible
+          ? String(ptmNodeLabel)
+          : '';
+      }
+    });
+    this._refreshGraph(true);
+  }
+
+  public toggleKinaseSubstrateLinks() {
+    this.kinaseSubstrateLinksVisible = !this.kinaseSubstrateLinksVisible;
+    this._refreshGraph(true);
+  }
+
+  public exportSkeleton(name: string, title: string) {
+    return JSON.stringify(
+      {
+        pathway: { name, title },
+        nodes: (<GeneProteinNodeD3[]>this.d3Nodes)
+          ?.filter(d3node => !d3node.nodeId.includes('ptm'))
+          .map(d3node => ({
+            id: d3node.nodeId,
+            geneNames: d3node.geneNames,
+            type: d3node.type,
+            x: Number(d3node.x.toFixed(1)),
+            y: Number(d3node.y.toFixed(1)),
+            uniprotAccs: d3node.uniprotAccs,
+            label: d3node.label,
+          })),
+        links: this.d3Links
+          ?.filter(d3link => !d3link.linkId.includes('ptm'))
+          .map(d3link => {
+            const { linkId, sourceId, targetId, types, label } = d3link;
+            return { id: linkId, sourceId, targetId, types, label };
+          }),
+      },
+      null,
+      0
+    );
+  }
+
   public selectNodesDownstreamOfSelection() {
     this.d3Nodes!.filter(node => node.selected).forEach(node =>
       this._selectDownstreamNodesWorker(node)
@@ -3283,15 +4009,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     /* eslint-enable no-param-reassign */
   }
 
-  private _initContextMenu() {
-    if (this.contextMenu) this.contextMenu.disconnect();
-
-    const container = d3v6
-      // @ts-ignore
-      .select(this.shadowRoot)
-      .select('#pathwayContainer')
-      .node();
-    this.contextMenu = new ContextMenu(<HTMLElement>container);
+  private _setUpViewingModeContextMenu() {
     this.contextMenuCommands = <ContextMenuCommand[]>[
       // Context Menu for Canvas
       {
@@ -3340,9 +4058,22 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       },
       {
         target: 'svg',
+        label: 'Show PTM Node Labels',
+        execute: () => this.toggleLabelPeptideNodes(),
+        type: 'radio',
+        checked: () => this.ptmNodeLabelsVisible,
+      },
+      {
+        target: 'svg',
+        label: 'Show Kinase-Substrate Relationships',
+        execute: () => this.toggleKinaseSubstrateLinks(),
+        type: 'radio',
+        checked: () => this.kinaseSubstrateLinksVisible,
+      },
+      {
+        target: 'svg',
         label: 'Show...',
         execute: ctx => {
-          // For hue, initialize to initial hue. Nothing is working so far...
           const storeId = `show-${ctx.item.id}`;
           ctx.store.set(storeId, !ctx.store.get(storeId));
           this._refreshGraph(true);
@@ -3415,20 +4146,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         ],
       },
     ];
-    const geneProteinPathwayCompoundsNodes = [
-      'rect.node-rect.gene_protein',
-      'rect.node-rect.gene_protein.down',
-      'rect.node-rect.gene_protein.up',
-      'rect.node-rect.gene_protein.both',
-      'rect.node-rect.gene_protein.not',
-      'rect.node-rect.pathway',
-      'rect.node-rect.compound',
-    ];
     this.contextMenuCommands.push(
       ...[
         // Context Menu for Gene/Protein Nodes
         {
-          target: geneProteinPathwayCompoundsNodes.concat(['path.group-path']),
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+            'path.group-path',
+          ]),
           label: 'Select Graph Downstream of...',
           execute: () => {},
           children: [
@@ -3457,15 +4181,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           ],
         },
         {
-          target: geneProteinPathwayCompoundsNodes,
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
           label: 'Alternative Names',
           // Children will be created dynamically!
         },
       ]
     );
-
-    // Add the store - it is saved as a separate variable, so it is persistent across incarnations of the contextmenu
-    this.contextMenu.store = this.contextMenuStore!;
 
     // Now we set up an event listener for nodes that dynamically creates the children of the 'Alternative Names' menu entry
     this._getMainDiv()
@@ -3474,28 +4195,390 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         '.gene_protein,.compound,.pathway'
       )
       .on('contextmenu', (e, node) => {
-        // Hide the tooltip when the context menu is shown
-        this._getMainDiv().select('#nodetooltip').style('opacity', '0');
-        const nameAlternatives = BiowcPathwaygraph._calcPossibleLabels(
-          <GeneProteinNodeD3>node
-        );
-        const alternativeNamesCommand =
-          this.contextMenuCommands!.pop() as ContextMenuCommand;
-        alternativeNamesCommand!.children = nameAlternatives.map(
-          alternative => ({
-            label: alternative,
-            execute: () => {
-              // eslint-disable-next-line no-param-reassign
-              node.currentDisplayedLabel = alternative;
-              this._refreshGraph(true);
-            },
-          })
-        );
-        this.contextMenuCommands!.push(alternativeNamesCommand);
-        this.contextMenu?.registerCommands(this.contextMenuCommands!);
+        // Only do this when in viewing mode
+        if (this.applicationMode === 'viewing') {
+          // Hide the tooltip when the context menu is shown
+          this._getMainDiv().select('#nodetooltip').style('opacity', '0');
+          const nameAlternatives = BiowcPathwaygraph._calcPossibleLabels(
+            <GeneProteinNodeD3>node
+          );
+          const alternativeNamesCommand =
+            this.contextMenuCommands!.pop() as ContextMenuCommand;
+          alternativeNamesCommand!.children = nameAlternatives.map(
+            alternative => ({
+              label: alternative,
+              execute: () => {
+                // eslint-disable-next-line no-param-reassign
+                node.currentDisplayedLabel = alternative;
+                this._refreshGraph(true);
+              },
+            })
+          );
+          this.contextMenuCommands!.push(alternativeNamesCommand);
+          this.contextMenu?.registerCommands(this.contextMenuCommands!);
+        }
       });
+  }
 
-    this.contextMenu.registerCommands(this.contextMenuCommands);
+  private _setUpEditingModeContextMenu() {
+    this.contextMenuCommands = <ContextMenuCommand[]>[
+      // Context Menu for Canvas
+      {
+        target: 'svg',
+        label: 'Add Node',
+        execute: ctx => {
+          this.contextMenuStore?.set('clickPoint', ctx.clickPoint);
+          const addNodeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-node-dialog')!;
+          addNodeDialog.showModal();
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Add Edge',
+        execute: () => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Source Node, then on the Target Node.';
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
+        },
+      },
+      {
+        target: 'svg',
+        label: 'Create Node Group',
+        execute: () => {
+          // eslint-disable-next-line no-alert
+          alert(
+            'Click on all nodes that should be part of the group.\nThen, right-click to finish the group.'
+          );
+          this.isCreatingGroup = true;
+          this.contextMenuStore!.set('groupMemberIds', []);
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+          'path.group-path',
+        ]),
+        label: 'Add Edge FROM this Node',
+        execute: ctx => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Target Node.';
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
+          // @ts-ignore
+          const { nodeId } = ctx.target.__data__;
+          this.contextMenuStore!.set('newEdgeSource', nodeId);
+
+          // @ts-ignore
+          ctx.target.__data__.isHighlighted = true;
+          this._refreshGraph(true);
+          this.isAddingEdge = true;
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
+          'path.group-path',
+        ]),
+        label: 'Add Edge TO this Node',
+        execute: ctx => {
+          const addEdgeInfoText: HTMLParagraphElement =
+            this.shadowRoot?.querySelector('#add-edge-info-text')!;
+          addEdgeInfoText.textContent =
+            'After clicking "Confirm", please click on the Source Node.';
+          const addEdgeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#add-edge-dialog')!;
+          addEdgeDialog.showModal();
+          // @ts-ignore
+          const { nodeId } = ctx.target.__data__;
+          this.contextMenuStore!.set('newEdgeTarget', nodeId);
+
+          // @ts-ignore
+          ctx.target.__data__.isHighlighted = true;
+          this._refreshGraph(true);
+          this.isAddingEdge = true;
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Change Node Type',
+        execute: ctx => {
+          // Get the node
+          const nodeToUpdate = this.graphdataSkeleton.nodes
+            // @ts-ignore
+            .filter(n => n.nodeId === ctx.target.__data__.nodeId)[0];
+          nodeToUpdate.type = ctx.item.id;
+          this.updated(new Map());
+        },
+        children: BiowcPathwaygraph.nodeTypes.map(nodeType => ({
+          type: 'radio',
+          id: nodeType.id,
+          label: nodeType.label,
+          checked: ctx => ctx.target.classList.contains(nodeType.id),
+        })),
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Edit Node Identifiers',
+        execute: ctx => {
+          const editNodePrimaryNameLabel: HTMLLabelElement =
+            this.shadowRoot?.querySelector('#edit-node-primary-name-label')!;
+          const editNodeAlternativeGeneNames: HTMLDivElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-alternative-gene-names'
+            )!;
+          const editNodeAlternativeGeneNamesTextArea: HTMLTextAreaElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-alternative-gene-names-textarea'
+            )!;
+          const editNodeUniprots: HTMLDivElement =
+            this.shadowRoot?.querySelector('#edit-node-uniprot-accession')!;
+          const editNodeUniprotsTextArea: HTMLTextAreaElement =
+            this.shadowRoot?.querySelector(
+              '#edit-node-uniprot-accession-textarea'
+            )!;
+          // @ts-ignore
+          if (ctx.target.__data__.type === 'gene_protein') {
+            editNodePrimaryNameLabel.textContent = 'Primary Gene Name:';
+            editNodeAlternativeGeneNames.style.display = 'block';
+            editNodeUniprots.style.display = 'block';
+            // @ts-ignore
+            editNodeAlternativeGeneNamesTextArea.setRangeText(
+              // @ts-ignore
+              ctx.target.__data__.geneNames
+                ?.filter(
+                  (name: String) =>
+                    ![
+                      // @ts-ignore
+                      ctx.target.__data__.label,
+                      // @ts-ignore
+                      ctx.target.__data__.currentDisplayedLabel,
+                    ].includes(name)
+                )
+                .join('\n') || ''
+            );
+            // @ts-ignore
+            editNodeUniprotsTextArea.setRangeText(
+              // @ts-ignore
+              ctx.target.__data__.uniprotAccs?.join('\n') || ''
+            );
+          } else {
+            editNodePrimaryNameLabel.textContent = 'Name:';
+            editNodeAlternativeGeneNames.style.display = 'none';
+            editNodeUniprots.style.display = 'none';
+          }
+
+          this.contextMenuStore?.set(
+            'nodeIdToUpdate',
+            // @ts-ignore
+            ctx.target.__data__.nodeId
+          );
+
+          const editNodePrimaryNameInput: HTMLInputElement =
+            this.shadowRoot?.querySelector('#edit-node-primary-name-input')!;
+          editNodePrimaryNameInput.setRangeText(
+            // @ts-ignore
+            ctx.target.__data__.label ||
+              // @ts-ignore
+              ctx.target.__data__.currentDisplayedLabel ||
+              ''
+          );
+
+          const editNodeDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#edit-node-dialog')!;
+          editNodeDialog.showModal();
+        },
+      },
+      {
+        target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+        label: 'Remove Node',
+        execute: ctx => {
+          // @ts-ignore
+          const nodeIdToRemove = ctx.target.__data__.nodeId;
+          this._removeNode(nodeIdToRemove);
+        },
+      },
+      {
+        target: 'path.group-path',
+        label: 'Remove Group',
+        execute: ctx => {
+          // @ts-ignore
+          const groupIdToRemove = ctx.target.__data__.nodeId;
+          this._removeGroup(groupIdToRemove);
+        },
+      },
+      {
+        target: 'line.link',
+        label: 'Change Edge Type',
+        execute: ctx => {
+          const edgeToUpdate = this.graphdataSkeleton.links
+            // @ts-ignore
+            .filter(e => e.linkId === ctx.target.__data__.linkId)[0];
+          edgeToUpdate.types = [ctx.item.id];
+          this.updated(new Map());
+        },
+        children: BiowcPathwaygraph.edgeTypes.map(edgeType => ({
+          type: 'radio',
+          id: edgeType.id,
+          label: edgeType.label,
+          // @ts-ignore
+          checked: ctx => ctx.target.__data__.types.includes(edgeType.id),
+        })),
+      },
+      {
+        target: 'line.link',
+        label: 'Change Edge Label',
+        execute: ctx => {
+          this.contextMenuStore?.set(
+            'edgeIdToUpdate',
+            // @ts-ignore
+            ctx.target.__data__.linkId
+          );
+          const editEdgeLabelInput: HTMLInputElement =
+            this.shadowRoot?.querySelector('#edit-edge-label-input')!;
+          // @ts-ignore
+          editEdgeLabelInput.setRangeText(ctx.target.__data__.label || '');
+
+          const editEdgeLabelDialog: HTMLDialogElement =
+            this.shadowRoot?.querySelector('#edit-edge-label-dialog')!;
+          editEdgeLabelDialog.showModal();
+        },
+      },
+      {
+        target: 'line.link',
+        label: 'Remove Edge',
+        execute: ctx => {
+          // @ts-ignore
+          const linkIdToRemove = ctx.target.__data__.linkId;
+          this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+            // Remove the link if it is either the very link to remove, or if it is
+            // an anchor that has the link to remove as source or target
+            link =>
+              ![link.linkId, link.sourceId, link.targetId].includes(
+                linkIdToRemove
+              )
+          );
+          // Refresh
+          this.updated(new Map()); // TODO: Forcing 'updated' with an empty map feels hacky...
+        },
+      },
+    ];
+  }
+
+  private _removeNode(nodeIdToRemove: string) {
+    this.graphdataSkeleton.nodes = this.graphdataSkeleton.nodes.filter(
+      node => node.nodeId !== nodeIdToRemove
+    );
+    this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+      link =>
+        link.sourceId !== nodeIdToRemove && link.targetId !== nodeIdToRemove
+    );
+    // Remove all higher-order links that just lost their endpoint
+    const nodeAndLinkIds = this.graphdataSkeleton.links
+      .map(link => link.linkId)
+      .concat(this.graphdataSkeleton.nodes.map(node => node.nodeId));
+    this.graphdataSkeleton.links = this.graphdataSkeleton.links.filter(
+      link =>
+        nodeAndLinkIds.includes(link.sourceId) &&
+        nodeAndLinkIds.includes(link.targetId)
+    );
+    // Refresh
+    this.updated(new Map());
+  }
+
+  private _removeGroup(groupIdToRemove: string) {
+    // Unlink every member of the group
+    this.graphdataSkeleton.nodes.forEach(node => {
+      if ((<GeneProteinNode>node).groupId === groupIdToRemove) {
+        // eslint-disable-next-line no-param-reassign
+        (<GeneProteinNode>node).groupId = undefined;
+      }
+    });
+
+    this._removeNode(groupIdToRemove);
+  }
+
+  private _initContextMenu() {
+    if (this.contextMenu) this.contextMenu.disconnect();
+
+    const container = d3v6
+      // @ts-ignore
+      .select(this.shadowRoot)
+      .select('#pathwayContainer')
+      .node();
+    this.contextMenu = new ContextMenu(<HTMLElement>container);
+
+    // TODO: I probably need to do most of this only once, not every time the mode is switched.
+    if (this.isCreatingGroup) {
+      this.contextMenuCommands = <ContextMenuCommand[]>[
+        {
+          target: 'svg',
+          label: 'Finish Group',
+          execute: () => {
+            const groupId = `customGroup-${
+              crypto.getRandomValues(new Uint32Array(1))[0]
+            }`;
+            this.graphdataSkeleton.nodes
+              .filter(node =>
+                this.contextMenuStore!.get('groupMemberIds').includes(
+                  node.nodeId
+                )
+              )
+              .forEach(node => {
+                // eslint-disable-next-line no-param-reassign
+                (<GeneProteinNode>node).groupId = groupId;
+              });
+            // @ts-ignore
+            this.graphdataSkeleton.nodes.push({
+              nodeId: groupId,
+              type: 'group',
+            });
+            this.contextMenuStore!.delete('groupMemberIds');
+            // Remove highlighting of node members
+            this.d3Nodes?.forEach(d => {
+              /* eslint-disable-next-line no-param-reassign */
+              d.isHighlighted = false;
+            });
+            // Check if any groups have become empty by the creation of the new group
+            // It can happen if the new group "steals" all remaining members
+            // In that case remove the group, there might be dangling edges otherwise
+            const allGroupIDs = this.graphdataSkeleton.nodes
+              .filter(node => node.type === 'group')
+              .map(node => node.nodeId);
+
+            allGroupIDs
+              .filter(
+                currentGroupId =>
+                  // If no node has the group as an id...
+                  !this.graphdataSkeleton.nodes.some(
+                    node => (<GeneProteinNode>node).groupId === currentGroupId
+                  )
+              )
+              .forEach(currentGroupId => {
+                // ...get rid of the group
+                this._removeGroup(currentGroupId);
+              });
+
+            this.isCreatingGroup = false;
+            this.updated(new Map());
+            this._refreshGraph(true);
+          },
+        },
+      ];
+    } else if (this.applicationMode === 'viewing') {
+      this._setUpViewingModeContextMenu();
+    } else {
+      this._setUpEditingModeContextMenu();
+    }
+
+    // Add the store - it is saved as a separate variable, so it is persistent across incarnations of the contextmenu
+    this.contextMenu.store = this.contextMenuStore!;
+    this.contextMenu.registerCommands(this.contextMenuCommands!);
     this.contextMenu.connect();
   }
 
@@ -3525,8 +4608,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     toSlider.max = String(Math.max(Math.ceil(this.colorRangeMax!), 9));
 
     // We use 5-9 as the default range for the sliders. So if it is within the range, set the sliders to those values
-    fromSlider.value = String(Math.max(Number(fromSlider.min), 5));
-    toSlider.value = String(Math.min(Number(toSlider.max), 9));
+    fromSlider.value = String(5);
+    toSlider.value = String(9);
 
     const fromSliderOutput: HTMLOutputElement =
       this.shadowRoot?.querySelector('#fromSliderOutput')!;
@@ -3653,5 +4736,27 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         /* eslint-enable no-param-reassign */
       });
     this._refreshGraph(true);
+  }
+
+  public switchApplicationMode(newMode: PossibleApplicationMode) {
+    this.applicationMode = newMode;
+
+    if (this.applicationMode === 'viewing') {
+      // The 'viewing' class has no effect right now, but I'm using it in analogy to the 'editing' class below,
+      // which has a CSS style
+      this._getMainDiv().attr('class', 'viewing');
+    }
+
+    if (this.applicationMode === 'editing') {
+      this._getMainDiv().attr('class', 'editing');
+      this.hue = 'direction';
+      this.ptmInputList = [];
+      this.fullProteomeInputList = [];
+      // Remove the legend if it is present
+      this._getMainDiv()
+        .select<SVGElement>('#pathwayLegend')
+        .selectAll('*')
+        .remove();
+    }
   }
 }

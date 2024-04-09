@@ -263,9 +263,15 @@ export default {
         regulation: 'down',
         details: {
           Sequence: 'TRY(ph)AGAINK',
+          Site: { text: 'S42' },
           'Fold Change': 0.1,
           'p Value': 0.0002,
           '-log(EC50)': 9,
+          'Upstream Kinase(s)': {
+            display: true,
+            indentKey: true,
+            text: 'GeneA, Protein D',
+          },
         },
       },
       {
@@ -273,6 +279,7 @@ export default {
         regulation: 'not',
         details: {
           Sequence: 'GILGVIVT(ph)LK',
+          Site: { text: 'Y512' },
           'Fold Change': 0.9,
           'p Value': 0.0003,
           '-log(EC50)': 6,
@@ -285,6 +292,11 @@ export default {
             indentKey: true,
           },
           'Something else': 'Hello!',
+          'Upstream Kinase(s)': {
+            display: true,
+            indentKey: true,
+            text: 'Protein B, Protein C',
+          },
         },
       },
       {
@@ -292,6 +304,7 @@ export default {
         regulation: 'up',
         details: {
           Sequence: 'VNIPRVT(ph)K',
+
           'Fold Change': 4,
           'p Value': 0.0004,
           '-log(EC50)': 10,
@@ -302,6 +315,7 @@ export default {
         regulation: 'up',
         details: {
           Sequence: 'GENENAMES(ph)K',
+          Site: { text: 'T90' },
           'Fold Change': 2,
           'p Value': 0.001,
           '-log(EC50)': 8,

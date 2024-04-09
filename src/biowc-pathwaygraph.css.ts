@@ -4,6 +4,8 @@ export default css`
   :host {
     --upregulated-color: #ea0000;
     --downregulated-color: #2571ff;
+    --upregulated-perturbed-color: #c20000;
+    --downregulated-perturbed-color: #0043c2;
     --unregulated-color: #a4a4a4;
     --pathway-color: #89b9ce;
     --gene-protein-color: #efefef;
@@ -11,6 +13,8 @@ export default css`
     --group-fill-color: #6c7a74;
     --group-stroke-color: #3b423f;
     --link-color: #999999;
+    --link-color-highlight: #3d3d3d;
+    --kinase-substrate-link-color: #7e1d17;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
     --font-stack: 'Roboto Light', 'Helvetica Neue', 'Verdana', sans-serif;
@@ -31,8 +35,17 @@ export default css`
     stroke-width: 3;
   }
 
+  .link.highlight {
+    stroke: var(--link-color-highlight);
+  }
+
   .link.ptmlink {
     visibility: hidden;
+  }
+
+  .link.kinaseSubstrateLink {
+    stroke: var(--kinase-substrate-link-color);
+    stroke-width: 2;
   }
 
   .link.maplink {
@@ -59,6 +72,16 @@ export default css`
 
   .node-rect.gene_protein {
     fill: var(--gene-protein-color);
+  }
+
+  .node-rect.gene_protein.highlight-up {
+    stroke: var(--upregulated-perturbed-color);
+    stroke-width: 4;
+  }
+
+  .node-rect.gene_protein.highlight-down {
+    stroke: var(--downregulated-perturbed-color);
+    stroke-width: 4;
   }
 
   .node-rect.group {
@@ -101,9 +124,38 @@ export default css`
     fill: var(--compound-color);
   }
 
+  .node-rect.highlight {
+    stroke-width: 3;
+  }
+
   strong {
     display: inline-block;
     text-align: left;
+  }
+
+  .form-wrapper {
+    display: block;
+    text-align: right;
+    line-height: 2;
+    font-family: var(--font-stack);
+
+    select {
+      width: 209px;
+    }
+
+    input {
+      width: 200px;
+    }
+
+    textarea {
+      width: 200px;
+      vertical-align: top;
+      resize: none;
+    }
+  }
+
+  .form-element {
+    margin-left: 10px;
   }
 
   .legend {
@@ -161,8 +213,22 @@ export default css`
     stroke: var(--group-stroke-color);
   }
 
+  .group-path.highlight {
+    stroke-width: 3px;
+  }
+
   #pathwayContainer {
     position: relative;
+  }
+
+  #pathwaygraph {
+    background-color: #ffffff;
+  }
+
+  #pathwaygraph.editing {
+    background-color: #ffffff;
+    border-color: #3e4349;
+    border-style: dashed;
   }
 
   #potencyRangeSlider {
@@ -232,5 +298,16 @@ export default css`
     position: relative;
     top: 15px;
     z-index: 1;
+  }
+
+  dialog {
+    border-radius: var(--context-menu-border-radius);
+    border-color: var(--context-menu-background-color);
+    box-shadow: var(--context-menu-shadow);
+  }
+
+  ::backdrop {
+    background: #d2d2d2;
+    opacity: 0.5;
   }
 `;

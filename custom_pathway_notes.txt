@@ -1,0 +1,37 @@
+Done:
+- mode: viewing/editing
+    - Create storybook with switch, same as for the hue + upload and download button
+    - Clear PTM & FP Inputlist when switching to edit mode
+- New Context Menu:
+    - Add Node
+        - Popup Form where you can enter:
+            - Type of Node (options: Gene/Protein, Metabolite/Compound, Pathway)
+            - For Gene/Protein:
+                - List of Names (first one will implicitly become default one)
+                - List of Uniprot Accession Numbers
+        -> Create node at position of right-click
+            - Just add to what is parsed from the JSON
+    - Add Edge
+        - Await two clicks 'After clicking confirm, please click on the source, then the target node.'
+        - Increase Border of node after click to feedback selection
+        - Popup Form where you can choose edge type and optionally set a label (e.g. '+p')
+- Export: Create JSON using current positions 
+    - Node: Add Edge to...
+    - Node: Add Edge from...
+    - Edge: Change Edge Type
+    - Edge: Delete Edge
+    - Node: Delete Node -> Need to delete all adjacent edges too -> AND HIGHER ORDER LINKS!
+    - Create Group
+    - Edge: Change Label
+    - Node: Change Node Type
+    - Node: Change Name(s)
+    - Group: Delete Group -> Merge code with Delete Node, it is similar
+    - Group: When addition of group clears another group, delete orphaned edges (you can probably reuse code from delete group, since you're implicitly deleting a group here)
+    - Edge: Add Anchor Edge
+    - When adding edge, highlight selected groups and edges similarly to how nodes are highlighted
+
+    
+Todo:
+	BiowcPathwaygraph:
+
+	In PTMNavigator:
