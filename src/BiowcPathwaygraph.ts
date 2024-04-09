@@ -234,6 +234,9 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: false })
   applicationMode!: PossibleApplicationMode;
 
+  @property({ attribute: false })
+  perturbedNodes?: { up: String[]; down: String[] };
+
   graphdataPTM?: {
     nodes: (PTMNode | PTMSummaryNode)[];
     links: PathwayGraphLinkInput[];
@@ -1498,7 +1501,9 @@ export class BiowcPathwaygraph extends LitElement {
         d =>
           `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(
             d
-          )} ${d.isHighlighted ? 'highlight' : ''}`
+          )} ${d.isHighlighted ? 'highlight' : ''}
+          ${this._computeIsPerturbed(d)}
+          `
       )
       .attr('rx', NODE_HEIGHT)
       .attr('ry', NODE_HEIGHT)
@@ -2250,6 +2255,28 @@ export class BiowcPathwaygraph extends LitElement {
       Number((<PTMNodeD3>node).details!['Fold Change']) ||
       Number((<PTMNodeD3>node).details!['Log Fold Change'])
     );
+  }
+
+  private _computeIsPerturbed(node: PathwayGraphNodeD3) {
+    // @ts-ignore
+    if (node.geneNames) {
+      const geneProteinNode = node as GeneProteinNodeD3;
+      if (
+        geneProteinNode.geneNames.filter(geneName =>
+          this.perturbedNodes?.down.includes(geneName)
+        ).length > 0
+      ) {
+        return 'highlight-down';
+      }
+      if (
+        geneProteinNode.geneNames.filter(geneName =>
+          this.perturbedNodes?.up.includes(geneName)
+        ).length > 0
+      ) {
+        return 'highlight-up';
+      }
+    }
+    return '';
   }
 
   private _computeNodeColor(node: PathwayGraphNodeD3) {
