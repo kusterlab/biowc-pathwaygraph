@@ -3931,6 +3931,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             y: Number(d3node.y.toFixed(1)),
             uniprotAccs: d3node.uniprotAccs,
             label: d3node.label,
+            groupId: d3node.groupId,
           })),
         links: this.d3Links
           ?.filter(d3link => !d3link.linkId.includes('ptm'))
