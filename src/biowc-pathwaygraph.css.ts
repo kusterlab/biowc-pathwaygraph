@@ -4,8 +4,11 @@ export default css`
   :host {
     --upregulated-color: #ea0000;
     --downregulated-color: #2571ff;
-    --upregulated-perturbed-color: #c20000;
-    --downregulated-perturbed-color: #0043c2;
+    /*These three are updated by the Typescript code*/
+    --upregulated-perturbed-color: #000000;
+    --downregulated-perturbed-color: #000000;
+    --perturbed-stroke-width: 1.5;
+
     --unregulated-color: #a4a4a4;
     --pathway-color: #89b9ce;
     --gene-protein-color: #efefef;
@@ -76,12 +79,12 @@ export default css`
 
   .node-rect.gene_protein.highlight-up {
     stroke: var(--upregulated-perturbed-color);
-    stroke-width: 4;
+    stroke-width: var(--perturbed-stroke-width);
   }
 
   .node-rect.gene_protein.highlight-down {
     stroke: var(--downregulated-perturbed-color);
-    stroke-width: 4;
+    stroke-width: var(--perturbed-stroke-width);
   }
 
   .node-rect.group {

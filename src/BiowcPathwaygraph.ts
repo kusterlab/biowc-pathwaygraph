@@ -295,6 +295,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   kinaseSubstrateLinksVisible: Boolean = false;
 
+  activeKinasesVisible: Boolean = false;
+
   // TODO: Is there no way I can generalize this to rect.node-rect?
   static geneProteinPathwayCompoundsNodes: string[] = [
     'rect.node-rect.gene_protein',
@@ -3917,6 +3919,22 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._refreshGraph(true);
   }
 
+  public toggleHighlightActiveKinases() {
+    this.activeKinasesVisible = !this.activeKinasesVisible;
+
+    // Add or remove the show-highlight class for all highlight-up and highlight-down nodes
+    if (this.activeKinasesVisible) {
+      this._getMainDiv().style('--upregulated-perturbed-color', '#c20000');
+      this._getMainDiv().style('--downregulated-perturbed-color', '#0043c2');
+      this._getMainDiv().style('--perturbed-stroke-width', '4');
+    } else {
+      this._getMainDiv().style('--upregulated-perturbed-color', '#000000');
+      this._getMainDiv().style('--downregulated-perturbed-color', '#000000');
+      this._getMainDiv().style('--perturbed-stroke-width', '1.5');
+    }
+    this._refreshGraph(true);
+  }
+
   public exportSkeleton(name: string, title: string) {
     return JSON.stringify(
       {
@@ -4070,6 +4088,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         execute: () => this.toggleKinaseSubstrateLinks(),
         type: 'radio',
         checked: () => this.kinaseSubstrateLinksVisible,
+      },
+      {
+        target: 'svg',
+        label: 'Highlight Differentially Active Kinases',
+        execute: () => this.toggleHighlightActiveKinases(),
+        type: 'radio',
+        checked: () => this.activeKinasesVisible,
       },
       {
         target: 'svg',
