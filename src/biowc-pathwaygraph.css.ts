@@ -16,7 +16,7 @@ export default css`
     --group-fill-color: #6c7a74;
     --group-stroke-color: #3b423f;
     --link-color: #999999;
-    --link-color-highlight: #3d3d3d;
+    --link-color-edit-highlight: #3d3d3d;
     --kinase-substrate-link-color: #7e1d17;
     --edge-label-color: #4e4e4e;
     --legend-frame-color: #a9a9a9;
@@ -38,8 +38,8 @@ export default css`
     stroke-width: 3;
   }
 
-  .link.highlight {
-    stroke: var(--link-color-highlight);
+  .link.edit-highlight {
+    stroke: var(--link-color-edit-highlight) !important;
   }
 
   .link.ptmlink {
@@ -77,12 +77,12 @@ export default css`
     fill: var(--gene-protein-color);
   }
 
-  .node-rect.gene_protein.highlight-up {
+  .node-rect.gene_protein.circle-up {
     stroke: var(--upregulated-perturbed-color);
     stroke-width: var(--perturbed-stroke-width);
   }
 
-  .node-rect.gene_protein.highlight-down {
+  .node-rect.gene_protein.circle-down {
     stroke: var(--downregulated-perturbed-color);
     stroke-width: var(--perturbed-stroke-width);
   }
@@ -127,8 +127,8 @@ export default css`
     fill: var(--compound-color);
   }
 
-  .node-rect.highlight {
-    stroke-width: 3;
+  .node-rect.edit-highlight {
+    stroke-width: 3 !important;
   }
 
   strong {
@@ -216,8 +216,8 @@ export default css`
     stroke: var(--group-stroke-color);
   }
 
-  .group-path.highlight {
-    stroke-width: 3px;
+  .group-path.edit-highlight {
+    stroke-width: 3px !important;
   }
 
   #pathwayContainer {

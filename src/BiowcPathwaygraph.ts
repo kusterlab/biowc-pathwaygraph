@@ -165,7 +165,7 @@ interface PathwayGraphNodeD3 extends PathwayGraphNode {
   leftX?: number;
   rightX?: number;
   currentDisplayedLabel?: string;
-  isHighlighted?: boolean;
+  isEditHighlighted?: boolean;
 }
 
 interface GeneProteinNodeD3 extends GeneProteinNode, PathwayGraphNodeD3 {
@@ -205,7 +205,7 @@ interface PathwayGraphLinkD3 extends PathwayGraphLink {
   targetX?: number;
   sourceY?: number;
   targetY?: number;
-  isHighlighted?: boolean;
+  isEditHighlighted?: boolean;
 }
 
 export class BiowcPathwaygraph extends LitElement {
@@ -295,7 +295,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   kinaseSubstrateLinksVisible: Boolean = false;
 
-  activeKinasesVisible: Boolean = false;
+  perturbedNodesVisible: Boolean = false;
 
   // TODO: Is there no way I can generalize this to rect.node-rect?
   static geneProteinPathwayCompoundsNodes: string[] = [
@@ -799,7 +799,7 @@ export class BiowcPathwaygraph extends LitElement {
       // Remove highlighting of node, if present
       this.d3Nodes?.forEach(d => {
         /* eslint-disable-next-line no-param-reassign */
-        d.isHighlighted = false;
+        d.isEditHighlighted = false;
       });
       this._refreshGraph(true);
       this.isAddingEdge = false;
@@ -1488,7 +1488,7 @@ export class BiowcPathwaygraph extends LitElement {
         'class',
         d =>
           `node ${d.type} ${BiowcPathwaygraph._computeRegulationClass(d)} ${
-            d.isHighlighted ? 'highlight' : ''
+            d.isEditHighlighted ? 'edit-highlight' : ''
           } `
       )
       .attr('id', d => `node-${d.nodeId}`);
@@ -1503,7 +1503,7 @@ export class BiowcPathwaygraph extends LitElement {
         d =>
           `node-rect ${d.type} ${BiowcPathwaygraph._computeRegulationClass(
             d
-          )} ${d.isHighlighted ? 'highlight' : ''}
+          )} ${d.isEditHighlighted ? 'edit-highlight' : ''}
           ${this._computeIsPerturbed(d)}
           `
       )
@@ -1586,7 +1586,10 @@ export class BiowcPathwaygraph extends LitElement {
             .empty()
       )
       .append('path')
-      .attr('class', d => `group-path ${d.isHighlighted ? 'highlight' : ''}`);
+      .attr(
+        'class',
+        d => `group-path ${d.isEditHighlighted ? 'edit-highlight' : ''}`
+      );
 
     // Draw links as lines with appropriate arrowheads
     const linksSvg = linkG
@@ -1607,7 +1610,10 @@ export class BiowcPathwaygraph extends LitElement {
       .append('line')
       .attr(
         'class',
-        d => `link ${d.types.join(' ')}  ${d.isHighlighted ? 'highlight' : ''}`
+        d =>
+          `link ${d.types.join(' ')}  ${
+            d.isEditHighlighted ? 'edit-highlight' : ''
+          }`
       )
       .attr('marker-end', d => {
         if (d.types.includes('inhibition')) {
@@ -2268,14 +2274,14 @@ export class BiowcPathwaygraph extends LitElement {
           this.perturbedNodes?.down.includes(geneName)
         ).length > 0
       ) {
-        return 'highlight-down';
+        return 'circle-down';
       }
       if (
         geneProteinNode.geneNames.filter(geneName =>
           this.perturbedNodes?.up.includes(geneName)
         ).length > 0
       ) {
-        return 'highlight-up';
+        return 'circle-up';
       }
     }
     return '';
@@ -3396,7 +3402,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             ...this.contextMenuStore!.get('groupMemberIds'),
             node.nodeId,
           ]);
-          node.isHighlighted = true;
+          node.isEditHighlighted = true;
           this._refreshGraph(true);
           /* eslint-enable no-param-reassign */
         }
@@ -3404,7 +3410,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         // Logic for adding an edge
         if (this.isAddingEdge) {
           // eslint-disable-next-line no-param-reassign
-          node.isHighlighted = true;
+          node.isEditHighlighted = true;
           this._addEdgeFromOrTo(node.nodeId);
         }
       });
@@ -3418,7 +3424,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         // Links can - for now - only be selected when in edge-adding mode
         if (this.isAddingEdge) {
           // eslint-disable-next-line no-param-reassign
-          link.isHighlighted = true;
+          link.isEditHighlighted = true;
           this._addEdgeFromOrTo(link.linkId);
         }
       });
@@ -3454,14 +3460,14 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         [sourceId, targetId].includes(nd.nodeId)
       ).forEach(nd => {
         // eslint-disable-next-line no-param-reassign
-        nd.isHighlighted = false;
+        nd.isEditHighlighted = false;
       });
 
       this.d3Links!.filter(lk =>
         [sourceId, targetId].includes(lk.linkId)
       ).forEach(lk => {
         // eslint-disable-next-line no-param-reassign
-        lk.isHighlighted = false;
+        lk.isEditHighlighted = false;
       });
 
       this.contextMenuStore!.delete('newEdgeSource');
@@ -3475,7 +3481,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   private _onSelectedNodesChanged() {
-    this._highlightSelectedNodes();
+    this._emphasizeSelectedNodes();
     this._sendSelectionDetailsToParent();
   }
 
@@ -3529,12 +3535,12 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     if (doEnableNodeExpandAndCollapse) {
       this._enableNodeExpandAndCollapse();
     }
-    this._highlightSelectedNodes();
+    this._emphasizeSelectedNodes();
     this._initContextMenu();
     this._updateRangeSliderVisibility();
   }
 
-  private _highlightSelectedNodes() {
+  private _emphasizeSelectedNodes() {
     // What we actually do is 'un-highlight' the NOT selected nodes by reducing their opacity
     const opacityOfUnselected = 0.125;
     const opacityOfUnselectedPTM = 0.25;
@@ -3919,11 +3925,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._refreshGraph(true);
   }
 
-  public toggleHighlightActiveKinases() {
-    this.activeKinasesVisible = !this.activeKinasesVisible;
+  public toggleHighlightPerturbedNodes() {
+    this.perturbedNodesVisible = !this.perturbedNodesVisible;
 
-    // Add or remove the show-highlight class for all highlight-up and highlight-down nodes
-    if (this.activeKinasesVisible) {
+    // Add or remove the show-highlight class for all circle-up and circle-down nodes
+    if (this.perturbedNodesVisible) {
       this._getMainDiv().style('--upregulated-perturbed-color', '#c20000');
       this._getMainDiv().style('--downregulated-perturbed-color', '#0043c2');
       this._getMainDiv().style('--perturbed-stroke-width', '4');
@@ -4092,9 +4098,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: 'svg',
         label: 'Highlight Differentially Active Kinases',
-        execute: () => this.toggleHighlightActiveKinases(),
+        execute: () => this.toggleHighlightPerturbedNodes(),
         type: 'radio',
-        checked: () => this.activeKinasesVisible,
+        checked: () => this.perturbedNodesVisible,
       },
       {
         target: 'svg',
@@ -4302,7 +4308,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           this.contextMenuStore!.set('newEdgeSource', nodeId);
 
           // @ts-ignore
-          ctx.target.__data__.isHighlighted = true;
+          ctx.target.__data__.isEditHighlighted = true;
           this._refreshGraph(true);
           this.isAddingEdge = true;
         },
@@ -4325,7 +4331,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           this.contextMenuStore!.set('newEdgeTarget', nodeId);
 
           // @ts-ignore
-          ctx.target.__data__.isHighlighted = true;
+          ctx.target.__data__.isEditHighlighted = true;
           this._refreshGraph(true);
           this.isAddingEdge = true;
         },
@@ -4568,7 +4574,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             // Remove highlighting of node members
             this.d3Nodes?.forEach(d => {
               /* eslint-disable-next-line no-param-reassign */
-              d.isHighlighted = false;
+              d.isEditHighlighted = false;
             });
             // Check if any groups have become empty by the creation of the new group
             // It can happen if the new group "steals" all remaining members
