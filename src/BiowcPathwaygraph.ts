@@ -4780,6 +4780,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     }
 
     if (this.applicationMode === 'editing') {
+      // Remove all full proteome and perturbation target information
+      this.perturbedNodes = { up: <String[]>[], down: <String[]>[] };
+
       this._getMainDiv().attr('class', 'editing');
       this.hue = 'direction';
       this.ptmInputList = [];

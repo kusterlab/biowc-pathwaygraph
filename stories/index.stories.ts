@@ -307,7 +307,9 @@ DownloadGraphAsSVG.args = {
 const DownloadCSVTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
   <div>${args.storyTitle}</div>
   <div>${args.storyDescription}</div>
-  <button onclick="document.getElementById('pathwaygraph').downloadPeptidesCSV()">
+  <button
+    onclick="document.getElementById('pathwaygraph').downloadPeptidesCSV()"
+  >
     Download
   </button>
   <biowc-pathwaygraph
@@ -326,8 +328,7 @@ DownloadMappedPeptidesCSV.args = {
   ...ColoringNodesByPotency.args,
   hue: 'direction',
   storyTitle: 'Download Mapped Peptides as CSV',
-  storyDescription:
-    'TODO: Change the finally in the previous story ;-)',
+  storyDescription: 'TODO: Change the finally in the previous story ;-)',
 };
 
 const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
@@ -338,13 +339,13 @@ const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     name="modeswitch"
     id="viewing"
     onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
+    checked
   /><label for="viewing">Viewing Mode</label>
   <input
     type="radio"
     name="modeswitch"
     id="editing"
     onclick="document.getElementById('pathwaygraph').switchApplicationMode(this.id);"
-    checked
   /><label for="editing">Editing Mode</label>
   <button
     onclick="document.getElementById('pathwaygraph').exportSkeleton('custompathway1', 'My Pathway')"
@@ -370,7 +371,7 @@ EditingMode.args = {
   hue: 'potency',
   storyTitle: 'Editing Mode',
   storyDescription: 'TODO',
-  applicationMode: 'editing',
+  applicationMode: 'viewing',
 };
 
 // TODO: Events: selectedNodeTooltip and selectionDetails are dispatched when?
