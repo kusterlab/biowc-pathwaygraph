@@ -12,6 +12,7 @@ import {
 import {
   CommandBase,
   ContextMenu,
+  EnabledOptions,
   ExecuteOptions,
 } from '@api-client/context-menu';
 import { ContextMenuCommand, Point } from '@api-client/context-menu/src/types';
@@ -293,7 +294,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   allPtmNodeLabelsVisible: boolean = false;
 
-  kinaseSubstrateLinksVisible: boolean = false;
+  allKinaseSubstrateLinksVisible: boolean = false;
 
   perturbedNodesVisible: boolean = false;
 
@@ -307,6 +308,10 @@ export class BiowcPathwaygraph extends LitElement {
       this.circle_strings.map(s2 => `rect.node-rect.gene_protein${s1}${s2}`)
     ),
     ...['rect.node-rect.pathway', 'rect.node-rect.compound'],
+  ];
+
+  static ptmNodes: string[] = [
+    ...this.regulation_strings.map(s1 => `rect.node-rect.ptm${s1}`),
   ];
 
   static nodeTypes: { id: string; label: string }[] = [
@@ -600,6 +605,7 @@ export class BiowcPathwaygraph extends LitElement {
       ['show-down', true],
       ['show-not', true],
       ['peptide-label-visibility-map', {}],
+      ['kinase-substrate-relationship-visibility-map', {}],
     ]);
 
     this._initEditModeForms();
@@ -1637,7 +1643,12 @@ export class BiowcPathwaygraph extends LitElement {
       })
       .style('visibility', d => {
         if (d.types.includes('kinaseSubstrateLink')) {
-          return this.kinaseSubstrateLinksVisible ? 'visible' : 'hidden';
+          const visibilityMapKey = `${d.sourceId},${d.targetId}`;
+          return this.contextMenuStore?.get(
+            'kinase-substrate-relationship-visibility-map'
+          )[visibilityMapKey]
+            ? 'visible'
+            : 'hidden';
         }
         if (d.types.includes('ptmlink')) {
           return 'hidden';
@@ -2269,7 +2280,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   private _computeIsPerturbed(node: PathwayGraphNodeD3) {
     // @ts-ignore
-    if (node.geneNames) {
+    if (node.geneNames && node.type !== 'ptm') {
       const geneProteinNode = node as GeneProteinNodeD3;
       if (
         geneProteinNode.geneNames.filter(geneName =>
@@ -3702,6 +3713,44 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     );
   }
 
+  private _updatePeptideNodeLabels() {
+    this.d3Nodes!.forEach(node => {
+      if (node.type === 'ptm') {
+        const ptmNode = <PTMNodeD3>node;
+        // TODO: If available, use Site identifier before sequence
+        const ptmNodeLabel =
+          // @ts-ignore
+          ptmNode.details?.Site?.text ||
+          ptmNode.details!['Modified Sequence'] ||
+          ptmNode.details!.Sequence ||
+          'test';
+        // eslint-disable-next-line no-param-reassign
+        ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
+          'peptide-label-visibility-map'
+        )[ptmNode.geneProteinNode?.nodeId!]
+          ? String(ptmNodeLabel)
+          : '';
+      }
+    });
+    this._refreshGraph(true);
+  }
+
+  private _toggleHighlightPerturbedNodes() {
+    this.perturbedNodesVisible = !this.perturbedNodesVisible;
+
+    // Add or remove the show-highlight class for all circle-up and circle-down nodes
+    if (this.perturbedNodesVisible) {
+      this._getMainDiv().style('--upregulated-perturbed-color', '#c20000');
+      this._getMainDiv().style('--downregulated-perturbed-color', '#0043c2');
+      this._getMainDiv().style('--perturbed-stroke-width', '4');
+    } else {
+      this._getMainDiv().style('--upregulated-perturbed-color', '#000000');
+      this._getMainDiv().style('--downregulated-perturbed-color', '#000000');
+      this._getMainDiv().style('--perturbed-stroke-width', '1.5');
+    }
+    this._refreshGraph(true);
+  }
+
   private static _getCoordinatesFromTranslate(
     elem: Selection<SVGElement, unknown, any, undefined>,
     withScale: Boolean
@@ -3902,49 +3951,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
-  public updatePeptideNodeLabels() {
-    this.d3Nodes!.forEach(node => {
-      if (node.type === 'ptm') {
-        const ptmNode = <PTMNodeD3>node;
-        // TODO: If available, use Site identifier before sequence
-        const ptmNodeLabel =
-          // @ts-ignore
-          ptmNode.details?.Site?.text ||
-          ptmNode.details!['Modified Sequence'] ||
-          ptmNode.details!.Sequence ||
-          'test';
-        // eslint-disable-next-line no-param-reassign
-        ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
-          'peptide-label-visibility-map'
-        )[ptmNode.geneProteinNode?.nodeId!]
-          ? String(ptmNodeLabel)
-          : '';
-      }
-    });
-    this._refreshGraph(true);
-  }
-
-  public toggleKinaseSubstrateLinks() {
-    this.kinaseSubstrateLinksVisible = !this.kinaseSubstrateLinksVisible;
-    this._refreshGraph(true);
-  }
-
-  public toggleHighlightPerturbedNodes() {
-    this.perturbedNodesVisible = !this.perturbedNodesVisible;
-
-    // Add or remove the show-highlight class for all circle-up and circle-down nodes
-    if (this.perturbedNodesVisible) {
-      this._getMainDiv().style('--upregulated-perturbed-color', '#c20000');
-      this._getMainDiv().style('--downregulated-perturbed-color', '#0043c2');
-      this._getMainDiv().style('--perturbed-stroke-width', '4');
-    } else {
-      this._getMainDiv().style('--upregulated-perturbed-color', '#000000');
-      this._getMainDiv().style('--downregulated-perturbed-color', '#000000');
-      this._getMainDiv().style('--perturbed-stroke-width', '1.5');
-    }
-    this._refreshGraph(true);
-  }
-
   public exportSkeleton(name: string, title: string) {
     return JSON.stringify(
       {
@@ -4102,7 +4108,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             peptideNodeVisibilityMap
           );
 
-          this.updatePeptideNodeLabels();
+          this._updatePeptideNodeLabels();
         },
         type: 'radio',
         checked: () => this.allPtmNodeLabelsVisible,
@@ -4110,14 +4116,33 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       {
         target: 'svg',
         label: 'Show Kinase-Substrate Relationships',
-        execute: () => this.toggleKinaseSubstrateLinks(),
+        execute: () => {
+          this.allKinaseSubstrateLinksVisible =
+            !this.allKinaseSubstrateLinksVisible;
+          const kinaseSubstrateRelationshipVisibilityMap =
+            this.contextMenuStore?.get(
+              'kinase-substrate-relationship-visibility-map'
+            );
+          this.d3Links!.forEach(link => {
+            if (link.types.includes('kinaseSubstrateLink')) {
+              const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+              kinaseSubstrateRelationshipVisibilityMap[visibilityMapKey] =
+                this.allKinaseSubstrateLinksVisible;
+            }
+          });
+          this.contextMenuStore?.set(
+            'kinase-substrate-relationship-visibility-map',
+            kinaseSubstrateRelationshipVisibilityMap
+          );
+          this._refreshGraph(true);
+        },
         type: 'radio',
-        checked: () => this.kinaseSubstrateLinksVisible,
+        checked: () => this.allKinaseSubstrateLinksVisible,
       },
       {
         target: 'svg',
         label: 'Highlight Differentially Active Kinases',
-        execute: () => this.toggleHighlightPerturbedNodes(),
+        execute: () => this._toggleHighlightPerturbedNodes(),
         type: 'radio',
         checked: () => this.perturbedNodesVisible,
       },
@@ -4197,8 +4222,78 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         ],
       },
     ];
+
     this.contextMenuCommands.push(
       ...(<ContextMenuCommand[]>[
+        // Context Menu for PTM Nodes
+        {
+          target: BiowcPathwaygraph.ptmNodes,
+          label: 'Show Kinase-Substrate Relationships for Node',
+          enabled: (ctx: EnabledOptions) =>
+            this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.targetId === ctx.target.__data__.nodeId
+            ).length > 0,
+          execute: (ctx: ExecuteOptions) => {
+            const kinaseSubstrateRelationshipVisibilityMap =
+              this.contextMenuStore?.get(
+                'kinase-substrate-relationship-visibility-map'
+              );
+            const kslinksOfNode = this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.targetId === ctx.target.__data__.nodeId
+            );
+            // If there is any link that is not visible, the menu will be unchecked and clicking will make all visible
+            // If all are visible, the menu will be checked and clicking will make all invisible
+            const hasSubstrateAnyNotVisibleLink =
+              kslinksOfNode.filter(link => {
+                const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+                return !kinaseSubstrateRelationshipVisibilityMap[
+                  visibilityMapKey
+                ];
+              }).length > 0;
+            kslinksOfNode.forEach(link => {
+              const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+              kinaseSubstrateRelationshipVisibilityMap[visibilityMapKey] =
+                hasSubstrateAnyNotVisibleLink;
+            });
+            this.contextMenuStore?.set(
+              'kinase-substrate-relationship-visibility-map',
+              kinaseSubstrateRelationshipVisibilityMap
+            );
+            this._refreshGraph(true);
+          },
+          type: 'radio',
+          checked: ctx => {
+            const kslinksOfNode = this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.targetId === ctx.target.__data__.nodeId
+            );
+            // If the node has zero kslinks, this is disabled and cannot be checked
+            if (kslinksOfNode.length === 0) {
+              return false;
+            }
+            // Else check if any of its ks links is not visible, then it is unchecked. If all are visible it is checked
+            const kinaseSubstrateRelationshipVisibilityMap =
+              this.contextMenuStore?.get(
+                'kinase-substrate-relationship-visibility-map'
+              );
+            return (
+              kslinksOfNode.filter(link => {
+                const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+                return !kinaseSubstrateRelationshipVisibilityMap[
+                  visibilityMapKey
+                ];
+              }).length === 0
+            );
+          },
+        },
         // Context Menu for Gene/Protein Nodes
         {
           target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
@@ -4211,7 +4306,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             peptideNodeVisibilityMap[ctx.target.__data__.nodeId] =
               // @ts-ignore
               !peptideNodeVisibilityMap[ctx.target.__data__.nodeId];
-            this.updatePeptideNodeLabels();
+            this._updatePeptideNodeLabels();
           },
           type: 'radio',
           checked: ctx =>
@@ -4219,6 +4314,75 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               // @ts-ignore
               ctx.target.__data__.nodeId
             ],
+        },
+        {
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+          label: 'Show Kinase-Substrate Relationships for Node',
+          enabled: (ctx: EnabledOptions) =>
+            this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.sourceId === ctx.target.__data__.nodeId
+            ).length > 0,
+          execute: (ctx: ExecuteOptions) => {
+            const kinaseSubstrateRelationshipVisibilityMap =
+              this.contextMenuStore?.get(
+                'kinase-substrate-relationship-visibility-map'
+              );
+            const kslinksOfNode = this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.sourceId === ctx.target.__data__.nodeId
+            );
+            // If there is any link that is not visible, the menu will be unchecked and clicking will make all visible
+            // If all are visible, the menu will be checked and clicking will make all invisible
+            const hasKinaseAnyNotVisibleLink =
+              kslinksOfNode.filter(link => {
+                const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+                return !kinaseSubstrateRelationshipVisibilityMap[
+                  visibilityMapKey
+                ];
+              }).length > 0;
+
+            kslinksOfNode.forEach(link => {
+              const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+              kinaseSubstrateRelationshipVisibilityMap[visibilityMapKey] =
+                hasKinaseAnyNotVisibleLink;
+            });
+            this.contextMenuStore?.set(
+              'kinase-substrate-relationship-visibility-map',
+              kinaseSubstrateRelationshipVisibilityMap
+            );
+            this._refreshGraph(true);
+          },
+          type: 'radio',
+          checked: ctx => {
+            const kslinksOfNode = this.d3Links!.filter(
+              link =>
+                link.types.includes('kinaseSubstrateLink') &&
+                // @ts-ignore
+                link.sourceId === ctx.target.__data__.nodeId
+            );
+            // If the node has zero kslinks, this is disabled and cannot be checked
+            if (kslinksOfNode.length === 0) {
+              return false;
+            }
+            // Else check if any of its ks links is not visible, then it is unchecked. If all are visible it is checked
+            const kinaseSubstrateRelationshipVisibilityMap =
+              this.contextMenuStore?.get(
+                'kinase-substrate-relationship-visibility-map'
+              );
+            return (
+              kslinksOfNode.filter(link => {
+                const visibilityMapKey = `${link.sourceId},${link.targetId}`;
+                return !kinaseSubstrateRelationshipVisibilityMap[
+                  visibilityMapKey
+                ];
+              }).length === 0
+            );
+          },
         },
         {
           target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
