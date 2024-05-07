@@ -287,25 +287,26 @@ export class BiowcPathwaygraph extends LitElement {
 
   contextMenuStore?: Map<string, any>;
 
-  isAddingEdge: Boolean = false;
+  isAddingEdge: boolean = false;
 
-  isCreatingGroup: Boolean = false;
+  isCreatingGroup: boolean = false;
 
-  ptmNodeLabelsVisible: Boolean = false;
+  allPtmNodeLabelsVisible: boolean = false;
 
-  kinaseSubstrateLinksVisible: Boolean = false;
+  kinaseSubstrateLinksVisible: boolean = false;
 
-  perturbedNodesVisible: Boolean = false;
+  perturbedNodesVisible: boolean = false;
 
-  // TODO: Is there no way I can generalize this to rect.node-rect?
+  // For the context menu I need to explicitly enumerate all possible class lists of gene protein nodes
+  static regulation_strings = ['', '.down', '.up', '.both', '.not'];
+
+  static circle_strings = ['', '.circle-down', '.circle-up'];
+
   static geneProteinPathwayCompoundsNodes: string[] = [
-    'rect.node-rect.gene_protein',
-    'rect.node-rect.gene_protein.down',
-    'rect.node-rect.gene_protein.up',
-    'rect.node-rect.gene_protein.both',
-    'rect.node-rect.gene_protein.not',
-    'rect.node-rect.pathway',
-    'rect.node-rect.compound',
+    ...this.regulation_strings.flatMap(s1 =>
+      this.circle_strings.map(s2 => `rect.node-rect.gene_protein${s1}${s2}`)
+    ),
+    ...['rect.node-rect.pathway', 'rect.node-rect.compound'],
   ];
 
   static nodeTypes: { id: string; label: string }[] = [
@@ -598,6 +599,7 @@ export class BiowcPathwaygraph extends LitElement {
       ['show-up', true],
       ['show-down', true],
       ['show-not', true],
+      ['peptide-label-visibility-map', {}],
     ]);
 
     this._initEditModeForms();
@@ -3900,19 +3902,21 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     a.click();
   }
 
-  public toggleLabelPeptideNodes() {
-    this.ptmNodeLabelsVisible = !this.ptmNodeLabelsVisible;
+  public updatePeptideNodeLabels() {
     this.d3Nodes!.forEach(node => {
       if (node.type === 'ptm') {
+        const ptmNode = <PTMNodeD3>node;
         // TODO: If available, use Site identifier before sequence
         const ptmNodeLabel =
           // @ts-ignore
-          (<PTMNodeD3>node).details?.Site?.text ||
-          (<PTMNodeD3>node).details!['Modified Sequence'] ||
-          (<PTMNodeD3>node).details!.Sequence ||
+          ptmNode.details?.Site?.text ||
+          ptmNode.details!['Modified Sequence'] ||
+          ptmNode.details!.Sequence ||
           'test';
         // eslint-disable-next-line no-param-reassign
-        node.currentDisplayedLabel = this.ptmNodeLabelsVisible
+        ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
+          'peptide-label-visibility-map'
+        )[ptmNode.geneProteinNode?.nodeId!]
           ? String(ptmNodeLabel)
           : '';
       }
@@ -4083,10 +4087,25 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       },
       {
         target: 'svg',
-        label: 'Show PTM Node Labels',
-        execute: () => this.toggleLabelPeptideNodes(),
+        label: 'Show PTM Labels',
+        execute: () => {
+          this.allPtmNodeLabelsVisible = !this.allPtmNodeLabelsVisible;
+          const peptideNodeVisibilityMap = this.contextMenuStore?.get(
+            'peptide-label-visibility-map'
+          );
+          this.d3Nodes!.forEach(node => {
+            peptideNodeVisibilityMap[node.nodeId!] =
+              this.allPtmNodeLabelsVisible;
+          });
+          this.contextMenuStore?.set(
+            'peptide-label-visibility-map',
+            peptideNodeVisibilityMap
+          );
+
+          this.updatePeptideNodeLabels();
+        },
         type: 'radio',
-        checked: () => this.ptmNodeLabelsVisible,
+        checked: () => this.allPtmNodeLabelsVisible,
       },
       {
         target: 'svg',
@@ -4179,8 +4198,28 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       },
     ];
     this.contextMenuCommands.push(
-      ...[
+      ...(<ContextMenuCommand[]>[
         // Context Menu for Gene/Protein Nodes
+        {
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+          label: 'Show PTM Labels for Node',
+          execute: (ctx: ExecuteOptions) => {
+            const peptideNodeVisibilityMap = this.contextMenuStore?.get(
+              'peptide-label-visibility-map'
+            );
+            // @ts-ignore
+            peptideNodeVisibilityMap[ctx.target.__data__.nodeId] =
+              // @ts-ignore
+              !peptideNodeVisibilityMap[ctx.target.__data__.nodeId];
+            this.updatePeptideNodeLabels();
+          },
+          type: 'radio',
+          checked: ctx =>
+            this.contextMenuStore?.get('peptide-label-visibility-map')[
+              // @ts-ignore
+              ctx.target.__data__.nodeId
+            ],
+        },
         {
           target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes.concat([
             'path.group-path',
@@ -4217,7 +4256,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           label: 'Alternative Names',
           // Children will be created dynamically!
         },
-      ]
+      ])
     );
 
     // Now we set up an event listener for nodes that dynamically creates the children of the 'Alternative Names' menu entry
