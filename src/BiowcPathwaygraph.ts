@@ -2334,31 +2334,23 @@ export class BiowcPathwaygraph extends LitElement {
           this.allDowngoingLessThan0 ||
           (!this.anyDowngoingPTMs && !this.allUpgoingGreaterThan1);
         const interpolationCenter = isLogFoldChange ? 0 : 1;
-
-        switch ((<PTMNodeD3>node).regulation) {
-          case 'up':
-            return d3v6.interpolate(
-              unregulatedColor,
-              upregulatedColor
-            )(
-              (BiowcPathwaygraph._getNodeFoldChange(node) -
-                interpolationCenter) /
-                (this.maxPosFoldChange! - interpolationCenter)
-            );
-          case 'down':
-            return d3v6.interpolate(
-              unregulatedColor,
-              downregulatedColor
-            )(
-              (BiowcPathwaygraph._getNodeFoldChange(node) -
-                interpolationCenter) /
-                (this.maxNegFoldChange! - interpolationCenter)
-            );
-          case 'not':
-            return 'var(--unregulated-color)';
-          default:
-            return '';
+        const nodeFoldChange = BiowcPathwaygraph._getNodeFoldChange(node);
+        if (nodeFoldChange > interpolationCenter) {
+          return d3v6.interpolate(
+            unregulatedColor,
+            upregulatedColor
+          )(
+            (BiowcPathwaygraph._getNodeFoldChange(node) - interpolationCenter) /
+              (this.maxPosFoldChange! - interpolationCenter)
+          );
         }
+        return d3v6.interpolate(
+          unregulatedColor,
+          downregulatedColor
+        )(
+          (BiowcPathwaygraph._getNodeFoldChange(node) - interpolationCenter) /
+            (this.maxNegFoldChange! - interpolationCenter)
+        );
       }
       case 'potency': {
         return d3v6.interpolateRgbBasis(this.potencyColorScale)(

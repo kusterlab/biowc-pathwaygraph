@@ -280,7 +280,7 @@ export default {
         details: {
           Sequence: 'GILGVIVT(ph)LK',
           Site: { text: 'Y512' },
-          'Fold Change': 0.9,
+          'Fold Change': 0.7,
           'p Value': 0.0003,
           '-log(EC50)': 6,
           MyUmbrellaTerm: ' ',
