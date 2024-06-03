@@ -266,9 +266,7 @@ export class BiowcPathwaygraph extends LitElement {
 
   anyUpgoingPTMs?: boolean;
 
-  allDowngoingLessThan0?: boolean;
-
-  allUpgoingGreaterThan1?: boolean;
+  isLogFoldChange?: boolean;
 
   isNodeExpandAndCollapseAllowed: boolean = false;
 
@@ -2330,10 +2328,7 @@ export class BiowcPathwaygraph extends LitElement {
       case 'foldchange': {
         // Interpolate between up and not or down and not, depending on direction
         // The center of interpolation is 0 for log fold change and 1 for fold change
-        const isLogFoldChange =
-          this.allDowngoingLessThan0 ||
-          (!this.anyDowngoingPTMs && !this.allUpgoingGreaterThan1);
-        const interpolationCenter = isLogFoldChange ? 0 : 1;
+        const interpolationCenter = this.isLogFoldChange ? 0 : 1;
         const nodeFoldChange = BiowcPathwaygraph._getNodeFoldChange(node);
         if (nodeFoldChange > interpolationCenter) {
           return d3v6.interpolate(
@@ -2365,23 +2360,48 @@ export class BiowcPathwaygraph extends LitElement {
   }
 
   private _calculateHueRange() {
-    const downNodes = this.d3Nodes?.filter(
-      node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'down'
-    );
-    this.anyDowngoingPTMs = !!downNodes && downNodes.length > 0;
-    const upNodes = this.d3Nodes?.filter(
-      node => node.type === 'ptm' && (<PTMNodeD3>node).regulation === 'up'
-    );
-    this.anyUpgoingPTMs = !!upNodes && upNodes.length > 0;
-
     switch (this.hue) {
       case 'direction':
         break;
       case 'foldchange':
         /* eslint-disable no-case-declarations */
 
-        this.maxPosFoldChange = upNodes?.reduce(
-          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+        // Determine if fold change is log or not
+        // For this, check if PTMs have "Log Fold Change" or "Fold Change" property.
+        // If "Fold Change", check if there are any negative values - then it's actually log fold change
+        this.isLogFoldChange = this.d3Nodes?.some(
+          node =>
+            node.type === 'ptm' &&
+            Object.hasOwn((<PTMNodeD3>node).details!, 'Log Fold Change')
+        );
+        if (!this.isLogFoldChange) {
+          this.isLogFoldChange = this.d3Nodes
+            ?.filter(
+              node =>
+                node.type === 'ptm' &&
+                Object.hasOwn((<PTMNodeD3>node).details!, 'Fold Change')
+            )
+            .some(node => (<PTMNodeD3>node).details!['Fold Change'] < 0);
+        }
+
+        const foldChangeCenter = this.isLogFoldChange ? 0 : 1;
+        this.anyDowngoingPTMs = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .some(
+            node =>
+              BiowcPathwaygraph._getNodeFoldChange(node) < foldChangeCenter
+          );
+
+        this.anyUpgoingPTMs = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          .some(
+            node =>
+              BiowcPathwaygraph._getNodeFoldChange(node) > foldChangeCenter
+          );
+
+        this.maxPosFoldChange = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          ?.reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -2401,16 +2421,11 @@ export class BiowcPathwaygraph extends LitElement {
               );
             }
             return currentMax;
-          },
-          0
-        );
+          }, 0);
 
-        this.allUpgoingGreaterThan1 = upNodes?.every(
-          currentNode => BiowcPathwaygraph._getNodeFoldChange(currentNode) >= 1
-        );
-
-        this.maxNegFoldChange = downNodes?.reduce(
-          (currentMax: number, currentNode: PathwayGraphNodeD3) => {
+        this.maxNegFoldChange = this.d3Nodes
+          ?.filter(node => node.type === 'ptm')
+          ?.reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
               Object.hasOwn(currentNode, 'details') &&
@@ -2430,13 +2445,8 @@ export class BiowcPathwaygraph extends LitElement {
               );
             }
             return currentMax;
-          },
-          0
-        );
+          }, 0);
 
-        this.allDowngoingLessThan0 = downNodes?.every(
-          currentNode => BiowcPathwaygraph._getNodeFoldChange(currentNode) < 0
-        );
         break;
       /* eslint-enable no-case-declarations */
       case 'potency':
@@ -2648,12 +2658,8 @@ export class BiowcPathwaygraph extends LitElement {
     // Bring legend to front of the canvas
     legendSvg.node()!.parentNode!.appendChild(legendSvg.node()!);
 
-    // We will draw a color legend if
-    // a) We have regulated curves AND
-    // b) The hue is either potency or fold change
-    const drawColorLegend =
-      (this.anyUpgoingPTMs || this.anyDowngoingPTMs) &&
-      (this.hue === 'potency' || this.hue === 'foldchange');
+    // We will draw a color legend if the hue is either potency or fold change
+    const drawColorLegend = this.hue === 'potency' || this.hue === 'foldchange';
 
     // Determine width and height of the legend.
     // Width is constant, height is larger if the legend contains a color scale
@@ -3077,15 +3083,11 @@ export class BiowcPathwaygraph extends LitElement {
             )((d - 0.5) / 0.5);
           });
 
-        const isLogFoldChange =
-          this.allDowngoingLessThan0 ||
-          (!this.anyDowngoingPTMs && !this.allUpgoingGreaterThan1);
-
         // The domain of the x axis depends on whether the fold change is log transformed
         // Log FC goes from -inf to +inf, with 0 in the center
         // Non-log FC goes from 0 to +inf, with 1 in the center
         const domain: string[] = [];
-        if (isLogFoldChange) {
+        if (this.isLogFoldChange) {
           if (this.anyDowngoingPTMs) {
             domain.push(
               ...[

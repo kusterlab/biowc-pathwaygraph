@@ -280,7 +280,7 @@ export default {
         details: {
           Sequence: 'GILGVIVT(ph)LK',
           Site: { text: 'Y512' },
-          'Fold Change': 0.7,
+          'Fold Change': 2.5,
           'p Value': 0.0003,
           '-log(EC50)': 6,
           MyUmbrellaTerm: ' ',
@@ -312,11 +312,11 @@ export default {
       },
       {
         geneNames: ['Protein B'],
-        regulation: 'up',
+        regulation: 'not',
         details: {
           Sequence: 'GENENAMES(ph)K',
           Site: { text: 'T90' },
-          'Fold Change': 2,
+          'Fold Change': 1.2,
           'p Value': 0.001,
           '-log(EC50)': 8,
         },
