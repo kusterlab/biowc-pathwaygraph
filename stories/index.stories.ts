@@ -11,6 +11,7 @@ export default {
     graphdataSkeleton: { control: 'object' },
     ptmInputList: { control: 'array' },
     fullProteomeInputList: { control: 'object' },
+    perturbedNodes: { control: 'object' },
     hue: { control: 'text' },
     applicationMode: { control: 'text' },
   },
@@ -29,6 +30,7 @@ interface ArgTypes {
   graphdataSkeleton?: object;
   ptmInputList?: object;
   fullProteomeInputList?: object;
+  perturbedNodes?: object;
   hue: string;
   applicationMode: string;
 }
@@ -41,6 +43,7 @@ const Template: Story<ArgTypes> = (args: ArgTypes) => html`
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
     .fullProteomeInputList=${args.fullProteomeInputList}
+    .perturbedNodes=${args.perturbedNodes}
     .hue=${args.hue}
   >
   </biowc-pathwaygraph>
@@ -288,6 +291,7 @@ const DownloadSVGTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
     .fullProteomeInputList=${args.fullProteomeInputList}
+    .perturbedNodes=${args.perturbedNodes}
     .hue=${args.hue}
   >
   </biowc-pathwaygraph>
@@ -296,6 +300,14 @@ const DownloadSVGTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
 export const DownloadGraphAsSVG = DownloadSVGTemplate.bind({});
 DownloadGraphAsSVG.args = {
   ...ColoringNodesByPotency.args,
+  graphdataSkeleton: {
+    nodes: StoryFixtures.linkTypesFixture.nodes,
+    links: StoryFixtures.linkTypesFixture.links,
+  },
+  perturbedNodes: {
+    up: ['Protein B', 'Protein D'],
+    down: ['Protein A', 'Protein C'],
+  },
   hue: 'potency',
   storyTitle: 'Download Graph as SVG',
   storyDescription:

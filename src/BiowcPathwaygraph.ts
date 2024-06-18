@@ -1611,6 +1611,20 @@ export class BiowcPathwaygraph extends LitElement {
       .join('g')
       .attr('class', d => `linkgroup ${d.types.join(' ')}`);
 
+    const isKinaseSubstrateLinkVisible = (linkD3: PathwayGraphLinkD3) => {
+      const visibilityMapKey = `${linkD3.sourceId},${linkD3.targetId}`;
+
+      // Show the arrow only if the PTM Node at the target is selected
+      const ptmnode = <PTMNodeD3>linkD3.target;
+
+      return (
+        ptmnode.selected &&
+        this.contextMenuStore?.get(
+          'kinase-substrate-relationship-visibility-map'
+        )[visibilityMapKey]
+      );
+    };
+
     linksSvg.selectAll('.link').remove();
     linksSvg
       .append('line')
@@ -1639,19 +1653,19 @@ export class BiowcPathwaygraph extends LitElement {
         if (d.types.includes('indirect effect')) return '7 2';
         return null;
       })
+      .attr('display', d => {
+        // Return 'none' if it IS a kinase-substrate-link, but it's been declared invisible for some reason
+        if (
+          d.types.includes('kinaseSubstrateLink') &&
+          !isKinaseSubstrateLinkVisible(d)
+        ) {
+          return 'none';
+        }
+        return 'block';
+      })
       .style('visibility', d => {
         if (d.types.includes('kinaseSubstrateLink')) {
-          const visibilityMapKey = `${d.sourceId},${d.targetId}`;
-
-          // Show the arrow only if the PTM Node at the target is selected
-          const ptmnode = <PTMNodeD3>d.target;
-
-          return ptmnode.selected &&
-            this.contextMenuStore?.get(
-              'kinase-substrate-relationship-visibility-map'
-            )[visibilityMapKey]
-            ? 'visible'
-            : 'hidden';
+          return isKinaseSubstrateLinkVisible(d) ? 'visible' : 'hidden';
         }
         if (d.types.includes('ptmlink')) {
           return 'hidden';
@@ -3920,7 +3934,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         const propertySplit = prop.split(':');
         if (propertySplit.length > 1) {
           const key = `var(${propertySplit[0].trim()})`;
-          const value = propertySplit[1].trim();
+          const value = this._getMainDiv().style(propertySplit[0].trim());
           serializedSVG = serializedSVG.replaceAll(key, value);
         }
       });
