@@ -312,7 +312,7 @@ export default {
       },
       {
         geneNames: ['Protein B'],
-        regulation: 'not',
+        regulation: 'up',
         details: {
           Sequence: 'GENENAMES(ph)K',
           Site: { text: 'T90' },

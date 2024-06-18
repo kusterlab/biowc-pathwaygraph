@@ -3373,8 +3373,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                 .each(l => {
                   /* eslint-disable no-param-reassign */
                   // If clicked node is a protein, select all its PTM nodes
+                  // ...if its regulation category is currently shown
                   if (l.target === node)
-                    (<PTMNodeD3>l.source).selected = isSelected;
+                    (<PTMNodeD3>l.source).selected =
+                      isSelected &&
+                      this.contextMenuStore?.get(
+                        `show-${(<PTMNodeD3>l.source).regulation}`
+                      );
                   // If clicked node is a PTM and it was a selection (not a deselection), we also want to select the protein
                   // We don't want the opposite, so if it is a deselection, don't deselect the protein as well
                   if (l.source === node && isSelected) {
@@ -3766,7 +3771,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                   );
                 }
               });
-              // console.log(`Flat details: ${JSON.stringify(detailsFlattened)}`)
+              console.log(`Flat details: ${JSON.stringify(detailsFlattened)}`);
               return detailsFlattened;
             }),
         },
