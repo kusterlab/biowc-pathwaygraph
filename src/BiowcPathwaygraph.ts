@@ -3752,6 +3752,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                   );
                 }
               });
+              // console.log(`Flat details: ${JSON.stringify(detailsFlattened)}`)
               return detailsFlattened;
             }),
         },
