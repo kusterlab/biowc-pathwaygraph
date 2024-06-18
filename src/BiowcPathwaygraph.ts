@@ -1642,9 +1642,14 @@ export class BiowcPathwaygraph extends LitElement {
       .style('visibility', d => {
         if (d.types.includes('kinaseSubstrateLink')) {
           const visibilityMapKey = `${d.sourceId},${d.targetId}`;
-          return this.contextMenuStore?.get(
-            'kinase-substrate-relationship-visibility-map'
-          )[visibilityMapKey]
+
+          // Show the arrow only if the PTM Node at the target is selected
+          const ptmnode = <PTMNodeD3>d.target;
+
+          return ptmnode.selected &&
+            this.contextMenuStore?.get(
+              'kinase-substrate-relationship-visibility-map'
+            )[visibilityMapKey]
             ? 'visible'
             : 'hidden';
         }
@@ -3492,6 +3497,29 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this._sendSelectionDetailsToParent();
   }
 
+  private _clearSelection() {
+    // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
+    this._getMainDiv()
+      .select('#nodeG')
+      .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+      .each(d => {
+        /* eslint-disable no-param-reassign */
+        d.selected = true;
+        /* eslint-enable no-param-reassign */
+      });
+
+    // If there's a parent listening for details, tell it to clear that
+    this.dispatchEvent(
+      new CustomEvent('selectedNodeTooltip', {
+        bubbles: true,
+        cancelable: true,
+        detail: undefined,
+      })
+    );
+
+    this._onSelectedNodesChanged();
+  }
+
   private _enableNodeExpandAndCollapse() {
     // Dblclick on summary nodes should expand them into their individual ptm nodes
     this._getMainDiv()
@@ -4059,26 +4087,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         target: 'svg',
         label: 'Clear Selection',
         execute: () => {
-          // Remove all highlighting by setting every node to "selected" (i.e. all opacities go back to 1)
-          this._getMainDiv()
-            .select('#nodeG')
-            .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
-            .each(d => {
-              /* eslint-disable no-param-reassign */
-              d.selected = true;
-              /* eslint-enable no-param-reassign */
-            });
-
-          // If there's a parent listening for details, tell it to clear that
-          this.dispatchEvent(
-            new CustomEvent('selectedNodeTooltip', {
-              bubbles: true,
-              cancelable: true,
-              detail: undefined,
-            })
-          );
-
-          this._onSelectedNodesChanged();
+          this._clearSelection();
         },
       },
       {
@@ -4147,6 +4156,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           const storeId = `show-${ctx.item.id}`;
           ctx.store.set(storeId, !ctx.store.get(storeId));
           this._refreshGraph(true);
+          this._clearSelection();
         },
         children: [
           {
