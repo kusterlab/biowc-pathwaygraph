@@ -433,7 +433,7 @@ export class BiowcPathwaygraph extends LitElement {
             </pattern>
             <linearGradient id="potency-linear-gradient"></linearGradient>
           </defs>
-          <svg id="pathwayLegend" x="25" y="25" />
+          <svg id="pathwayLegend" x="15" y="15" />
         </svg>
         <div id="potencyRangeSlider" class="slider" style="visibility: hidden">
           <div class="sliders_control">
@@ -2669,7 +2669,7 @@ export class BiowcPathwaygraph extends LitElement {
     // Determine width and height of the legend.
     // Width is constant, height is larger if the legend contains a color scale
     const legendWidth = 265;
-    const legendHeight = drawColorLegend ? 255 : 180;
+    const legendHeight = drawColorLegend ? 285 : 210;
 
     // Draw the frame
     legendSvg
@@ -2986,10 +2986,34 @@ export class BiowcPathwaygraph extends LitElement {
         yOffset * scalingFactor - 8 + lineHeight * 6 + paragraphMargin * 2
       );
 
+    legendSvg
+      .append('line')
+      .attr('class', 'link kinaseSubstrateLink legend')
+      .attr('x1', xOffset)
+      .attr(
+        'y1',
+        yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 1
+      )
+      .attr('x2', xOffset + 32)
+      .attr(
+        'y2',
+        yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 1
+      )
+      .attr('marker-end', 'url(#kinaseSubstrateLinkMarker)');
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Kinase-Substrate Relationship')
+      .attr('x', xOffset + 45)
+      .attr(
+        'y',
+        yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 1
+      );
+
     if (drawColorLegend) {
       const colorLegendGroupPosition = [
         xOffset + 5,
-        yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 2 + 10,
+        yOffset * scalingFactor + lineHeight * 8 + paragraphMargin * 2 + 10,
       ];
       const colorLegendGroup = legendSvg
         .append('g')
