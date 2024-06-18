@@ -1,5 +1,5 @@
 {
-  "name": "biowc-pathwaygraph",
+  "name": "@biowc/pathwaygraph",
   "description": "Webcomponent biowc-pathwaygraph following open-wc recommendations",
   "license": "Apache-2.0",
   "author": "biowc-pathwaygraph",
