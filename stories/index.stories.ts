@@ -35,9 +35,21 @@ interface ArgTypes {
   applicationMode: string;
 }
 
-const Template: Story<ArgTypes> = (args: ArgTypes) => html`
-  <div>${args.storyTitle}</div>
-  <div>${args.storyDescription}</div>
+const GeneralTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div
+    style="width:800px;
+    margin-bottom: 5px;
+    padding: 2px;
+    border: 2px solid #000;
+    background-color: #f0f0f0;"
+  >
+    <b style="font-family: 'Calibri', sans-serif; font-size: 14pt;"
+      >${args.storyTitle}</b
+    >
+    <pre style="font-family: 'Calibri', sans-serif;">
+${args.storyDescription}</pre
+    >
+  </div>
   <biowc-pathwaygraph
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
@@ -49,9 +61,35 @@ const Template: Story<ArgTypes> = (args: ArgTypes) => html`
   </biowc-pathwaygraph>
 `;
 
+// Introduction - empty graph
+const IntroductionTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
+  <div
+    style="width:800px;
+    margin-bottom: 5px;
+    padding: 2px;
+    border: 2px solid #000;
+    background-color: #f0f0f0;"
+  >
+    <b style="font-family: 'Calibri', sans-serif; font-size: 14pt;"
+      >${args.storyTitle}</b
+    >
+    <pre style="font-family: 'Calibri', sans-serif;">
+${args.storyDescription}</pre
+    >
+  </div>
+`;
+
+export const Introduction = IntroductionTemplate.bind({});
+Introduction.args = {
+  storyTitle: 'Introduction',
+  storyDescription:
+    'Welcome to the Storybook of @biowc/pathwaygraph!\n' +
+    'The stories here should give both users and developers an overview of the components and features of the package.',
+};
+
 // Simple Skeleton Graph
 // 2 Nodes, one edge
-export const SimpleSkeletonGraph = Template.bind({});
+export const SimpleSkeletonGraph = GeneralTemplate.bind({});
 SimpleSkeletonGraph.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.simpleSkeletonFixture.nodes,
@@ -59,10 +97,10 @@ SimpleSkeletonGraph.args = {
   },
   storyTitle: 'A Simple Skeleton Graph',
   storyDescription:
-    'The skeleton of a graph consists of:' +
-    '- A list of nodes, including their coordinates' +
-    '- A list of links that connect the nodes' +
-    "These two parts of the skeleton are defined under the 'nodes' and 'links' properties of a biowc-pathwaygraph component instance. " +
+    'The skeleton of a graph consists of:\n' +
+    '- A list of nodes, including their coordinates\n' +
+    '- A list of links that connect the nodes\n' +
+    "These two parts of the skeleton are defined under the 'nodes' and 'links' properties of a biowc-pathwaygraph component instance.\n" +
     'The graph is then automatically rendered. ' +
     'The graph is interactive: You can drag the nodes around and the edges will follow.' +
     'Click on a node to select it. Press CTRL to select multiple nodes. Click the canvas to clear the selection. ' +
@@ -70,7 +108,7 @@ SimpleSkeletonGraph.args = {
 };
 
 // Node types
-export const NodeTypes = Template.bind({});
+export const NodeTypes = GeneralTemplate.bind({});
 NodeTypes.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.nodeTypesFixture.nodes,
@@ -78,7 +116,7 @@ NodeTypes.args = {
   },
   storyTitle: 'Node types',
   storyDescription:
-    "The type of a node is set using the 'type' property. Possible types are: " +
+    "The type of a node is set using the 'type' property. Possible types are:" +
     '- gene_protein' +
     '- compound' +
     '- pathway' +
@@ -90,7 +128,7 @@ NodeTypes.args = {
 };
 
 // Alternative names
-export const AlternativeNames = Template.bind({});
+export const AlternativeNames = GeneralTemplate.bind({});
 AlternativeNames.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.alternativeNamesFixture.nodes,
@@ -105,7 +143,7 @@ AlternativeNames.args = {
 
 // Edge types
 // Edges on edges
-export const LinkTypes = Template.bind({});
+export const LinkTypes = GeneralTemplate.bind({});
 LinkTypes.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.linkTypesFixture.nodes,
@@ -125,7 +163,7 @@ LinkTypes.args = {
 };
 
 // Simple PTM Graph
-export const SimplePTMGraph = Template.bind({});
+export const SimplePTMGraph = GeneralTemplate.bind({});
 SimplePTMGraph.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.simplePTMGraphFixture.nodes,
@@ -145,7 +183,7 @@ SimplePTMGraph.args = {
 };
 
 // PTM Graph with more Details (Tooltip - it only appears when there are details but that is ok)
-export const PTMGraphWithDetails = Template.bind({});
+export const PTMGraphWithDetails = GeneralTemplate.bind({});
 PTMGraphWithDetails.args = {
   ...SimplePTMGraph.args,
   ptmInputList: StoryFixtures.ptmGraphWithDetailsFixture.ptmInputList,
@@ -162,7 +200,7 @@ PTMGraphWithDetails.args = {
 };
 
 // PTM Graph with FPs
-export const ProteinExpressionGraph = Template.bind({});
+export const ProteinExpressionGraph = GeneralTemplate.bind({});
 ProteinExpressionGraph.args = {
   graphdataSkeleton: {
     nodes: StoryFixtures.proteinExpressionFixture.nodes,
@@ -181,12 +219,13 @@ ProteinExpressionGraph.args = {
 };
 
 // PTM Graph with Fold Change
-export const ColoringNodesByFoldChange = Template.bind({});
+export const ColoringNodesByFoldChange = GeneralTemplate.bind({});
 ColoringNodesByFoldChange.args = {
   ...PTMGraphWithDetails.args,
   hue: 'foldchange',
   storyTitle: 'Coloring Nodes By Fold Change',
   storyDescription:
+    'Introducing: The context menu!' +
     'If the details of the `ptmInputList` contain fold changes or log fold changes, ' +
     "you can change the color scheme of the graph by setting the `hue` property to 'foldchange'. " +
     'The legend will then be extended by a dynamic color bar that ranges from the smallest ' +
@@ -197,7 +236,7 @@ ColoringNodesByFoldChange.args = {
 };
 
 // DecryptM Graph with Potency Hue
-export const ColoringNodesByPotency = Template.bind({});
+export const ColoringNodesByPotency = GeneralTemplate.bind({});
 ColoringNodesByPotency.args = {
   ...PTMGraphWithDetails.args,
   hue: 'potency',
