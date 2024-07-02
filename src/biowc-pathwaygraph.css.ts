@@ -10,6 +10,7 @@ export default css`
     --perturbed-stroke-width: 1.5;
 
     --unregulated-color: #a4a4a4;
+    --unregulated-color-light: #d3d3d3;
     --pathway-color: #89b9ce;
     --gene-protein-color: #efefef;
     --compound-color: #e7d190;

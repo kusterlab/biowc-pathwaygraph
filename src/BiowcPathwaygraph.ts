@@ -2328,11 +2328,11 @@ export class BiowcPathwaygraph extends LitElement {
     const downregulatedColor = getComputedStyle(this).getPropertyValue(
       '--downregulated-color'
     );
-    const unregulatedColor = getComputedStyle(this).getPropertyValue(
-      '--unregulated-color'
-    );
     switch (this.hue) {
       case 'direction': {
+        const unregulatedColor = getComputedStyle(this).getPropertyValue(
+          '--unregulated-color'
+        );
         switch ((<PTMNodeD3>node).regulation) {
           case 'up':
             return upregulatedColor;
@@ -2345,6 +2345,9 @@ export class BiowcPathwaygraph extends LitElement {
         }
       }
       case 'foldchange': {
+        const unregulatedColor = getComputedStyle(this).getPropertyValue(
+          '--unregulated-color-light'
+        );
         // Interpolate between up and not or down and not, depending on direction
         // The center of interpolation is 0 for log fold change and 1 for fold change
         const interpolationCenter = this.isLogFoldChange ? 0 : 1;
@@ -3098,7 +3101,7 @@ export class BiowcPathwaygraph extends LitElement {
           '--downregulated-color'
         );
         const unregulatedColor = getComputedStyle(this).getPropertyValue(
-          '--unregulated-color'
+          '--unregulated-color-light'
         );
 
         linearGradient
