@@ -4117,10 +4117,27 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       // Context Menu for Canvas
       {
         target: 'svg',
-        label: 'Expand All',
-        execute: () => {
-          this.expandAllPTMNodes();
-        },
+        label: 'Expand...',
+        children: [
+          {
+            label: 'All PTMs',
+            execute: () => {
+              this.expandAllPTMNodes();
+            },
+          },
+          {
+            label: 'Selected PTMs',
+            execute: () => {
+              this.expandSelectedPTMNodes();
+            },
+          },
+          {
+            label: 'Regulated PTMs',
+            execute: () => {
+              this.expandRegulatedPTMNodes();
+            },
+          },
+        ],
       },
       {
         target: 'svg',
@@ -5020,6 +5037,42 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         });
         /* eslint-enable no-param-reassign */
       });
+    this._refreshGraph(true);
+  }
+
+  public expandSelectedPTMNodes() {
+    if (!this.isNodeExpandAndCollapseAllowed) return;
+
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
+      .filter(ptmnode => ptmnode.selected || false)
+      .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+        /* eslint-disable no-param-reassign */
+        ptmSummaryNode.visible = false;
+        ptmSummaryNode.ptmNodes?.forEach(n => {
+          n.visible = true;
+        });
+        /* eslint-enable no-param-reassign */
+      });
+
+    this._refreshGraph(true);
+  }
+
+  public expandRegulatedPTMNodes() {
+    if (!this.isNodeExpandAndCollapseAllowed) return;
+
+    this._getMainDiv()
+      .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
+      .filter(ptmnode => ['up', 'down'].includes(ptmnode.regulation) || false)
+      .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+        /* eslint-disable no-param-reassign */
+        ptmSummaryNode.visible = false;
+        ptmSummaryNode.ptmNodes?.forEach(n => {
+          n.visible = true;
+        });
+        /* eslint-enable no-param-reassign */
+      });
+
     this._refreshGraph(true);
   }
 
