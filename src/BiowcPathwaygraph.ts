@@ -4382,6 +4382,25 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             peptideNodeVisibilityMap[ctx.target.__data__.nodeId] =
               // @ts-ignore
               !peptideNodeVisibilityMap[ctx.target.__data__.nodeId];
+            // Expand the PTMs of that node
+            this._getMainDiv()
+              .selectAll<SVGGElement, PTMSummaryNodeD3>(
+                'g.ptm.summary:not(.legend)'
+              )
+              .filter(
+                summaryNode =>
+                  // @ts-ignore
+                  summaryNode.geneProteinNodeId === ctx.target.__data__.nodeId
+              )
+              .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+                /* eslint-disable no-param-reassign */
+                ptmSummaryNode.visible = false;
+                ptmSummaryNode.ptmNodes?.forEach(n => {
+                  n.visible = true;
+                });
+                /* eslint-enable no-param-reassign */
+              });
+
             this._updatePeptideNodeLabels();
           },
           type: 'radio',
