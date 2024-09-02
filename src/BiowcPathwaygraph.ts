@@ -3352,8 +3352,17 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             // the event is canceled using clearTimeout below
             dblClickTimer = setTimeout(() => {
               this.recentClicks = 0;
-              // Unless the CTRL key is pressed, unselect everything first
-              if (!e.ctrlKey) {
+              // Unselect everything else if
+              // a) the control key is NOT pressed or
+              // b) the control key is pressed, but everything is selected right now
+              // (so if the control key is pressed and only a part of the graph is selected, do not unselect)
+              const allSelected =
+                this._getMainDiv()
+                  .select('#nodeG')
+                  .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
+                  .filter(d => !d.selected)
+                  .size() === 0;
+              if (!e.ctrlKey || allSelected) {
                 this._getMainDiv()
                   .select('#nodeG')
                   .selectAll<SVGGElement, PathwayGraphNodeD3>('g')
