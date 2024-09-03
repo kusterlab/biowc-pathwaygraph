@@ -31,6 +31,7 @@ export default css`
     --context-menu-border-radius: 4px;
     --context-menu-shadow: 0 0 1px 1px;
     --context-menu-background-color: #f9f9fb;
+    --context-menu-min-width: 300px;
   }
 
   .link {
