@@ -4373,6 +4373,82 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         // Context Menu for Gene/Protein Nodes
         {
           target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
+          label: 'Expand/Collapse for Node',
+          children: [
+            {
+              label: 'Expand All',
+              execute: (ctx: ExecuteOptions) => {
+                this._getMainDiv()
+                  .selectAll<SVGGElement, PTMSummaryNodeD3>(
+                    'g.ptm.summary:not(.legend)'
+                  )
+                  .filter(
+                    summaryNode =>
+                      summaryNode.geneProteinNodeId ===
+                      // @ts-ignore
+                      ctx.target.__data__.nodeId
+                  )
+                  .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+                    /* eslint-disable no-param-reassign */
+                    ptmSummaryNode.visible = false;
+                    ptmSummaryNode.ptmNodes?.forEach(n => {
+                      n.visible = true;
+                    });
+                    /* eslint-enable no-param-reassign */
+                  });
+                this._refreshGraph(true);
+              },
+            },
+            {
+              label: 'Expand Regulated',
+              execute: (ctx: ExecuteOptions) => {
+                this._getMainDiv()
+                  .selectAll<SVGGElement, PTMSummaryNodeD3>(
+                    'g.ptm.summary:not(.legend)'
+                  )
+                  .filter(
+                    summaryNode =>
+                      summaryNode.geneProteinNodeId ===
+                        // @ts-ignore
+                        ctx.target.__data__.nodeId &&
+                      ['up', 'down'].includes(summaryNode.regulation)
+                  )
+                  .each((ptmSummaryNode: PTMSummaryNodeD3) => {
+                    /* eslint-disable no-param-reassign */
+                    ptmSummaryNode.visible = false;
+                    ptmSummaryNode.ptmNodes?.forEach(n => {
+                      n.visible = true;
+                    });
+                    /* eslint-enable no-param-reassign */
+                  });
+                this._refreshGraph(true);
+              },
+            },
+            {
+              label: 'Collapse All',
+              execute: (ctx: ExecuteOptions) => {
+                this._getMainDiv()
+                  .selectAll<SVGGElement, PTMNodeD3>(
+                    'g.ptm:not(.summary):not(.legend)'
+                  )
+                  .filter(
+                    ptmNode =>
+                      // @ts-ignore
+                      ptmNode.geneProteinNodeId === ctx.target.__data__.nodeId
+                  )
+                  .each((ptmNode: PTMNodeD3) => {
+                    /* eslint-disable no-param-reassign */
+                    ptmNode.visible = false;
+                    ptmNode.summaryNode!.visible = true;
+                    /* eslint-enable no-param-reassign */
+                  });
+                this._refreshGraph(true);
+              },
+            },
+          ],
+        },
+        {
+          target: BiowcPathwaygraph.geneProteinPathwayCompoundsNodes,
           label: 'Show PTM Labels for Node',
           execute: (ctx: ExecuteOptions) => {
             const peptideNodeVisibilityMap = this.contextMenuStore?.get(
@@ -5091,7 +5167,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
     this._getMainDiv()
       .selectAll<SVGGElement, PTMSummaryNodeD3>('g.ptm.summary:not(.legend)')
-      .filter(ptmnode => ['up', 'down'].includes(ptmnode.regulation) || false)
+      .filter(
+        summaryNode => ['up', 'down'].includes(summaryNode.regulation) || false
+      )
       .each((ptmSummaryNode: PTMSummaryNodeD3) => {
         /* eslint-disable no-param-reassign */
         ptmSummaryNode.visible = false;
