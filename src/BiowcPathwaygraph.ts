@@ -3783,7 +3783,10 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                   );
                 }
               });
-              return detailsFlattened;
+              return {
+                Regulation: (<PTMNodeD3>node).regulation,
+                ...detailsFlattened,
+              };
             }),
         },
       })
