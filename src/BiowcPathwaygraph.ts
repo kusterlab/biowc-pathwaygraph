@@ -4209,6 +4209,20 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             'kinase-substrate-relationship-visibility-map',
             kinaseSubstrateRelationshipVisibilityMap
           );
+
+          if (this.allKinaseSubstrateLinksVisible) {
+            // Now, expand all PTM summary nodes that have substrates
+            this.d3Links!.forEach(link => {
+              if (link.types.includes('kinaseSubstrateLink')) {
+                const summaryNode = (<PTMNodeD3>link.target).summaryNode!;
+                /* eslint-disable no-param-reassign */
+                summaryNode.visible = false;
+                summaryNode.ptmNodes?.forEach(n => {
+                  n.visible = true;
+                });
+              }
+            });
+          }
           this._refreshGraph(true);
         },
         type: 'radio',
@@ -4526,6 +4540,19 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               'kinase-substrate-relationship-visibility-map',
               kinaseSubstrateRelationshipVisibilityMap
             );
+
+            // Now, expand all PTM summary nodes that have substrates
+            kslinksOfNode.forEach(link => {
+              const summaryNode = (<PTMNodeD3>link.target).summaryNode!;
+              /* eslint-disable no-param-reassign */
+              summaryNode.visible = false;
+              summaryNode.ptmNodes?.forEach(n => {
+                n.visible = true;
+              });
+
+              /* eslint-enable no-param-reassign */
+            });
+
             this._refreshGraph(true);
           },
           type: 'radio',
