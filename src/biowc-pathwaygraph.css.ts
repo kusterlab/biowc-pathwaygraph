@@ -244,7 +244,7 @@ export default css`
 
   #potencyRangeSlider {
     position: absolute;
-    top: 220px;
+    top: 290px;
     left: 20px;
     font-size: 11pt;
     font-family: var(--font-stack);

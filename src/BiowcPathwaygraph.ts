@@ -2698,7 +2698,7 @@ export class BiowcPathwaygraph extends LitElement {
     // Determine width and height of the legend.
     // Width is constant, height is larger if the legend contains a color scale
     const legendWidth = 265;
-    const legendHeight = drawColorLegend ? 285 : 210;
+    const legendHeight = drawColorLegend ? 357 : 277;
 
     // Draw the frame
     legendSvg
@@ -3039,10 +3039,86 @@ export class BiowcPathwaygraph extends LitElement {
         yOffset * scalingFactor + lineHeight * 7 + paragraphMargin * 1
       );
 
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Protein Activity:')
+      .attr('x', xOffset)
+      .attr(
+        'y',
+        yOffset * scalingFactor + lineHeight * 8 + paragraphMargin * 1
+      );
+
+    legendSvg
+      .append('rect')
+      .attr('class', 'node-rect gene_protein legend')
+      .attr('x', xOffset)
+      .attr('y', yOffset + lineHeight * 9 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
+      .attr('rx', 10 * scalingFactor)
+      .attr('ry', 30 * scalingFactor)
+      .attr('width', 35 * scalingFactor)
+      .attr('height', 25 * scalingFactor)
+      .style('stroke', '#c20000')
+      .style('stroke-width', 4);
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Increased')
+      .attr('x', xOffset + 22)
+      .attr(
+        'y',
+        yOffset * scalingFactor + 3 + lineHeight * 9 + paragraphMargin * 0
+      );
+
+    legendSvg
+      .append('rect')
+      .attr('class', 'node-rect gene_protein legend')
+      .attr('x', xOffset + 100)
+      .attr('y', yOffset + lineHeight * 9 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
+      .attr('rx', 10 * scalingFactor)
+      .attr('ry', 30 * scalingFactor)
+      .attr('width', 35 * scalingFactor)
+      .attr('height', 25 * scalingFactor)
+      .style('stroke', '#0043c2')
+      .style('stroke-width', 4);
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Decreased')
+      .attr('x', xOffset + 122)
+      .attr(
+        'y',
+        yOffset * scalingFactor + 3 + lineHeight * 9 + paragraphMargin * 0
+      );
+
+    legendSvg
+      .append('rect')
+      .attr('class', 'node-rect gene_protein legend')
+      .attr('x', xOffset)
+      .attr('y', yOffset + lineHeight * 10 + paragraphMargin * 0)
+      .attr('transform', 'translate(0,-15)')
+      .attr('rx', 10 * scalingFactor)
+      .attr('ry', 30 * scalingFactor)
+      .attr('width', 35 * scalingFactor)
+      .attr('height', 25 * scalingFactor)
+      .style('stroke', '#8100c2')
+      .style('stroke-width', 4);
+    legendSvg
+      .append('text')
+      .attr('class', 'legend')
+      .text('Unknown Direction')
+      .attr('x', xOffset + 22)
+      .attr(
+        'y',
+        yOffset * scalingFactor + 3 + lineHeight * 10 + paragraphMargin * 0
+      );
+
     if (drawColorLegend) {
       const colorLegendGroupPosition = [
         xOffset + 5,
-        yOffset * scalingFactor + lineHeight * 8 + paragraphMargin * 2 + 10,
+        yOffset * scalingFactor + lineHeight * 11 + paragraphMargin * 2 + 10,
       ];
       const colorLegendGroup = legendSvg
         .append('g')
