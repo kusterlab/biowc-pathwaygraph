@@ -236,7 +236,7 @@ export class BiowcPathwaygraph extends LitElement {
   applicationMode!: PossibleApplicationMode;
 
   @property({ attribute: false })
-  perturbedNodes?: { up: String[]; down: String[] };
+  perturbedNodes?: { up: String[]; down: String[]; undirected: String[] };
 
   graphdataPTM?: {
     nodes: (PTMNode | PTMSummaryNode)[];
@@ -294,12 +294,17 @@ export class BiowcPathwaygraph extends LitElement {
 
   allKinaseSubstrateLinksVisible: boolean = false;
 
-  perturbedNodesVisible: boolean = false;
+  perturbedNodesVisible: boolean = false; // Will be toggled on startup so actually true at the start
 
   // For the context menu I need to explicitly enumerate all possible class lists of gene protein nodes
   static regulation_strings = ['', '.down', '.up', '.both', '.not'];
 
-  static circle_strings = ['', '.circle-down', '.circle-up'];
+  static circle_strings = [
+    '',
+    '.circle-down',
+    '.circle-up',
+    '.circle-undirected',
+  ];
 
   static geneProteinPathwayCompoundsNodes: string[] = [
     ...this.regulation_strings.flatMap(s1 =>
@@ -605,7 +610,7 @@ export class BiowcPathwaygraph extends LitElement {
       ['peptide-label-visibility-map', {}],
       ['kinase-substrate-relationship-visibility-map', {}],
     ]);
-
+    this._toggleHighlightPerturbedNodes();
     this._initEditModeForms();
     super.firstUpdated(_changedProperties);
   }
@@ -2313,6 +2318,13 @@ export class BiowcPathwaygraph extends LitElement {
       ) {
         return 'circle-up';
       }
+      if (
+        geneProteinNode.geneNames.filter(geneName =>
+          this.perturbedNodes?.undirected.includes(geneName)
+        ).length > 0
+      ) {
+        return 'circle-undirected';
+      }
     }
     return '';
   }
@@ -3818,14 +3830,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   private _toggleHighlightPerturbedNodes() {
     this.perturbedNodesVisible = !this.perturbedNodesVisible;
 
-    // Add or remove the show-highlight class for all circle-up and circle-down nodes
+    // Add or remove the show-highlight class for all circle-up, circle-down, and circle-undirected nodes
     if (this.perturbedNodesVisible) {
       this._getMainDiv().style('--upregulated-perturbed-color', '#c20000');
       this._getMainDiv().style('--downregulated-perturbed-color', '#0043c2');
+      this._getMainDiv().style('--undirected-perturbed-color', '#8100c2');
       this._getMainDiv().style('--perturbed-stroke-width', '4');
     } else {
       this._getMainDiv().style('--upregulated-perturbed-color', '#000000');
       this._getMainDiv().style('--downregulated-perturbed-color', '#000000');
+      this._getMainDiv().style('--undirected-perturbed-color', '#000000');
       this._getMainDiv().style('--perturbed-stroke-width', '1.5');
     }
     this._refreshGraph(true);
@@ -5223,7 +5237,11 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
     if (this.applicationMode === 'editing') {
       // Remove all full proteome and perturbation target information
-      this.perturbedNodes = { up: <String[]>[], down: <String[]>[] };
+      this.perturbedNodes = {
+        up: <String[]>[],
+        down: <String[]>[],
+        undirected: <String[]>[],
+      };
 
       this._getMainDiv().attr('class', 'editing');
       this.hue = 'direction';

@@ -4,9 +4,10 @@ export default css`
   :host {
     --upregulated-color: #ea0000;
     --downregulated-color: #2571ff;
-    /*These three are updated by the Typescript code*/
+    /*These are updated by the Typescript code*/
     --upregulated-perturbed-color: #000000;
     --downregulated-perturbed-color: #000000;
+    --undirected-perturbed-color: #000000;
     --perturbed-stroke-width: 1.5;
 
     --unregulated-color: #a4a4a4;
@@ -86,6 +87,11 @@ export default css`
 
   .node-rect.gene_protein.circle-down {
     stroke: var(--downregulated-perturbed-color);
+    stroke-width: var(--perturbed-stroke-width);
+  }
+
+  .node-rect.gene_protein.circle-undirected {
+    stroke: var(--undirected-perturbed-color);
     stroke-width: var(--perturbed-stroke-width);
   }
 
