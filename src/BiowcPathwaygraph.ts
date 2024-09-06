@@ -3807,12 +3807,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
   }
 
   private _sendSelectionDetailsToParent() {
-    let selectedNodes: PathwayGraphNodeD3[] = [];
-
-    // We cannot display PTM and FP curves at the same time right now
-    // So if there are PTM selections we only show that
-    // FP selections are only shown if there are not also PTM selections
-    let hasPTMCurves = false;
+    const selectedPTMNodes: PathwayGraphNodeD3[] = [];
+    const selectedProteinNodes: PathwayGraphNodeD3[] = [];
     this.d3Nodes!.forEach(node => {
       if (node.type === 'ptm') {
         const ptmNode = node as PTMNodeD3;
@@ -3823,36 +3819,27 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             ptmNode.summaryNode.visible &&
             ptmNode.summaryNode.selected)
         ) {
-          hasPTMCurves = true;
-          selectedNodes.push(ptmNode);
+          selectedPTMNodes.push(ptmNode);
         }
       } else if (node.type === 'gene_protein') {
         if (node.selected) {
-          selectedNodes.push(node);
+          selectedProteinNodes.push(node);
         }
       }
     });
-
-    // If we have selected ptmNodes, remove all FP nodes from the list
-    if (hasPTMCurves) {
-      selectedNodes = selectedNodes.filter(n => n.type === 'ptm');
-    }
 
     this.dispatchEvent(
       new CustomEvent('selectionDetails', {
         bubbles: true,
         cancelable: true,
         detail: {
-          isFullProteome: !hasPTMCurves,
-          selection: selectedNodes
+          selection_peptide: selectedPTMNodes
             .filter(
               node =>
-                Object.hasOwn(node, 'details') &&
-                !!(<GeneProteinNodeD3 | PTMNodeD3>node).details
+                Object.hasOwn(node, 'details') && !!(<PTMNodeD3>node).details
             )
             .map(node => {
-              const nodeDetails = (<GeneProteinNodeD3 | PTMNodeD3>node)
-                .details!;
+              const nodeDetails = (<PTMNodeD3>node).details!;
               // If a detail has format { display: boolean; text: string | number }, only pass the value
               const detailsFlattened: { [key: string]: string | number } = {};
               Object.keys(nodeDetails).forEach(detailKey => {
@@ -3873,6 +3860,42 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               });
               return {
                 Regulation: (<PTMNodeD3>node).regulation,
+                ...detailsFlattened,
+              };
+            }),
+          selection_protein: selectedProteinNodes
+            .filter(
+              node =>
+                Object.hasOwn(node, 'details') &&
+                !!(<GeneProteinNodeD3>node).details
+            )
+            .map(node => {
+              const nodeDetails = (<GeneProteinNodeD3>node).details!;
+              // If a detail has format { display: boolean; text: string | number }, only pass the value
+              const detailsFlattened: { [key: string]: string | number } = {};
+              Object.keys(nodeDetails).forEach(detailKey => {
+                const nodeDetailValue = nodeDetails[detailKey] as {
+                  display: boolean;
+                  text: string | number;
+                };
+                if (
+                  !!nodeDetailValue &&
+                  Object.hasOwn(nodeDetailValue, 'text')
+                ) {
+                  detailsFlattened[detailKey] = nodeDetailValue.text;
+                } else {
+                  detailsFlattened[detailKey] = <string | number>(
+                    nodeDetails[detailKey]
+                  );
+                }
+              });
+              return {
+                Regulation: BiowcPathwaygraph._computeRegulationClass(
+                  <GeneProteinNodeD3>node
+                ),
+                '#Up': (<GeneProteinNodeD3>node).nUp,
+                '#Down': (<GeneProteinNodeD3>node).nDown,
+                '#Not': (<GeneProteinNodeD3>node).nNot,
                 ...detailsFlattened,
               };
             }),
