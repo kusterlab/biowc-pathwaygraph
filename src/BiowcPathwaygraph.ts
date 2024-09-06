@@ -229,6 +229,10 @@ export class BiowcPathwaygraph extends LitElement {
   @property({ attribute: false })
   fullProteomeInputList?: FullProteomeInputEntry[];
 
+  ptmInputListBackup?: PTMInputEntry[];
+
+  fullProteomeInputListBackup?: FullProteomeInputEntry[];
+
   @property({ attribute: false })
   hue!: PossibleHueType;
 
@@ -3914,7 +3918,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           ptmNode.details?.Site?.text ||
           ptmNode.details!['Modified Sequence'] ||
           ptmNode.details!.Sequence ||
-          'test';
+          ptmNode.details!.Site
+            ? String(ptmNode.details!.Site).split('-p')[0]
+            : ''; // For site-level data
         // eslint-disable-next-line no-param-reassign
         ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
           'peptide-label-visibility-map'
@@ -5332,6 +5338,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       // The 'viewing' class has no effect right now, but I'm using it in analogy to the 'editing' class below,
       // which has a CSS style
       this._getMainDiv().attr('class', 'viewing');
+      // Clear the backups
+      this.ptmInputListBackup = [];
+      this.fullProteomeInputListBackup = [];
     }
 
     if (this.applicationMode === 'editing') {
@@ -5344,6 +5353,17 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
       this._getMainDiv().attr('class', 'editing');
       this.hue = 'direction';
+
+      /**
+       * Note to future self: Maybe need to comment out Lines 1368ff in PTMNavigator:
+       *             this.graphdataSkeleton = undefined
+       *             this.selectedCanonicalPathway = undefined
+       *             this.selectedCustomPathway = undefined
+       */
+
+      // Keep a backup of the input lists to reapply it later
+      this.ptmInputListBackup = this.ptmInputList;
+      this.fullProteomeInputListBackup = this.fullProteomeInputList;
       this.ptmInputList = [];
       this.fullProteomeInputList = [];
       // Remove the legend if it is present
