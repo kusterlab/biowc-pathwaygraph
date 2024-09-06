@@ -3897,6 +3897,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
                 Regulation: BiowcPathwaygraph._computeRegulationClass(
                   <GeneProteinNodeD3>node
                 ),
+                'Gene Name(s)': (<GeneProteinNodeD3>node).geneNames
+                  ? (<GeneProteinNodeD3>node).geneNames.join(',')
+                  : (<GeneProteinNodeD3>node).label,
                 '#Up': (<GeneProteinNodeD3>node).nUp,
                 '#Down': (<GeneProteinNodeD3>node).nDown,
                 '#Not': (<GeneProteinNodeD3>node).nNot,
