@@ -603,6 +603,11 @@ export class BiowcPathwaygraph extends LitElement {
     this.d3Links = [];
     this._getMainDiv().append('g').attr('id', 'linkG');
     this._getMainDiv().append('g').attr('id', 'nodeG');
+    // We need to install an event here to make sure it is fired whenever there is a click on the canvas
+    this._getMainDiv().on('mousedown', () => {
+      this.dispatchEvent(new CustomEvent('pathwayGraphChanged'));
+    });
+
     this._enableZoomingAndPanning();
 
     // Initialize the store of the context menu here, so it is not overwritten when the graph is updated
@@ -1799,9 +1804,16 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv()
       .select('#nodeG')
       .selectAll<SVGElement, PathwayGraphNodeD3>('g')
+      // We need to install an event here to make sure it is fired whenever there is a click on a node
+      .on('mousedown', () => {
+        this.dispatchEvent(new CustomEvent('pathwayGraphChanged'));
+      })
       .call(this._dragNodes(simulation));
     this._getMainDiv()
       .selectAll<SVGElement, PathwayGraphNodeD3>('.group-path')
+      .on('mousedown', () => {
+        this.dispatchEvent(new CustomEvent('pathwayGraphChanged'));
+      })
       .call(this._dragGroups(simulation));
 
     // Define animation
