@@ -3933,9 +3933,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           ptmNode.details?.Site?.text ||
           ptmNode.details!['Modified Sequence'] ||
           ptmNode.details!.Sequence ||
-          ptmNode.details!.Site
+          (ptmNode.details!.Site
             ? String(ptmNode.details!.Site).split('-p')[0]
-            : ''; // For site-level data
+            : ''); // For site-level data
         // eslint-disable-next-line no-param-reassign
         ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
           'peptide-label-visibility-map'
