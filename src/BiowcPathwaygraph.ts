@@ -4321,6 +4321,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           );
 
           this._updatePeptideNodeLabels();
+          if (this.allPtmNodeLabelsVisible) this.expandAllPTMNodes();
         },
         type: 'radio',
         checked: () => this.allPtmNodeLabelsVisible,
@@ -4609,6 +4610,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
             peptideNodeVisibilityMap[ctx.target.__data__.nodeId] =
               // @ts-ignore
               !peptideNodeVisibilityMap[ctx.target.__data__.nodeId];
+
+            // If this was a hide-labels action, then we need to make sure
+            // that this.allPtmNodeLabelsVisible is not true anymore!
+            // @ts-ignore
+            if (!peptideNodeVisibilityMap[ctx.target.__data__.nodeId])
+              this.allPtmNodeLabelsVisible = false;
+
             // Expand the PTMs of that node
             this._getMainDiv()
               .selectAll<SVGGElement, PTMSummaryNodeD3>(
