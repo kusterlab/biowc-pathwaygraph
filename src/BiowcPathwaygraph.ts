@@ -597,7 +597,6 @@ export class BiowcPathwaygraph extends LitElement {
     if (this.applicationMode !== 'editing') {
       this.applicationMode = 'viewing';
     }
-    this.switchApplicationMode(this.applicationMode);
 
     this.d3Nodes = [];
     this.d3Links = [];
@@ -607,6 +606,7 @@ export class BiowcPathwaygraph extends LitElement {
     this._getMainDiv().on('mousedown', () => {
       this.dispatchEvent(new CustomEvent('pathwayGraphChanged'));
     });
+    this.switchApplicationMode(this.applicationMode);
 
     this._enableZoomingAndPanning();
 
@@ -5353,6 +5353,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       // The 'viewing' class has no effect right now, but I'm using it in analogy to the 'editing' class below,
       // which has a CSS style
       this._getMainDiv().attr('class', 'viewing');
+
+      // If backups exist, apply them
+      if (!!this.ptmInputListBackup && this.ptmInputListBackup.length > 0)
+        this.ptmInputList = this.ptmInputListBackup;
+      if (
+        !!this.fullProteomeInputListBackup &&
+        this.fullProteomeInputListBackup.length > 0
+      )
+        this.fullProteomeInputList = this.fullProteomeInputListBackup;
+
       // Clear the backups
       this.ptmInputListBackup = [];
       this.fullProteomeInputListBackup = [];
@@ -5369,13 +5379,6 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       this._getMainDiv().attr('class', 'editing');
       this.hue = 'direction';
 
-      /**
-       * Note to future self: Maybe need to comment out Lines 1368ff in PTMNavigator:
-       *             this.graphdataSkeleton = undefined
-       *             this.selectedCanonicalPathway = undefined
-       *             this.selectedCustomPathway = undefined
-       */
-
       // Keep a backup of the input lists to reapply it later
       this.ptmInputListBackup = this.ptmInputList;
       this.fullProteomeInputListBackup = this.fullProteomeInputList;
@@ -5386,6 +5389,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         .select<SVGElement>('#pathwayLegend')
         .selectAll('*')
         .remove();
+
+      if (this.graphdataSkeleton.nodes.length > 0) this._refreshGraph(false);
     }
   }
 }
