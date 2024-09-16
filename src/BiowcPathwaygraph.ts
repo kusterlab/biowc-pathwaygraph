@@ -642,6 +642,12 @@ export class BiowcPathwaygraph extends LitElement {
     this._initContextMenu();
     this._updateRangeSliderVisibility();
 
+    // Remind the view that the perturbed nodes are still there by turning them off and on again
+    if (this.perturbedNodesVisible) {
+      this._toggleHighlightPerturbedNodes();
+      this._toggleHighlightPerturbedNodes();
+    }
+
     super.updated(_changedProperties);
   }
 
