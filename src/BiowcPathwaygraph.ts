@@ -270,8 +270,6 @@ export class BiowcPathwaygraph extends LitElement {
 
   anyUpgoingPTMs?: boolean;
 
-  isLogFoldChange?: boolean;
-
   isNodeExpandAndCollapseAllowed: boolean = false;
 
   currentTimeoutId?: NodeJS.Timeout;
@@ -2383,8 +2381,8 @@ export class BiowcPathwaygraph extends LitElement {
           '--unregulated-color-light'
         );
         // Interpolate between up and not or down and not, depending on direction
-        // The center of interpolation is 0 for log fold change and 1 for fold change
-        const interpolationCenter = this.isLogFoldChange ? 0 : 1;
+        // BiowcPathwayGraph expects log Fold Changes, therefore the interpolation center is always 0
+        const interpolationCenter = 0;
         const nodeFoldChange = BiowcPathwaygraph._getNodeFoldChange(node);
         if (nodeFoldChange > interpolationCenter) {
           return d3v6.interpolate(
@@ -2422,37 +2420,21 @@ export class BiowcPathwaygraph extends LitElement {
       case 'foldchange':
         /* eslint-disable no-case-declarations */
 
-        // Determine if fold change is log or not
-        // For this, check if PTMs have "Log Fold Change" or "Fold Change" property.
-        // If "Fold Change", check if there are any negative values - then it's actually log fold change
-        this.isLogFoldChange = this.d3Nodes?.some(
-          node =>
-            node.type === 'ptm' &&
-            Object.hasOwn((<PTMNodeD3>node).details!, 'Log Fold Change')
-        );
-        if (!this.isLogFoldChange) {
-          this.isLogFoldChange = this.d3Nodes
-            ?.filter(
-              node =>
-                node.type === 'ptm' &&
-                Object.hasOwn((<PTMNodeD3>node).details!, 'Fold Change')
-            )
-            .some(node => (<PTMNodeD3>node).details!['Fold Change'] < 0);
-        }
-
-        const foldChangeCenter = this.isLogFoldChange ? 0 : 1;
+        // Interpolate between up and not or down and not, depending on direction
+        // BiowcPathwayGraph expects log Fold Changes, therefore the interpolation center is always 0
+        const interpolationCenter = 0;
         this.anyDowngoingPTMs = this.d3Nodes
           ?.filter(node => node.type === 'ptm')
           .some(
             node =>
-              BiowcPathwaygraph._getNodeFoldChange(node) < foldChangeCenter
+              BiowcPathwaygraph._getNodeFoldChange(node) < interpolationCenter
           );
 
         this.anyUpgoingPTMs = this.d3Nodes
           ?.filter(node => node.type === 'ptm')
           .some(
             node =>
-              BiowcPathwaygraph._getNodeFoldChange(node) > foldChangeCenter
+              BiowcPathwaygraph._getNodeFoldChange(node) > interpolationCenter
           );
 
         this.maxPosFoldChange = this.d3Nodes
@@ -3239,41 +3221,24 @@ export class BiowcPathwaygraph extends LitElement {
             )((d - 0.5) / 0.5);
           });
 
-        // The domain of the x axis depends on whether the fold change is log transformed
-        // Log FC goes from -inf to +inf, with 0 in the center
-        // Non-log FC goes from 0 to +inf, with 1 in the center
+        // The domain of the x axis goes from -inf to +inf, with 0 in the center
         const domain: string[] = [];
-        if (this.isLogFoldChange) {
-          if (this.anyDowngoingPTMs) {
-            domain.push(
-              ...[
-                `${this.maxNegFoldChange!.toPrecision(2)}`,
-                `${(this.maxNegFoldChange! / 2).toPrecision(2)}`,
-              ]
-            );
-          }
-          domain.push('0');
-          if (this.anyUpgoingPTMs) {
-            domain.push(
-              ...[
-                `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
-                `${this.maxPosFoldChange!.toPrecision(2)}`,
-              ]
-            );
-          }
-        } else {
-          if (this.anyDowngoingPTMs) {
-            domain.push(...['0', '0.5']);
-          }
-          domain.push('1');
-          if (this.anyUpgoingPTMs) {
-            domain.push(
-              ...[
-                `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
-                `${this.maxPosFoldChange!.toPrecision(2)}`,
-              ]
-            );
-          }
+        if (this.anyDowngoingPTMs) {
+          domain.push(
+            ...[
+              `${this.maxNegFoldChange!.toPrecision(2)}`,
+              `${(this.maxNegFoldChange! / 2).toPrecision(2)}`,
+            ]
+          );
+        }
+        domain.push('0');
+        if (this.anyUpgoingPTMs) {
+          domain.push(
+            ...[
+              `${(this.maxPosFoldChange! / 2).toPrecision(2)}`,
+              `${this.maxPosFoldChange!.toPrecision(2)}`,
+            ]
+          );
         }
 
         colorLegendXAxisScale
