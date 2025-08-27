@@ -400,7 +400,7 @@ export default {
         types: [],
       },
     ],
-    fullProteomeInputList: [
+    proteinInputList: [
       {
         geneNames: ['Protein A'],
         regulation: 'down',

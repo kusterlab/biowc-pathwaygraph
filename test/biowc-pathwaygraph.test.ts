@@ -100,8 +100,8 @@ describe('Protein Expression Graph', () => {
           nodes: StoryFixtures.proteinExpressionFixture.nodes,
           links: StoryFixtures.proteinExpressionFixture.links,
         }}"
-        .fullProteomeInputList="${StoryFixtures.proteinExpressionFixture
-          .fullProteomeInputList}"
+        .proteinInputList="${StoryFixtures.proteinExpressionFixture
+          .proteinInputList}"
       ></biowc-pathwaygraph>`
     );
     await expect(el).shadowDom.to.be.accessible();
@@ -116,7 +116,7 @@ describe('Graph Colored by Fold Change', () => {
           nodes: StoryFixtures.simplePTMGraphFixture.nodes,
           links: StoryFixtures.simplePTMGraphFixture.links,
         }}"
-        .fullProteomeInputList="${StoryFixtures.ptmGraphWithDetailsFixture
+        .proteinInputList="${StoryFixtures.ptmGraphWithDetailsFixture
           .ptmInputList}"
         .hue="foldchange"
       ></biowc-pathwaygraph>`
@@ -133,7 +133,7 @@ describe('Graph Colored by Potency', () => {
           nodes: StoryFixtures.simplePTMGraphFixture.nodes,
           links: StoryFixtures.simplePTMGraphFixture.links,
         }}"
-        .fullProteomeInputList="${StoryFixtures.ptmGraphWithDetailsFixture
+        .proteinInputList="${StoryFixtures.ptmGraphWithDetailsFixture
           .ptmInputList}"
         .hue="potency"
       ></biowc-pathwaygraph>`
@@ -152,7 +152,7 @@ describe('BiowcPathwaygraph', () => {
         }}"
         .ptmInputList="${StoryFixtures.ptmGraphWithDetailsFixture.ptmInputList}"
         .fpInputList="${StoryFixtures.proteinExpressionFixture
-          .fullProteomeInputList}"
+          .proteinInputList}"
         .hue="${'foldchange'}"
       ></biowc-pathwaygraph>`
     );

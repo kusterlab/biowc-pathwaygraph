@@ -10,7 +10,7 @@ export default {
     pathwayMetaData: { control: 'object' },
     graphdataSkeleton: { control: 'object' },
     ptmInputList: { control: 'array' },
-    fullProteomeInputList: { control: 'object' },
+    proteinInputList: { control: 'object' },
     perturbedNodes: { control: 'object' },
     hue: { control: 'text' },
     applicationMode: { control: 'text' },
@@ -29,7 +29,7 @@ interface ArgTypes {
   pathwayMetaData?: object;
   graphdataSkeleton?: object;
   ptmInputList?: object;
-  fullProteomeInputList?: object;
+  proteinInputList?: object;
   perturbedNodes?: object;
   hue: string;
   applicationMode: string;
@@ -54,7 +54,7 @@ ${args.storyDescription}</pre
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .perturbedNodes=${args.perturbedNodes}
     .hue=${args.hue}
   >
@@ -206,12 +206,11 @@ ProteinExpressionGraph.args = {
     nodes: StoryFixtures.proteinExpressionFixture.nodes,
     links: StoryFixtures.proteinExpressionFixture.links,
   },
-  fullProteomeInputList:
-    StoryFixtures.proteinExpressionFixture.fullProteomeInputList,
+  proteinInputList: StoryFixtures.proteinExpressionFixture.proteinInputList,
   storyTitle: 'Protein Expression Graph',
   storyDescription:
     "You can also supply protein expression ('full proteome') data " +
-    'using the `fullProteomeInputList` property. ' +
+    'using the `proteinInputList` property. ' +
     "The 'gene_protein' nodes will be colored accordingly. " +
     "Note that nodes with a 'not' regulation (e.g. Protein C) are distinguished from nodes with no regulation (e.g. Protein E). " +
     'If multiple entries map to the same node, their details are concatenated. ' +
@@ -272,7 +271,7 @@ const ExpandAndCollapseAllButtonTemplate: Story<ArgTypes> = (
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .hue=${args.hue}
   >
   </biowc-pathwaygraph>
@@ -302,7 +301,7 @@ const SelectDownstreamButtonTemplate: Story<ArgTypes> = (
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .hue=${args.hue}
   >
   </biowc-pathwaygraph>
@@ -329,7 +328,7 @@ const DownloadSVGTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .perturbedNodes=${args.perturbedNodes}
     .hue=${args.hue}
   >
@@ -368,7 +367,7 @@ const DownloadCSVTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .hue=${args.hue}
   >
   </biowc-pathwaygraph>
@@ -409,7 +408,7 @@ const EditingModeTemplate: Story<ArgTypes> = (args: ArgTypes) => html`
     .pathwayMetaData=${args.pathwayMetaData}
     .graphdataSkeleton=${args.graphdataSkeleton}
     .ptmInputList=${args.ptmInputList}
-    .fullProteomeInputList=${args.fullProteomeInputList}
+    .proteinInputList=${args.proteinInputList}
     .hue=${args.hue}
     .applicationMode=${args.applicationMode}
   >

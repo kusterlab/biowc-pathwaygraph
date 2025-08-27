@@ -57,7 +57,7 @@ interface GeneProteinNode extends PathwayGraphNode {
       | number
       | { display: boolean; text: string | number; indentKey?: boolean };
   };
-  // The following are only defined if Full Proteome Data was supplied
+  // The following are only defined if Protein Data was supplied
   nUp?: number;
   nDown?: number;
   nNot?: number;
@@ -106,9 +106,9 @@ interface PTMSummaryNode extends PathwayGraphNode {
 }
 
 /**
- * An entry in the {@link fullProteomeInputList}.
+ * An entry in the {@link proteinInputList}.
  */
-interface FullProteomeInputEntry {
+interface ProteinInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
@@ -227,11 +227,11 @@ export class BiowcPathwaygraph extends LitElement {
   ptmInputList?: PTMInputEntry[];
 
   @property({ attribute: false })
-  fullProteomeInputList?: FullProteomeInputEntry[];
+  proteinInputList?: ProteinInputEntry[];
 
   ptmInputListBackup?: PTMInputEntry[];
 
-  fullProteomeInputListBackup?: FullProteomeInputEntry[];
+  proteinInputListBackup?: ProteinInputEntry[];
 
   @property({ attribute: false })
   hue!: PossibleHueType;
@@ -627,10 +627,9 @@ export class BiowcPathwaygraph extends LitElement {
 
     // Map PTM Input to Skeleton Nodes
     this.graphdataPTM = this._addPTMInformationToPathway();
-    // Add Full Proteome Input to Skeleton Nodes
-    if (this.fullProteomeInputList) {
-      this.graphdataSkeleton.nodes =
-        this._addFullProteomeInformationToPathway();
+    // Add Protein Data Input to Skeleton Nodes
+    if (this.proteinInputList) {
+      this.graphdataSkeleton.nodes = this._addProteinInformationToPathway();
     }
 
     this._createD3GraphObject();
@@ -1170,7 +1169,7 @@ export class BiowcPathwaygraph extends LitElement {
     return graphdataPTM;
   }
 
-  private _addFullProteomeInformationToPathway(): PathwayGraphNode[] {
+  private _addProteinInformationToPathway(): PathwayGraphNode[] {
     // Create a dictionary out of the nodes of the skeleton graph, for quick access
     const nodesDict: { [key: string]: PathwayGraphNode } = {};
     for (const node of this.graphdataSkeleton.nodes) {
@@ -1180,18 +1179,16 @@ export class BiowcPathwaygraph extends LitElement {
       (<GeneProteinNode>node).nNot = 0;
     }
 
-    if (this.fullProteomeInputList) {
-      for (const fullProteomeInputEntry of this.fullProteomeInputList) {
+    if (this.proteinInputList) {
+      for (const proteinInputEntry of this.proteinInputList) {
         // In analogy to the addPTMInformation function:
         // Keep track of the gene/protein node ids with which this gene/protein has been associated
         // In case node is represented by both Uniprot and Genename we could otherwise match it twice here
         const geneProteinNodeIdsOfEntry = new Set();
-        const geneNamesUnique = [...new Set(fullProteomeInputEntry.geneNames)];
+        const geneNamesUnique = [...new Set(proteinInputEntry.geneNames)];
         const uniprotAccsUniqueOnlyCanonical = [
           ...new Set(
-            fullProteomeInputEntry.uniprotAccs?.map(
-              entry => entry.split('-')[0]
-            )
+            proteinInputEntry.uniprotAccs?.map(entry => entry.split('-')[0])
           ),
         ];
 
@@ -1211,7 +1208,7 @@ export class BiowcPathwaygraph extends LitElement {
               // Only proceed if the node has not yet been associated with this protein
               if (!geneProteinNodeIdsOfEntry.has(geneProteinNode.nodeId)) {
                 geneProteinNodeIdsOfEntry.add(geneProteinNode.nodeId);
-                switch (fullProteomeInputEntry.regulation) {
+                switch (proteinInputEntry.regulation) {
                   case 'down':
                     nodesDictEntry.nDown = (nodesDictEntry.nDown || 0) + 1;
                     break;
@@ -1226,22 +1223,18 @@ export class BiowcPathwaygraph extends LitElement {
                 }
 
                 // Concatenate the details
-                if (fullProteomeInputEntry.details) {
+                if (proteinInputEntry.details) {
                   nodesDictEntry.details = nodesDictEntry.details || {};
-                  Object.keys(fullProteomeInputEntry.details)
-                    .filter(
-                      detailKey => fullProteomeInputEntry.details![detailKey]
-                    )
+                  Object.keys(proteinInputEntry.details)
+                    .filter(detailKey => proteinInputEntry.details![detailKey])
                     .forEach(detailKey => {
                       if (Object.hasOwn(nodesDictEntry.details!, detailKey)) {
                         nodesDictEntry.details![detailKey] = `${String(
                           nodesDictEntry.details![detailKey]
-                        )},${String(
-                          fullProteomeInputEntry.details![detailKey]
-                        )}`;
+                        )},${String(proteinInputEntry.details![detailKey])}`;
                       } else {
                         nodesDictEntry.details![detailKey] =
-                          fullProteomeInputEntry.details![detailKey];
+                          proteinInputEntry.details![detailKey];
                       }
                     });
                 }
@@ -5337,18 +5330,18 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       if (!!this.ptmInputListBackup && this.ptmInputListBackup.length > 0)
         this.ptmInputList = this.ptmInputListBackup;
       if (
-        !!this.fullProteomeInputListBackup &&
-        this.fullProteomeInputListBackup.length > 0
+        !!this.proteinInputListBackup &&
+        this.proteinInputListBackup.length > 0
       )
-        this.fullProteomeInputList = this.fullProteomeInputListBackup;
+        this.proteinInputList = this.proteinInputListBackup;
 
       // Clear the backups
       this.ptmInputListBackup = [];
-      this.fullProteomeInputListBackup = [];
+      this.proteinInputListBackup = [];
     }
 
     if (this.applicationMode === 'editing') {
-      // Remove all full proteome and perturbation target information
+      // Remove all protein data and perturbation target information
       this.perturbedNodes = {
         up: <String[]>[],
         down: <String[]>[],
@@ -5360,9 +5353,9 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
 
       // Keep a backup of the input lists to reapply it later
       this.ptmInputListBackup = this.ptmInputList;
-      this.fullProteomeInputListBackup = this.fullProteomeInputList;
+      this.proteinInputListBackup = this.proteinInputList;
       this.ptmInputList = [];
-      this.fullProteomeInputList = [];
+      this.proteinInputList = [];
       // Remove the legend if it is present
       this._getMainDiv()
         .select<SVGElement>('#pathwayLegend')
