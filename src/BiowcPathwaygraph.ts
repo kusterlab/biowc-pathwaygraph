@@ -49,14 +49,8 @@ interface GeneProteinNode extends PathwayGraphNode {
   defaultName?: string;
   label?: string;
   groupId?: string;
-  // Interfaces are hoisted so we can reference PTMSummaryNode before defining it
-  // eslint-disable-next-line no-use-before-define
-  details?: {
-    [key: string]:
-      | string
-      | number
-      | { display: boolean; text: string | number; indentKey?: boolean };
-  };
+  detailsInternal?: { [key: string]: string | number };
+  detailsForTooltip?: { [key: string]: string | number };
   // The following are only defined if Protein Data was supplied
   nUp?: number;
   nDown?: number;
@@ -70,12 +64,8 @@ interface PTMInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
-  details?: {
-    [key: string]:
-      | string
-      | number
-      | { display: boolean; text: string | number; indentKey?: boolean };
-  };
+  details?: { [key: string]: string | number };
+  hiddenDetails?: { [key: string]: string | number };
 }
 
 /**
@@ -83,12 +73,8 @@ interface PTMInputEntry {
  */
 interface PTMNode extends PathwayGraphNode {
   geneProteinNodeId: string;
-  details?: {
-    [key: string]:
-      | string
-      | number
-      | { display: boolean; text: string | number; indentKey?: boolean };
-  };
+  detailsInternal?: { [key: string]: string | number };
+  detailsForTooltip?: { [key: string]: string | number };
   regulation: PossibleRegulationCategoriesType;
   geneNames?: string[];
   uniprotAccs?: string[];
@@ -112,12 +98,8 @@ interface ProteinInputEntry {
   geneNames?: string[];
   uniprotAccs?: string[];
   regulation: PossibleRegulationCategoriesType;
-  details?: {
-    [key: string]:
-      | string
-      | number
-      | { display: boolean; text: string | number; indentKey?: boolean };
-  };
+  details?: { [key: string]: string | number };
+  hiddenDetails?: { [key: string]: string | number };
 }
 
 /**
@@ -1029,7 +1011,11 @@ export class BiowcPathwaygraph extends LitElement {
                 const ptmNode = {
                   nodeId: ptmNodeId,
                   type: 'ptm',
-                  details: ptmPeptide.details,
+                  detailsInternal: {
+                    ...BiowcPathwaygraph._trimKeys(ptmPeptide.details!),
+                    ...ptmPeptide.hiddenDetails,
+                  },
+                  detailsForTooltip: ptmPeptide.details,
                   geneNames: geneNamesUnique,
                   uniprotAccs: uniprotAccsUnique,
                   regulation: ptmPeptide.regulation,
@@ -1096,14 +1082,12 @@ export class BiowcPathwaygraph extends LitElement {
                 }
                 // Check if the PTM node has Upstream kinase annotations
                 if (
-                  ptmPeptide.details &&
-                  ptmPeptide.details!['Upstream Kinase(s)'] &&
-                  // @ts-ignore
-                  !!ptmPeptide.details!['Upstream Kinase(s)'].text
+                  ptmNode.detailsInternal &&
+                  ptmNode.detailsInternal!['Upstream Kinase(s)']
                 ) {
-                  const currentUpstreamKinases =
-                    // @ts-ignore
-                    ptmPeptide.details!['Upstream Kinase(s)'].text.split(', ');
+                  const currentUpstreamKinases = (<String>(
+                    ptmNode.detailsInternal!['Upstream Kinase(s)']
+                  )).split(', ');
                   for (const kinase of currentUpstreamKinases) {
                     if (
                       Object.hasOwn(
@@ -1224,19 +1208,44 @@ export class BiowcPathwaygraph extends LitElement {
 
                 // Concatenate the details
                 if (proteinInputEntry.details) {
-                  nodesDictEntry.details = nodesDictEntry.details || {};
-                  Object.keys(proteinInputEntry.details)
-                    .filter(detailKey => proteinInputEntry.details![detailKey])
-                    .forEach(detailKey => {
-                      if (Object.hasOwn(nodesDictEntry.details!, detailKey)) {
-                        nodesDictEntry.details![detailKey] = `${String(
-                          nodesDictEntry.details![detailKey]
-                        )},${String(proteinInputEntry.details![detailKey])}`;
-                      } else {
-                        nodesDictEntry.details![detailKey] =
-                          proteinInputEntry.details![detailKey];
-                      }
-                    });
+                  const entryDetailsInternal = {
+                    ...BiowcPathwaygraph._trimKeys(proteinInputEntry.details!),
+                    ...proteinInputEntry.hiddenDetails,
+                  };
+                  const entryDetailsForTooltip = proteinInputEntry.details;
+
+                  nodesDictEntry.detailsInternal =
+                    nodesDictEntry.detailsInternal || {};
+                  Object.keys(entryDetailsInternal).forEach(detailKey => {
+                    if (
+                      Object.hasOwn(nodesDictEntry.detailsInternal!, detailKey)
+                    ) {
+                      nodesDictEntry.detailsInternal![detailKey] = `${String(
+                        nodesDictEntry.detailsInternal![detailKey]
+                      )},${String(entryDetailsInternal[detailKey])}`;
+                    } else {
+                      nodesDictEntry.detailsInternal![detailKey] =
+                        entryDetailsInternal[detailKey];
+                    }
+                  });
+
+                  nodesDictEntry.detailsForTooltip =
+                    nodesDictEntry.detailsForTooltip || {};
+                  Object.keys(entryDetailsForTooltip).forEach(detailKey => {
+                    if (
+                      Object.hasOwn(
+                        nodesDictEntry.detailsForTooltip!,
+                        detailKey
+                      )
+                    ) {
+                      nodesDictEntry.detailsForTooltip![detailKey] = `${String(
+                        nodesDictEntry.detailsForTooltip![detailKey]
+                      )},${String(entryDetailsForTooltip[detailKey])}`;
+                    } else {
+                      nodesDictEntry.detailsForTooltip![detailKey] =
+                        entryDetailsForTooltip[detailKey];
+                    }
+                  });
                 }
               }
             }
@@ -2265,6 +2274,17 @@ export class BiowcPathwaygraph extends LitElement {
       .on('mouseleave', mouseleave);
   }
 
+  private static _trimKeys(obj: { [key: string]: string | number }) {
+    if (!obj) return {};
+    return Object.keys(obj).reduce(
+      (res: { [key: string]: string | number }, key) => {
+        res[key.trim()] = obj[key];
+        return res;
+      },
+      {}
+    );
+  }
+
   private static _calcPossibleLabels(node: GeneProteinNodeD3) {
     let splitRegex;
     // Individual PTM nodes cannot have a label
@@ -2308,8 +2328,8 @@ export class BiowcPathwaygraph extends LitElement {
 
   private static _getNodeFoldChange(node: PathwayGraphNodeD3) {
     return (
-      Number((<PTMNodeD3>node).details!['Fold Change']) ||
-      Number((<PTMNodeD3>node).details!['Log Fold Change'])
+      Number((<PTMNodeD3>node).detailsInternal!['Fold Change']) ||
+      Number((<PTMNodeD3>node).detailsInternal!['Log Fold Change'])
     );
   }
 
@@ -2396,7 +2416,7 @@ export class BiowcPathwaygraph extends LitElement {
       }
       case 'potency': {
         return d3v6.interpolateRgbBasis(this.potencyColorScale)(
-          (Number((<PTMNodeD3>node).details!['-log(EC50)']) -
+          (Number((<PTMNodeD3>node).detailsInternal!['-log(EC50)']) -
             this.colorRangeMin!) /
             (this.colorRangeMax! - this.colorRangeMin!)
         );
@@ -2435,13 +2455,13 @@ export class BiowcPathwaygraph extends LitElement {
           ?.reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
-              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(currentNode, 'detailsInternal') &&
               (Object.hasOwn(
-                (<PTMNodeD3>currentNode).details!,
+                (<PTMNodeD3>currentNode).detailsInternal!,
                 'Fold Change'
               ) ||
                 Object.hasOwn(
-                  (<PTMNodeD3>currentNode).details!,
+                  (<PTMNodeD3>currentNode).detailsInternal!,
                   'Log Fold Change'
                 ))
             ) {
@@ -2459,13 +2479,13 @@ export class BiowcPathwaygraph extends LitElement {
           ?.reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has a fold change in its details
             if (
-              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(currentNode, 'detailsInternal') &&
               (Object.hasOwn(
-                (<PTMNodeD3>currentNode).details!,
+                (<PTMNodeD3>currentNode).detailsInternal!,
                 'Fold Change'
               ) ||
                 Object.hasOwn(
-                  (<PTMNodeD3>currentNode).details!,
+                  (<PTMNodeD3>currentNode).detailsInternal!,
                   'Log Fold Change'
                 ))
             ) {
@@ -2486,16 +2506,16 @@ export class BiowcPathwaygraph extends LitElement {
           .reduce((currentMax: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has details and if they include a fold change
             if (
-              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(currentNode, 'detailsInternal') &&
               Object.hasOwn(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).detailsInternal!,
                 '-log(EC50)'
               )
             ) {
               // If yes, compare it with the currentMax
               return Math.max(
                 Number(
-                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).detailsInternal![
                     '-log(EC50)'
                   ]
                 ),
@@ -2510,16 +2530,16 @@ export class BiowcPathwaygraph extends LitElement {
           .reduce((currentMin: number, currentNode: PathwayGraphNodeD3) => {
             // Check if the node has details and if they include an EC50
             if (
-              Object.hasOwn(currentNode, 'details') &&
+              Object.hasOwn(currentNode, 'detailsInternal') &&
               Object.hasOwn(
-                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details!,
+                (<GeneProteinNodeD3 | PTMNodeD3>currentNode).detailsInternal!,
                 '-log(EC50)'
               )
             ) {
               // If yes, compare it with the currentMin
               return Math.min(
                 Number(
-                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).details![
+                  (<GeneProteinNodeD3 | PTMNodeD3>currentNode).detailsInternal![
                     '-log(EC50)'
                   ]
                 ),
@@ -3279,33 +3299,14 @@ export class BiowcPathwaygraph extends LitElement {
   // Helper function for the two tooltip text functions
   private static _formatTextIfValuePresent(
     key: string,
-    value:
-      | string
-      | number
-      | { display: boolean; text: string | number; indentKey?: boolean }
-      | undefined,
+    value: string | number | undefined,
     strongWidth: number
   ) {
-    let keyIndent;
-    let valueText;
-    if (!value) {
-      return '';
-    }
-    if (typeof value === 'string' || typeof value === 'number') {
-      keyIndent = 0;
-      valueText = value;
-    } else {
-      keyIndent = value.indentKey ? 25 : 0;
-      valueText = value.text;
-    }
-
     return value
       ? `<li class='tooltip-list-item' style='margin: 5px 0;
-padding-left: ${keyIndent}px;
+white-space: pre;
 font-size: 12pt;
-font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${
-          strongWidth - keyIndent!
-        }px'>${key}:</strong> ${valueText}</li>`
+font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong style='width: ${strongWidth!}px'>${key}:</strong> ${value}</li>`
       : '';
   }
 
@@ -3313,8 +3314,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     // Estimate required width of the tooltip
     const minTooltipStrongWidth = 150;
     let tooltipStrongWidth = minTooltipStrongWidth;
-    if (node.details) {
-      const maxKeyLength = Object.keys(node.details!).reduce(
+    if (node.detailsForTooltip) {
+      const maxKeyLength = Object.keys(node.detailsForTooltip!).reduce(
         (currentMax, currentKey) =>
           currentKey.length > currentMax ? currentKey.length : currentMax,
         minTooltipStrongWidth / 12
@@ -3326,21 +3327,14 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
       'Regulation',
       node.regulation,
       tooltipStrongWidth
-    )}${Object.entries(node.details!)
-      .map(([key, value]) => {
-        if (
-          typeof value === 'string' ||
-          typeof value === 'number' ||
-          value?.display
-        ) {
-          return BiowcPathwaygraph._formatTextIfValuePresent(
-            key,
-            value,
-            tooltipStrongWidth
-          );
-        }
-        return null;
-      })
+    )}${Object.entries(node.detailsForTooltip!)
+      .map(([key, value]) =>
+        BiowcPathwaygraph._formatTextIfValuePresent(
+          key,
+          value,
+          tooltipStrongWidth
+        )
+      )
       .join('')}</ul>`;
   }
 
@@ -3348,8 +3342,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     // Estimate required width of the tooltip
     const minGeneProteinTooltipStrongWidth = 150;
     let tooltipStrongWidth = minGeneProteinTooltipStrongWidth;
-    if (node.details) {
-      const maxKeyLength = Object.keys(node.details!).reduce(
+    if (node.detailsForTooltip) {
+      const maxKeyLength = Object.keys(node.detailsForTooltip!).reduce(
         (currentMax, currentKey) =>
           currentKey.length > currentMax ? currentKey.length : currentMax,
         minGeneProteinTooltipStrongWidth / 12
@@ -3387,8 +3381,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
         : ''
     }
     ${
-      node.details
-        ? Object.entries(node.details)
+      node.detailsForTooltip
+        ? Object.entries(node.detailsForTooltip)
             .map(([key, value]) =>
               BiowcPathwaygraph._formatTextIfValuePresent(
                 key,
@@ -3816,72 +3810,31 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           selection_peptide: selectedPTMNodes
             .filter(
               node =>
-                Object.hasOwn(node, 'details') && !!(<PTMNodeD3>node).details
+                Object.hasOwn(node, 'detailsInternal') &&
+                !!(<PTMNodeD3>node).detailsInternal
             )
-            .map(node => {
-              const nodeDetails = (<PTMNodeD3>node).details!;
-              // If a detail has format { display: boolean; text: string | number }, only pass the value
-              const detailsFlattened: { [key: string]: string | number } = {};
-              Object.keys(nodeDetails).forEach(detailKey => {
-                const nodeDetailValue = nodeDetails[detailKey] as {
-                  display: boolean;
-                  text: string | number;
-                };
-                if (
-                  !!nodeDetailValue &&
-                  Object.hasOwn(nodeDetailValue, 'text')
-                ) {
-                  detailsFlattened[detailKey] = nodeDetailValue.text;
-                } else {
-                  detailsFlattened[detailKey] = <string | number>(
-                    nodeDetails[detailKey]
-                  );
-                }
-              });
-              return {
-                Regulation: (<PTMNodeD3>node).regulation,
-                ...detailsFlattened,
-              };
-            }),
+            .map(node => ({
+              Regulation: (<PTMNodeD3>node).regulation,
+              ...(<PTMNodeD3>node).detailsInternal,
+            })),
           selection_protein: selectedProteinNodes
             .filter(
               node =>
-                Object.hasOwn(node, 'details') &&
-                !!(<GeneProteinNodeD3>node).details
+                Object.hasOwn(node, 'detailsInternal') &&
+                !!(<GeneProteinNodeD3>node).detailsInternal
             )
-            .map(node => {
-              const nodeDetails = (<GeneProteinNodeD3>node).details!;
-              // If a detail has format { display: boolean; text: string | number }, only pass the value
-              const detailsFlattened: { [key: string]: string | number } = {};
-              Object.keys(nodeDetails).forEach(detailKey => {
-                const nodeDetailValue = nodeDetails[detailKey] as {
-                  display: boolean;
-                  text: string | number;
-                };
-                if (
-                  !!nodeDetailValue &&
-                  Object.hasOwn(nodeDetailValue, 'text')
-                ) {
-                  detailsFlattened[detailKey] = nodeDetailValue.text;
-                } else {
-                  detailsFlattened[detailKey] = <string | number>(
-                    nodeDetails[detailKey]
-                  );
-                }
-              });
-              return {
-                Regulation: BiowcPathwaygraph._computeRegulationClass(
-                  <GeneProteinNodeD3>node
-                ),
-                'Gene Name(s)': (<GeneProteinNodeD3>node).geneNames
-                  ? (<GeneProteinNodeD3>node).geneNames.join(',')
-                  : (<GeneProteinNodeD3>node).label,
-                '#Up': (<GeneProteinNodeD3>node).nUp,
-                '#Down': (<GeneProteinNodeD3>node).nDown,
-                '#Not': (<GeneProteinNodeD3>node).nNot,
-                ...detailsFlattened,
-              };
-            }),
+            .map(node => ({
+              Regulation: BiowcPathwaygraph._computeRegulationClass(
+                <GeneProteinNodeD3>node
+              ),
+              'Gene Name(s)': (<GeneProteinNodeD3>node).geneNames
+                ? (<GeneProteinNodeD3>node).geneNames.join(',')
+                : (<GeneProteinNodeD3>node).label,
+              '#Up': (<GeneProteinNodeD3>node).nUp,
+              '#Down': (<GeneProteinNodeD3>node).nDown,
+              '#Not': (<GeneProteinNodeD3>node).nNot,
+              ...(<GeneProteinNodeD3>node).detailsInternal!,
+            })),
         },
       })
     );
@@ -3891,15 +3844,16 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     this.d3Nodes!.forEach(node => {
       if (node.type === 'ptm') {
         const ptmNode = <PTMNodeD3>node;
-        // TODO: If available, use Site identifier before sequence
-        const ptmNodeLabel =
-          // @ts-ignore
-          ptmNode.details?.Site?.text ||
-          ptmNode.details!['Modified Sequence'] ||
-          ptmNode.details!.Sequence ||
-          (ptmNode.details!.Site
-            ? String(ptmNode.details!.Site).split('-p')[0]
-            : ''); // For site-level data
+        let ptmNodeLabel;
+        if (ptmNode.detailsInternal?.Site) {
+          // Dear eslint, I do not believe that the use of destructuring would make it more obvious what I'm doing here
+          // eslint-disable-next-line prefer-destructuring
+          ptmNodeLabel = String(ptmNode.detailsInternal!.Site).split('-p')[0];
+        } else {
+          ptmNodeLabel =
+            ptmNode.detailsInternal!['Modified Sequence'] ||
+            ptmNode.detailsInternal!.Sequence;
+        }
         // eslint-disable-next-line no-param-reassign
         ptmNode.currentDisplayedLabel = this.contextMenuStore?.get(
           'peptide-label-visibility-map'
@@ -4099,11 +4053,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
     const peptidesJSON = this.graphdataPTM!.nodes.filter(
       node => node.type === 'ptm'
     ).map(node => ({
-      'Modified Sequence': (<PTMNodeD3>node).details?.['Modified Sequence'],
-      'Gene Name(s)': (<PTMNodeD3>node).details?.['Gene Name(s)'],
+      'Modified Sequence': (<PTMNodeD3>node).detailsInternal?.[
+        'Modified Sequence'
+      ],
+      'Gene Name(s)': (<PTMNodeD3>node).detailsInternal?.['Gene Name(s)'],
       // @ts-ignore
-      Uniprot: (<PTMNodeD3>node).details?.Uniprot_Accession_Number?.text,
-      Experiment: (<PTMNodeD3>node).details?.['Experiment Name'],
+      Uniprot: (<PTMNodeD3>node).detailsInternal?.Uniprot_Accession_Number,
+      Experiment: (<PTMNodeD3>node).detailsInternal?.['Experiment Name'],
       Regulation: (<PTMNodeD3>node).regulation,
     }));
 
@@ -4390,10 +4346,13 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               this.d3Nodes?.some(
                 node =>
                   node?.type === 'ptm' &&
-                  !!(<PTMNodeD3>node).details &&
-                  (Object.hasOwn((<PTMNodeD3>node).details!, 'Fold Change') ||
+                  !!(<PTMNodeD3>node).detailsInternal &&
+                  (Object.hasOwn(
+                    (<PTMNodeD3>node).detailsInternal!,
+                    'Fold Change'
+                  ) ||
                     Object.hasOwn(
-                      (<PTMNodeD3>node).details!,
+                      (<PTMNodeD3>node).detailsInternal!,
                       'Log Fold Change'
                     ))
               ),
@@ -4407,8 +4366,8 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
               this.d3Nodes?.some(
                 node =>
                   node?.type === 'ptm' &&
-                  !!(<PTMNodeD3>node).details &&
-                  !!(<PTMNodeD3>node).details!['-log(EC50)']
+                  !!(<PTMNodeD3>node).detailsInternal &&
+                  !!(<PTMNodeD3>node).detailsInternal!['-log(EC50)']
               ),
           },
         ],

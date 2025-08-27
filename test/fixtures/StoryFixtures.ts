@@ -263,15 +263,12 @@ export default {
         regulation: 'down',
         details: {
           Sequence: 'TRY(ph)AGAINK',
-          Site: { text: 'S42' },
+          Site: 'S42',
           'Fold Change': 0.1,
           'p Value': 0.0002,
           '-log(EC50)': 9,
-          'Upstream Kinase(s)': {
-            display: true,
-            indentKey: true,
-            text: 'GeneA, Protein D',
-          },
+          'Upstream Kinase(s)': 'GeneA, Protein D',
+          '    MyTest': 42,
         },
       },
       {
@@ -279,24 +276,16 @@ export default {
         regulation: 'not',
         details: {
           Sequence: 'GILGVIVT(ph)LK',
-          Site: { text: 'Y512' },
+          Site: 'Y512',
           'Fold Change': 2.5,
           'p Value': 0.0003,
           '-log(EC50)': 6,
           MyUmbrellaTerm: ' ',
-          Subterm1: { text: 'Neque porro', display: true, indentKey: true },
-          Subterm2: { text: 'quisquam est', display: true, indentKey: true },
-          Subterm3: {
-            text: 'qui dolorem ipsum',
-            display: true,
-            indentKey: true,
-          },
+          '    Subterm1': 'Neque porro',
+          '    Subterm2': 'quisquam est',
+          '    Subterm3': 'qui dolorem ipsum',
           'Something else': 'Hello!',
-          'Upstream Kinase(s)': {
-            display: true,
-            indentKey: true,
-            text: 'Protein B, Protein C',
-          },
+          'Upstream Kinase(s)': 'Protein B, Protein C',
         },
       },
       {
@@ -315,7 +304,7 @@ export default {
         regulation: 'up',
         details: {
           Sequence: 'GENENAMES(ph)K',
-          Site: { text: 'T90' },
+          Site: 'T90',
           'Fold Change': 1.2,
           'p Value': 0.001,
           '-log(EC50)': 8,
