@@ -4094,6 +4094,7 @@ font-family: "Roboto Light", "Helvetica Neue", "Verdana", sans-serif'><strong st
           .map(d3node => ({
             id: d3node.nodeId,
             geneNames: d3node.geneNames,
+            defaultName: d3node.defaultName,
             type: d3node.type,
             x: Number(d3node.x.toFixed(1)),
             y: Number(d3node.y.toFixed(1)),
